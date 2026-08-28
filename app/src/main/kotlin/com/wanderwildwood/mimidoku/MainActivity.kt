@@ -70,6 +70,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
+import java.util.Date
 
 class MainActivity : ComponentActivity() {
 
@@ -100,6 +102,8 @@ private sealed interface Editing {
     data object Skip : Editing
     data object AutoRewind : Editing
     data object Sleep : Editing
+    data object AutoSleepStart : Editing
+    data object AutoSleepEnd : Editing
     data object Shake : Editing
     data object Speed : Editing
 }
@@ -110,6 +114,12 @@ private fun Mimidoku() {
     val scope = rememberCoroutineScope()
     val library = remember { LibraryRepository(context) }
     val preferences = remember { Preferences(context) }
+
+    // An hour is written the way the phone writes hours, so that a reader who has set a 24-hour
+    // clock is not handed "10:00 PM" by this one app.
+    val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
+    val clock = { minutesOfDay: Int -> timeFormat.format(dayAt(minutesOfDay)) }
+
     val books by library.books.collectAsState(initial = emptyList())
 
     var screen by remember { mutableStateOf<Screen>(Screen.Library) }
@@ -238,6 +248,25 @@ private fun Mimidoku() {
                 announcement = "Sleep timer ended"
             }
         }
+    }
+
+    // And the timer lets itself on, if the reader has asked for that and it is late enough.
+    //
+    // Starting a book at bedtime and pressing the timer are the same gesture every night, so the
+    // second one is worth not having to remember -- which is the whole of the feature. It fires on
+    // the moment playback starts rather than on a clock of its own: a window that armed the timer
+    // at ten sharp would arm it while the phone sat on a shelf, and the timer only means anything
+    // over a book that is playing.
+    //
+    // A timer already running is left alone, including one the reader has just switched off by
+    // hand and is presumably not wanting back. Nothing is bookmarked here: this is the reader
+    // settling in, not the place they stopped following, and the countdown above already marks
+    // that when it runs out.
+    LaunchedEffect(isPlaying) {
+        if (!isPlaying || sleepRemainingMs != null || !preferences.autoSleep) return@LaunchedEffect
+        if (!withinWindow(preferences.autoSleepStart, preferences.autoSleepEnd)) return@LaunchedEffect
+        sleepRemainingMs = preferences.sleepMinutes * 60_000L
+        announcement = "Sleep timer on"
     }
 
     // Listening for a shake costs battery, so it happens only while there is a timer to call off.
@@ -635,24 +664,40 @@ private fun Mimidoku() {
 
         Screen.Settings -> {
             SettingsScreen(
-                rows = listOf(
+                rows = buildList {
                     // How many folders, not a sentence about what the row is for: a row
                     // earns its second line by saying something that changes.
-                    SettingRow(
-                        key = "folders",
-                        title = "Audiobook folders",
-                        value = when (grants.size) {
-                            0 -> "None chosen yet"
-                            1 -> "1 folder"
-                            else -> "${grants.size} folders"
-                        },
-                    ),
-                    SettingRow("shelving", "Library view", preferences.shelving.label),
-                    SettingRow("skip", "Skip amount", "${preferences.skipSeconds} seconds"),
-                    SettingRow("rewind", "Auto rewind", "${preferences.autoRewindSeconds} seconds"),
-                    SettingRow("sleep", "Sleep timer duration", "${preferences.sleepMinutes} minutes"),
-                    SettingRow("shake", "Shake sensitivity", preferences.shake.label),
-                ),
+                    add(
+                        SettingRow(
+                            key = "folders",
+                            title = "Audiobook folders",
+                            value = when (grants.size) {
+                                0 -> "None chosen yet"
+                                1 -> "1 folder"
+                                else -> "${grants.size} folders"
+                            },
+                        ),
+                    )
+                    add(SettingRow("shelving", "Library view", preferences.shelving.label))
+                    add(SettingRow("skip", "Skip amount", "${preferences.skipSeconds} seconds"))
+                    add(SettingRow("rewind", "Auto rewind", "${preferences.autoRewindSeconds} seconds"))
+                    add(SettingRow("sleep", "Sleep timer duration", "${preferences.sleepMinutes} minutes"))
+                    add(
+                        SettingRow(
+                            key = "autosleep",
+                            title = "Automatic sleep timer",
+                            value = null,
+                            toggle = preferences.autoSleep,
+                        ),
+                    )
+                    // The hours only exist while the window does. Two rows saying when something
+                    // that is switched off starts and ends are two rows of nothing.
+                    if (preferences.autoSleep) {
+                        add(SettingRow("autosleepstart", "Starts at", clock(preferences.autoSleepStart)))
+                        add(SettingRow("autosleepend", "Ends at", clock(preferences.autoSleepEnd)))
+                    }
+                    add(SettingRow("shake", "Shake sensitivity", preferences.shake.label))
+                },
                 onClose = { screen = Screen.Library },
                 onAbout = { showAbout = true },
                 onRowClick = { row ->
@@ -662,6 +707,11 @@ private fun Mimidoku() {
                         "skip" -> editing = Editing.Skip
                         "rewind" -> editing = Editing.AutoRewind
                         "sleep" -> editing = Editing.Sleep
+                        // A switch is its own dialog: there is one other value and no question
+                        // worth asking about it.
+                        "autosleep" -> preferences.autoSleep = !preferences.autoSleep
+                        "autosleepstart" -> editing = Editing.AutoSleepStart
+                        "autosleepend" -> editing = Editing.AutoSleepEnd
                         "shake" -> editing = Editing.Shake
                     }
                 },
@@ -739,6 +789,24 @@ private fun Mimidoku() {
             label = { "$it minutes" },
             onDismiss = close,
             onSet = { preferences.sleepMinutes = it },
+        )
+        // Half hours, because that is how bedtimes are said. Every minute of the day would be
+        // forty-eight times the presses to say the same thing.
+        Editing.AutoSleepStart -> StepperDialog(
+            title = "Starts at",
+            initial = preferences.autoSleepStart,
+            range = 0..(23 * 60 + 30) step 30,
+            label = { clock(it) },
+            onDismiss = close,
+            onSet = { preferences.autoSleepStart = it },
+        )
+        Editing.AutoSleepEnd -> StepperDialog(
+            title = "Ends at",
+            initial = preferences.autoSleepEnd,
+            range = 0..(23 * 60 + 30) step 30,
+            label = { clock(it) },
+            onDismiss = close,
+            onSet = { preferences.autoSleepEnd = it },
         )
     }
 }
@@ -857,6 +925,30 @@ private fun Long.asMinutes(): String {
     val total = (this / 1000).coerceAtLeast(0)
     return "${total / 60}:${(total % 60).toString().padStart(2, '0')}"
 }
+
+/**
+ * Whether the clock is now inside the nightly window, both ends given in minutes since midnight.
+ *
+ * The window almost always crosses midnight, which is why this is not a comparison. Ten at night
+ * until six in the morning is `start > end`, and the hours inside it are the ones at or after
+ * start *or* before end -- the opposite of what reading the two numbers in order suggests. A
+ * window whose ends are the same hour is no window, and never fires.
+ */
+private fun withinWindow(startMinutes: Int, endMinutes: Int): Boolean {
+    val now = Calendar.getInstance()
+    val minutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+    return if (startMinutes <= endMinutes) {
+        minutes >= startMinutes && minutes < endMinutes
+    } else {
+        minutes >= startMinutes || minutes < endMinutes
+    }
+}
+
+/** Minutes since midnight as a moment today, which is all a time formatter will take. */
+private fun dayAt(minutesOfDay: Int): Date = Calendar.getInstance().apply {
+    set(Calendar.HOUR_OF_DAY, minutesOfDay / 60)
+    set(Calendar.MINUTE, minutesOfDay % 60)
+}.time
 
 /** Named commands the service understands but a MediaController has no vocabulary for. */
 private fun MediaController.ask(action: String, on: Boolean) {

@@ -25,7 +25,8 @@ a card without asking for permission to read everything on the phone. Three layo
 and a library may be more than one of them at once: audio sitting directly in the chosen folder is
 one book; a folder of folders is books; a folder of folders of folders is authors holding books.
 
-Sleep timer, playback speed, chapter list, bookmarks, and a shake to keep the timer going.
+Sleep timer -- by hand, or on its own between two hours you set -- playback speed, chapter
+list, bookmarks, and a shake to keep the timer going.
 
 Released.
 

@@ -1,7 +1,9 @@
 package com.wanderwildwood.mimidoku.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +33,12 @@ data class SettingRow(
     val title: String,
     /** What it is currently set to, or a sentence saying what the row does. Null for About. */
     val value: String?,
+    /**
+     * On or off, for a preference that is only ever one of the two. Such a row draws a switch and
+     * needs no [value]: the switch is already showing what it is set to, and a second line saying
+     * "On" underneath it would be the same fact twice.
+     */
+    val toggle: Boolean? = null,
 )
 
 /**
@@ -75,7 +84,7 @@ private fun SettingLine(row: SettingRow, onClick: () -> Unit) {
             .padding(start = 16.dp, end = 16.dp, bottom = 25.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = row.title,
                 fontSize = 19.5.sp,
@@ -93,5 +102,38 @@ private fun SettingLine(row: SettingRow, onClick: () -> Unit) {
                 )
             }
         }
+        if (row.toggle != null) {
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(on = row.toggle)
+        }
+    }
+}
+
+/**
+ * On or off, drawn the way the phone's own settings draw it.
+ *
+ * Deliberately not Material's Switch: that one slides its thumb across, and a sliding thumb on a
+ * panel that repaints in tenths of a second is a grey smear that ends up in the right place. This
+ * one is simply in one position or the other. The size is the platform's -- a switch that is not
+ * the size of every other switch on the phone stops reading as a switch.
+ *
+ * It draws the state and nothing else. The row around it takes the press, so that the whole line
+ * is the target rather than a 52dp strip at the end of it.
+ */
+@Composable
+private fun Switch(on: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(width = 52.dp, height = 32.dp)
+            .border(2.dp, Color.Black, CircleShape)
+            .background(if (on) Color.Black else Color.White, CircleShape)
+            .padding(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .align(if (on) Alignment.CenterEnd else Alignment.CenterStart)
+                .size(20.dp)
+                .background(if (on) Color.White else Color.Black, CircleShape),
+        )
     }
 }
