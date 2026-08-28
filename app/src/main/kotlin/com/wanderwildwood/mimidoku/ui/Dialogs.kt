@@ -169,9 +169,6 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
         AboutText("Audio Reading $version")
 
         Spacer(modifier = Modifier.height(12.dp))
-        AboutText("No permissions beyond the folders you pick. No network.")
-
-        Spacer(modifier = Modifier.height(12.dp))
         AboutText("GNU General Public License v3")
         AboutText("Lato \u2014 SIL Open Font License 1.1")
         AboutText("Material Symbols \u2014 Apache License 2.0")
