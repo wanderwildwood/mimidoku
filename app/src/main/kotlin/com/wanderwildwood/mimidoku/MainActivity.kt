@@ -745,7 +745,21 @@ private fun Mimidoku() {
 /** What the files say, or what the folders say when the files say nothing. */
 private fun BookEntity.shownTitle(): String = tagTitle ?: name
 
-private fun BookEntity.shownAuthor(): String? = tagAuthor ?: author
+/**
+ * The folder wins, and the tag only fills a gap.
+ *
+ * It was the other way round, and it made a tidy library look ransacked. Someone who files
+ * audiobooks under a folder per author has already said who wrote each one, deliberately and
+ * consistently. The ID3 tags in the same files have not been curated by anyone: on one shelf
+ * they read "DT Suzuki" as "D. T. Suzuki", "Frank Herbert" as "Frank Herbert (audio)", and
+ * "Bessel Van Der Kolk" with a trailing comma, and one stray file claims an artist of "(02".
+ * Letting them override produced a list of authors in four spellings and one that does not
+ * exist.
+ *
+ * Where there is no folder to go by -- audio loose in the chosen directory -- the tag is all
+ * there is, and it is used.
+ */
+private fun BookEntity.shownAuthor(): String? = author ?: tagAuthor
 
 /** Which shelf a book belongs on, which depends on what the reader asked to see. */
 /**
