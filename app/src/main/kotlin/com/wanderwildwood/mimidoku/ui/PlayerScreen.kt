@@ -163,11 +163,14 @@ fun PlayerScreen(
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             val ink = if (locked) Dimmed else Color.Black
             if (playback.author != null) {
+                // The same size as the chapter line below the title, and bold against the
+                // italic title between them, so the block reads as a name over a work rather
+                // than three lines of the same weight. The old player set both from one style.
                 Text(
                     text = playback.author,
-                    fontSize = 24.sp,
+                    fontSize = 23.sp,
                     lineHeight = 29.5.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = ink,
                 )
             }
@@ -184,19 +187,34 @@ fun PlayerScreen(
             // back in smaller type.
             if (playback.chapter.isNotBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = playback.chapter,
-                    fontSize = 23.sp,
-                    lineHeight = 29.5.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = ink,
-                    // The name of what is playing is also the way to the rest of the book: a
-                    // reader hunting for another chapter is already looking straight at it. The
-                    // whole line takes the press, not just the letters.
+                // The name of what is playing is also the way to the rest of the book: a reader
+                // hunting for another chapter is already looking straight at it. The whole line
+                // takes the press, not just the letters.
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(enabled = !locked, onClick = chapters.onOpen),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = playback.chapter,
+                        fontSize = 23.sp,
+                        lineHeight = 29.5.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = ink,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    // Without this the line is a third line of text and the list behind it is
+                    // invisible. It is the only mark on this screen saying there is more here.
+                    Icon(
+                        imageVector = Icons.ExpandMore,
+                        contentDescription = "Chapters",
+                        tint = ink,
+                        modifier = Modifier
+                            .padding(start = 4.dp)
+                            .size(28.dp),
+                    )
+                }
             }
         }
 

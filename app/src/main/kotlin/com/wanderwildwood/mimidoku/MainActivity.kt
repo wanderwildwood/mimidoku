@@ -352,9 +352,16 @@ private fun Mimidoku() {
         }
         parts.map { (ends[it.chapterUri] ?: 0L) + it.startMs }
     }
-    val atPart = remember(parts, chapterUri, position) {
-        parts.indexOfLast { it.chapterUri == chapterUri && it.startMs <= position }
-            .takeIf { it >= 0 } ?: parts.indexOfFirst { it.chapterUri == chapterUri }
+    val atPart = remember(parts, chapterUri, position, playing) {
+        // A book opened but not yet started has nothing prepared, so chapterUri is null and no
+        // part matches - which left this at -1, emptied the chapter name, and took away the only
+        // way into the chapter list: the book looked as though it had no chapters at all until
+        // you pressed play. Unprepared, the book itself is the one that knows where it is.
+        val inPart = chapterUri ?: playing?.currentChapterUri
+        val into = if (chapterUri != null) position else playing?.positionMs ?: 0L
+        parts.indexOfLast { it.chapterUri == inPart && it.startMs <= into }
+            .takeIf { it >= 0 }
+            ?: parts.indexOfFirst { it.chapterUri == inPart }.coerceAtLeast(0)
     }
     val goToPart = { index: Int ->
         parts.getOrNull(index)?.let { part ->
