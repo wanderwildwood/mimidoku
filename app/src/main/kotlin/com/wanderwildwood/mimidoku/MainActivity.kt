@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
@@ -38,6 +39,7 @@ import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
 import com.wanderwildwood.mimidoku.data.Shelving
 import com.wanderwildwood.mimidoku.library.TreeShape
+import com.wanderwildwood.mimidoku.playback.CoverArt
 import com.wanderwildwood.mimidoku.playback.PlaybackService
 import com.wanderwildwood.mimidoku.playback.ShakeDetector
 import com.wanderwildwood.mimidoku.ui.BookRow
@@ -349,7 +351,7 @@ private fun Mimidoku() {
                     chapters = library.chaptersOf(book.uri)
                     marks = library.marksOf(book.uri)
                 }
-                c.play(chapters, book)
+                c.play(context, chapters, book)
             }
         } else if (c != null) {
             if (c.isPlaying) {
@@ -420,7 +422,7 @@ private fun Mimidoku() {
                     scope.launch {
                         chapters = library.chaptersOf(book.uri)
                         marks = library.marksOf(book.uri)
-                        controller?.play(chapters, book)
+                        controller?.play(context, chapters, book)
                     }
                 },
                 onNowPlayingClick = { screen = Screen.Player },
@@ -557,7 +559,7 @@ private fun Mimidoku() {
                     scope.launch {
                         chapters = library.chaptersOf(book.uri)
                         marks = library.marksOf(book.uri)
-                        controller?.play(chapters, book)
+                        controller?.play(context, chapters, book)
                     }
                 },
                 onNowPlayingClick = { screen = Screen.Player },
@@ -820,8 +822,27 @@ private fun BookEntity.toRow() = BookRow(
     },
 )
 
-private fun MediaController.play(chapters: List<ChapterEntity>, book: BookEntity) {
-    setMediaItems(chapters.map { MediaItem.Builder().setMediaId(it.uri).setUri(it.uri).build() })
+private suspend fun MediaController.play(
+    context: android.content.Context,
+    chapters: List<ChapterEntity>,
+    book: BookEntity,
+) {
+    // Only the artwork is set here. Everything else the notification shows - the title, the
+    // author - is read out of the file itself, and a field set on the item would override it.
+    val cover = CoverArt.forBook(context, chapters.firstOrNull()?.uri)
+    setMediaItems(
+        chapters.map {
+            MediaItem.Builder()
+                .setMediaId(it.uri)
+                .setUri(it.uri)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setArtworkData(cover, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                        .build()
+                )
+                .build()
+        }
+    )
     // Pick up where the reader left off, if they have been here before.
     val resumeAt = chapters.indexOfFirst { it.uri == book.currentChapterUri }
     if (resumeAt >= 0) seekTo(resumeAt, book.positionMs)

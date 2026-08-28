@@ -5,12 +5,14 @@ import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.wanderwildwood.mimidoku.R
 
 /**
  * Holds the player for as long as something is listening.
@@ -55,6 +57,14 @@ class PlaybackService : MediaSessionService() {
 
         player = exoPlayer
         session = MediaSession.Builder(this, exoPlayer).setCallback(Commands()).build()
+
+        // Media3's own notification icon is a musical note, and it is what the home screen
+        // shows beside whatever is playing. A book is not music.
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider.Builder(this).build().apply {
+                setSmallIcon(R.drawable.ic_notification)
+            }
+        )
     }
 
     /**

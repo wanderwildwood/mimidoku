@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The same mark, for the notification and for whatever the launcher draws beside a book
+  that is playing. Without it Media3 supplies its own, which is a musical note - wrong
+  twice over, since this is neither music nor anyone else's app.
+
+  Scaled up from the launcher drawing: an adaptive icon holds its shape inside a safe
+  circle that a mask cuts into, and a notification icon has no mask, so the same drawing
+  at the same size would sit in a box of empty room. Android renders this by its alpha
+  alone and tints it, so the colours below only have to be opaque.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+  <group
+    android:pivotX="54"
+    android:pivotY="51.25"
+    android:scaleX="1.6"
+    android:scaleY="1.6"
+    android:translateY="2.75">
+<path
+    android:pathData="M 28.5 53.5 A 25.5 25.5 0 0 1 79.5 53.5"
+    android:strokeColor="#000000"
+    android:strokeWidth="5"
+    android:strokeLineCap="round" />
+  <path
+    android:pathData="M24.25,54.25 A4.25,4.25 0 0 1 28.5,50 A4.25,4.25 0 0 1 32.75,54.25 L32.75,60.75 A4.25,4.25 0 0 1 28.5,65 A4.25,4.25 0 0 1 24.25,60.75 Z"
+    android:fillColor="#000000" />
+  <path
+    android:pathData="M75.25,54.25 A4.25,4.25 0 0 1 79.5,50 A4.25,4.25 0 0 1 83.75,54.25 L83.75,60.75 A4.25,4.25 0 0 1 79.5,65 A4.25,4.25 0 0 1 75.25,60.75 Z"
+    android:fillColor="#000000" />
+  <path
+    android:pathData="M 38 52 L 54 56 L 54 75 L 38 71 Z"
+    android:strokeColor="#000000"
+    android:strokeWidth="4"
+    android:strokeLineJoin="round" />
+  <path
+    android:pathData="M 70 52 L 54 56 L 54 75 L 70 71 Z"
+    android:strokeColor="#000000"
+    android:strokeWidth="4"
+    android:strokeLineJoin="round" />
+  <path
+    android:pathData="M 54 56 L 54 75"
+    android:strokeColor="#000000"
+    android:strokeWidth="3.2"
+    android:strokeLineCap="round" />
+  <path
+    android:pathData="M 41.4 59.5 L 50.4 60.9"
+    android:strokeColor="#000000"
+    android:strokeWidth="2.1"
+    android:strokeLineCap="round" />
+  <path
+    android:pathData="M 66.6 59.5 L 57.6 60.9"
+    android:strokeColor="#000000"
+    android:strokeWidth="2.1"
+    android:strokeLineCap="round" />
+  <path
+    android:pathData="M 41.4 65.9 L 50.4 67.3"
+    android:strokeColor="#000000"
+    android:strokeWidth="2.1"
+    android:strokeLineCap="round" />
+  <path
+    android:pathData="M 66.6 65.9 L 57.6 67.3"
+    android:strokeColor="#000000"
+    android:strokeWidth="2.1"
+    android:strokeLineCap="round" />
+  </group>
+</vector>
