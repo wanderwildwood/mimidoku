@@ -42,10 +42,22 @@ data class SettingRow(
 fun SettingsScreen(
     rows: List<SettingRow>,
     onClose: () -> Unit,
+    onAbout: () -> Unit,
     onRowClick: (SettingRow) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        ScreenTopBar(title = "Preferences", onClose = onClose)
+        ScreenTopBar(
+            title = "Settings",
+            onClose = onClose,
+            trailing = {
+                Icon(
+                    imageVector = Icons.Info,
+                    contentDescription = "About",
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp).clickable(onClick = onAbout),
+                )
+            },
+        )
         LazyColumn(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
             items(rows, key = { it.key }) { row ->
                 SettingLine(row = row, onClick = { onRowClick(row) })

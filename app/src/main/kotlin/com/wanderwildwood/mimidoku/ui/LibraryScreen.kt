@@ -66,7 +66,7 @@ fun LibraryScreen(
             trailing = {
                 Icon(
                     imageVector = Icons.Settings,
-                    contentDescription = "Preferences",
+                    contentDescription = "Settings",
                     tint = Color.Black,
                     modifier = Modifier.size(24.dp).clickable(onClick = onSettingsClick),
                 )

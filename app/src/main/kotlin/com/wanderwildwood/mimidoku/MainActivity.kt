@@ -652,9 +652,9 @@ private fun Mimidoku() {
                     SettingRow("rewind", "Auto rewind", "${preferences.autoRewindSeconds} seconds"),
                     SettingRow("sleep", "Sleep timer duration", "${preferences.sleepMinutes} minutes"),
                     SettingRow("shake", "Shake sensitivity", preferences.shake.label),
-                    SettingRow("about", "About", null),
                 ),
                 onClose = { screen = Screen.Library },
+                onAbout = { showAbout = true },
                 onRowClick = { row ->
                     when (row.key) {
                         "folders" -> screen = Screen.Folders
@@ -663,7 +663,6 @@ private fun Mimidoku() {
                         "rewind" -> editing = Editing.AutoRewind
                         "sleep" -> editing = Editing.Sleep
                         "shake" -> editing = Editing.Shake
-                        "about" -> showAbout = true
                     }
                 },
             )
