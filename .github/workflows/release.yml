@@ -117,4 +117,5 @@ jobs:
             mimidoku-*.apk.sha256
             mimidoku.apk
             mimidoku.apk.sha256
+          body_path: .github/release-body.md
           generate_release_notes: true
