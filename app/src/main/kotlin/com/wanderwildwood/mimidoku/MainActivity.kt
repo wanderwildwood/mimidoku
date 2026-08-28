@@ -637,18 +637,23 @@ private fun Mimidoku() {
         Screen.Settings -> {
             SettingsScreen(
                 rows = listOf(
+                    // How many folders, not a sentence about what the row is for: a row
+                    // earns its second line by saying something that changes.
                     SettingRow(
                         key = "folders",
-                        icon = Icons.Folders,
                         title = "Audiobook folders",
-                        value = "Manage folders scanned for audiobooks",
+                        value = when (grants.size) {
+                            0 -> "None chosen yet"
+                            1 -> "1 folder"
+                            else -> "${grants.size} folders"
+                        },
                     ),
-                    SettingRow("shelving", Icons.Shelving, "Library view", preferences.shelving.label),
-                    SettingRow("skip", Icons.Timelapse, "Skip amount", "${preferences.skipSeconds} seconds"),
-                    SettingRow("rewind", Icons.Rewind, "Auto rewind", "${preferences.autoRewindSeconds} seconds"),
-                    SettingRow("sleep", Icons.Bedtime, "Sleep timer duration", "${preferences.sleepMinutes} minutes"),
-                    SettingRow("shake", Icons.Sparkles, "Shake sensitivity", preferences.shake.label),
-                    SettingRow("about", Icons.Help, "About", null),
+                    SettingRow("shelving", "Library view", preferences.shelving.label),
+                    SettingRow("skip", "Skip amount", "${preferences.skipSeconds} seconds"),
+                    SettingRow("rewind", "Auto rewind", "${preferences.autoRewindSeconds} seconds"),
+                    SettingRow("sleep", "Sleep timer duration", "${preferences.sleepMinutes} minutes"),
+                    SettingRow("shake", "Shake sensitivity", preferences.shake.label),
+                    SettingRow("about", "About", null),
                 ),
                 onClose = { screen = Screen.Library },
                 onRowClick = { row ->
