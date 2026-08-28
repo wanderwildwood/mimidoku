@@ -29,6 +29,20 @@ Sleep timer, playback speed, chapter list, bookmarks, and a shake to keep the ti
 
 Released.
 
+## Getting it, and keeping it
+
+Download <https://github.com/wanderwildwood/mimidoku/releases/latest/download/mimidoku.apk> and
+sideload it. That address always points at the newest release, and every release publishes a
+`.sha256` beside the APK if you would rather check than trust.
+
+For updates without doing this by hand, add this repository to
+[Obtainium](https://github.com/ImranR98/Obtainium):
+
+    https://github.com/wanderwildwood/mimidoku
+
+It will offer each new release as it appears. **The application id is settled** — updates
+install over what you have, keeping your settings and anything the app has stored.
+
 ## Licence
 
 GPL-3.0-only. See [LICENSE](LICENSE).
