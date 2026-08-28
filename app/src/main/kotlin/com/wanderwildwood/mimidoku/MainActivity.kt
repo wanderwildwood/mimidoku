@@ -700,8 +700,21 @@ private fun Mimidoku() {
                     // The hours only exist while the window does. Two rows saying when something
                     // that is switched off starts and ends are two rows of nothing.
                     if (preferences.autoSleep) {
-                        add(SettingRow("autosleepstart", "Starts at", clock(preferences.autoSleepStart)))
-                        add(SettingRow("autosleepend", "Ends at", clock(preferences.autoSleepEnd)))
+                        // One line, two columns, indented under the switch that governs them:
+                        // a start and an end are read together, and they exist only while it is on.
+                        add(
+                            SettingRow(
+                                key = "autosleepstart",
+                                title = "Starts at",
+                                value = clock(preferences.autoSleepStart),
+                                beside = SettingRow(
+                                    key = "autosleepend",
+                                    title = "Ends at",
+                                    value = clock(preferences.autoSleepEnd),
+                                ),
+                                beneath = true,
+                            )
+                        )
                     }
                     add(SettingRow("shake", "Shake sensitivity", preferences.shake.label))
                 },
