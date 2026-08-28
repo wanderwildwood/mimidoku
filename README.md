@@ -27,7 +27,7 @@ one book; a folder of folders is books; a folder of folders of folders is author
 
 Sleep timer, playback speed, chapter list, bookmarks, and a shake to keep the timer going.
 
-Not released yet.
+Released.
 
 ## Licence
 
