@@ -46,6 +46,23 @@ class Preferences(context: Context) {
     var shake: Shake by choice("shake", Shake.High, Shake.entries)
 
     /**
+     * The nightly window, kept as minutes since midnight.
+     *
+     * A reader who listens in bed wants the timer every night and never wants to remember to
+     * press it, so the app presses it for them: a book started between [autoSleepStart] and
+     * [autoSleepEnd] arms the sleep timer itself. Outside those hours nothing happens, because
+     * listening at two in the afternoon is not going to bed.
+     *
+     * Minutes rather than a time: it survives a preferences file as one plain number, it compares
+     * with `<` and `>`, and the window is set in half hours anyway. The default is the one most
+     * people would have chosen -- ten at night until six in the morning -- but it is off until
+     * asked for.
+     */
+    var autoSleep: Boolean by flag("autoSleep", false)
+    var autoSleepStart: Int by number("autoSleepStart", 22 * 60)
+    var autoSleepEnd: Int by number("autoSleepEnd", 6 * 60)
+
+    /**
      * How a book should sound. Kept here rather than for the session only: a reader who needs the
      * boost for one quiet recording usually needs it for the next one too, and having to find it
      * again every morning is the sort of thing that makes a setting feel broken.
