@@ -1,0 +1,4 @@
+<resources>
+    <!-- The launcher label. Internally the project is mimidoku, 耳読 - reading by ear. -->
+    <string name="app_name">Audio Reading</string>
+</resources>
