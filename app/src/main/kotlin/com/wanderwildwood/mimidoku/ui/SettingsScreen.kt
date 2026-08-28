@@ -39,6 +39,18 @@ data class SettingRow(
      * "On" underneath it would be the same fact twice.
      */
     val toggle: Boolean? = null,
+    /**
+     * A second setting to share this row, as two columns. For a pair that is only ever read
+     * together - a start and an end - two full rows state one fact twice and put a stack of
+     * other settings between the halves of it.
+     */
+    val beside: SettingRow? = null,
+    /**
+     * Drawn indented, under the row above it, which is the setting that governs it. A setting
+     * that only exists while a switch is on belongs to that switch, and saying so by where it
+     * sits costs nothing and needs no words.
+     */
+    val beneath: Boolean = false,
 )
 
 /**
@@ -69,42 +81,65 @@ fun SettingsScreen(
         )
         LazyColumn(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
             items(rows, key = { it.key }) { row ->
-                SettingLine(row = row, onClick = { onRowClick(row) })
+                SettingLine(row = row, onClick = onRowClick)
             }
         }
     }
 }
 
 @Composable
-private fun SettingLine(row: SettingRow, onClick: () -> Unit) {
+private fun SettingLine(row: SettingRow, onClick: (SettingRow) -> Unit) {
+    if (row.beside != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = indent(row), end = 16.dp, bottom = 25.5.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            // Each half takes its own press: they are two settings, drawn as one line because
+            // that is how they are read.
+            Label(row, Modifier.weight(1f).clickable { onClick(row) })
+            Label(row.beside, Modifier.weight(1f).clickable { onClick(row.beside) })
+        }
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(start = 16.dp, end = 16.dp, bottom = 25.5.dp),
+            .clickable { onClick(row) }
+            .padding(start = indent(row), end = 16.dp, bottom = 25.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = row.title,
-                fontSize = 19.5.sp,
-                lineHeight = 24.sp,
-                fontWeight = FontWeight.Normal,
-                color = Color.Black,
-            )
-            if (row.value != null) {
-                Text(
-                    text = row.value,
-                    fontSize = 17.5.sp,
-                    lineHeight = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color.Black,
-                )
-            }
-        }
+        Label(row, Modifier.weight(1f))
         if (row.toggle != null) {
             Spacer(modifier = Modifier.width(16.dp))
             Switch(on = row.toggle)
+        }
+    }
+}
+
+/** Where a row starts: indented if it belongs to the setting above it. */
+private fun indent(row: SettingRow) = if (row.beneath) 32.dp else 16.dp
+
+/** What a setting is called, over what it is set to. */
+@Composable
+private fun Label(row: SettingRow, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = row.title,
+            fontSize = 19.5.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.Black,
+        )
+        if (row.value != null) {
+            Text(
+                text = row.value,
+                fontSize = 17.5.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.Black,
+            )
         }
     }
 }
