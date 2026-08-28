@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 /** One preference: what it is called, what it is set to, and what it looks like. */
 data class SettingRow(
     val key: String,
-    val icon: ImageVector,
     val title: String,
     /** What it is currently set to, or a sentence saying what the row does. Null for About. */
     val value: String?,
@@ -64,13 +63,6 @@ private fun SettingLine(row: SettingRow, onClick: () -> Unit) {
             .padding(start = 16.dp, end = 16.dp, bottom = 25.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = row.icon,
-            contentDescription = null,
-            tint = Color.Black,
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(modifier = Modifier.width(16.dp))
         Column {
             Text(
                 text = row.title,
