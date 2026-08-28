@@ -153,13 +153,6 @@ fun ConfirmDialog(
     }
 }
 
-/** One fact about the app, with the thing it is about beside it. */
-data class AboutLine(
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val title: String,
-    val value: String,
-)
-
 /**
  * What this is and what it is built out of.
  *
@@ -168,36 +161,43 @@ data class AboutLine(
  * is a line of text.
  */
 @Composable
-fun AboutDialog(lines: List<AboutLine>, onDismiss: () -> Unit) {
+fun AboutDialog(version: String, onDismiss: () -> Unit) {
     DialogCard(onDismiss = onDismiss) {
         DialogTitle("About")
-        Spacer(modifier = Modifier.height(26.dp))
-        lines.forEach { line ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 14.dp, bottom = 22.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = line.icon,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(modifier = Modifier.width(17.dp))
-                Column {
-                    Text(text = line.title, fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.Black)
-                    Text(text = line.value, fontSize = 17.5.sp, lineHeight = 22.sp, color = Color.Black)
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(13.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        AboutText("Audio Reading $version")
+
+        Spacer(modifier = Modifier.height(12.dp))
+        AboutText("No permissions beyond the folders you pick. No network.")
+
+        Spacer(modifier = Modifier.height(12.dp))
+        AboutText("GNU General Public License v3")
+        AboutText("Lato \u2014 SIL Open Font License 1.1")
+        AboutText("Material Symbols \u2014 Apache License 2.0")
+
+        Spacer(modifier = Modifier.height(12.dp))
+        AboutText("github.com/wanderwildwood/mimidoku")
+
+        Spacer(modifier = Modifier.height(20.dp))
         Row(
             modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            DialogAction("OK", onDismiss)
+            DialogAction("Close", onDismiss)
         }
     }
+}
+
+@Composable
+private fun AboutText(text: String) {
+    Text(
+        text = text,
+        fontSize = 16.sp,
+        lineHeight = 21.sp,
+        color = Color.Black,
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp),
+    )
 }
 
 /** One of a handful of named options, chosen and closed. */

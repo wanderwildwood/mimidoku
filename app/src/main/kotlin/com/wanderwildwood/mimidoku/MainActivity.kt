@@ -52,7 +52,6 @@ import com.wanderwildwood.mimidoku.ui.Playback
 import com.wanderwildwood.mimidoku.ui.PlaybackTools
 import com.wanderwildwood.mimidoku.ui.PlayerScreen
 import com.wanderwildwood.mimidoku.ui.AboutDialog
-import com.wanderwildwood.mimidoku.ui.AboutLine
 import com.wanderwildwood.mimidoku.ui.ChoiceDialog
 import com.wanderwildwood.mimidoku.ui.ConfirmDialog
 import com.wanderwildwood.mimidoku.ui.Icons
@@ -673,11 +672,7 @@ private fun Mimidoku() {
 
     if (showAbout) {
         AboutDialog(
-            lines = listOf(
-                AboutLine(Icons.Version, "App version", BuildConfig.VERSION_NAME),
-                AboutLine(Icons.Licences, "Lato", "SIL Open Font License 1.1"),
-                AboutLine(Icons.Licences, "Material Symbols", "Apache License 2.0"),
-            ),
+            version = BuildConfig.VERSION_NAME,
             onDismiss = { showAbout = false },
         )
     }
