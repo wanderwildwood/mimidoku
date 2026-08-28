@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Headphones, drawn rather than borrowed.
+
+  The launcher on this device lists apps by name and shows no icons at all, so this exists for the
+  places that do want one: another launcher, a notification, an updater's list. It is one shape at
+  one weight, black on white, because that is all a sixteen-grey panel can render honestly.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- The band over the top, stopping where the earcups begin. -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M 30,66 V 54 A 24,24 0 0 1 78,54 V 66" />
+
+    <!-- The earcups. Rounded because every real pair is. -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M 24,62 h 8 a 4,4 0 0 1 4,4 v 16 a 4,4 0 0 1 -4,4 h -8 a 4,4 0 0 1 -4,-4 v -16 a 4,4 0 0 1 4,-4 z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M 76,62 h 8 a 4,4 0 0 1 4,4 v 16 a 4,4 0 0 1 -4,4 h -8 a 4,4 0 0 1 -4,-4 v -16 a 4,4 0 0 1 4,-4 z" />
+</vector>
