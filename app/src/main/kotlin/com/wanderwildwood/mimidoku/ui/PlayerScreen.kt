@@ -163,12 +163,14 @@ fun PlayerScreen(
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             val ink = if (locked) Dimmed else Color.Black
             if (playback.author != null) {
-                // The same size as the chapter line below the title, and bold against the
-                // italic title between them, so the block reads as a name over a work rather
-                // than three lines of the same weight. The old player set both from one style.
+                // Author and chapter are one size - the old player set both from a single
+                // style - with the author bold against the italic title between them, so the
+                // block reads as a name over a work rather than three lines of one weight.
+                // Measured against that player on the phone: 24sp lands on its ascender, 23
+                // falls a pixel short.
                 Text(
                     text = playback.author,
-                    fontSize = 23.sp,
+                    fontSize = 24.sp,
                     lineHeight = 29.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = ink,
@@ -198,7 +200,7 @@ fun PlayerScreen(
                 ) {
                     Text(
                         text = playback.chapter,
-                        fontSize = 23.sp,
+                        fontSize = 24.sp,
                         lineHeight = 29.5.sp,
                         fontWeight = FontWeight.Normal,
                         color = ink,
