@@ -214,9 +214,15 @@ private fun Mimidoku() {
     // The sleep timer counts in whole seconds because that is how it is shown. When it runs out it
     // marks the place before pausing, so a reader who fell asleep can find where they stopped
     // following rather than where the audio stopped.
+    //
+    // It counts only while something is playing. The timer is for falling asleep listening, so a
+    // book paused halfway through it should find the same time still on the clock when it starts
+    // again -- not a timer that ran down in a pocket and then paused a book that was already
+    // stopped. The loop keeps running so that resuming picks the count straight back up.
     LaunchedEffect(sleepRemainingMs != null) {
         while (sleepRemainingMs != null) {
             delay(1_000)
+            if (!isPlaying) continue
             val left = (sleepRemainingMs ?: return@LaunchedEffect) - 1_000
             if (left > 0) {
                 sleepRemainingMs = left
