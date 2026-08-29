@@ -18,6 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 /** One marked place, as the list needs it. */
 data class BookmarkRow(
@@ -86,14 +92,28 @@ fun BookmarksScreen(
 
 @Composable
 private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: () -> Unit) {
+    // The row asks, rather than a dialog: one repaint instead of two, and the question is put
+    // in the place the answer belongs. It disarms itself, so a stray tap leaves nothing live
+    // for whoever picks the phone up next.
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (armed) {
+            delay(4000)
+            armed = false
+        }
+    }
+
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 16.dp, end = 27.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = { if (armed) armed = false else onClick() })
+            .padding(start = 16.dp, end = 27.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = bookmark.when_,
+                    text = if (armed) "Remove this mark — tap again" else bookmark.when_,
                     fontSize = 20.sp,
                     lineHeight = 24.sp,
                     color = Color.Black,
@@ -116,9 +136,11 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
         }
         Icon(
             imageVector = Icons.More,
-            contentDescription = "Remove this bookmark",
+            contentDescription = if (armed) "Remove this mark — tap again" else "Remove this mark",
             tint = Color.Black,
-            modifier = Modifier.size(24.dp).clickable(onClick = onDelete),
+            modifier = Modifier
+                .size(24.dp)
+                .clickable { if (armed) onDelete() else armed = true },
         )
     }
 }

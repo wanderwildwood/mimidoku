@@ -53,7 +53,6 @@ import com.wanderwildwood.mimidoku.ui.PlaybackTools
 import com.wanderwildwood.mimidoku.ui.PlayerScreen
 import com.wanderwildwood.mimidoku.ui.AboutDialog
 import com.wanderwildwood.mimidoku.ui.ChoiceDialog
-import com.wanderwildwood.mimidoku.ui.ConfirmDialog
 import com.wanderwildwood.mimidoku.ui.Icons
 import com.wanderwildwood.mimidoku.ui.BookmarkRow
 import com.wanderwildwood.mimidoku.ui.ChapterRow
@@ -142,7 +141,6 @@ private fun Mimidoku() {
     var grants by remember { mutableStateOf(context.contentResolver.persistedUriPermissions.map { it.uri }) }
     var shapes by remember { mutableStateOf<Map<String, TreeShape>>(emptyMap()) }
     var locked by remember { mutableStateOf(false) }
-    var removing by remember { mutableStateOf<Long?>(null) }
     var chaptersOpen by remember { mutableStateOf(false) }
 
     // The controller is the activity's handle on the service's player. It is asynchronous: the
@@ -626,7 +624,7 @@ private fun Mimidoku() {
                         if (at >= 0) controller?.seekTo(at, mark.positionMs)
                         screen = Screen.Player
                     },
-                    onDelete = { row -> removing = row.id },
+                    onDelete = { row -> scope.launch { library.deleteBookmark(row.id) } },
                     onAdd = {
                         val chapter = chapterUri
                         if (chapter != null) {
@@ -743,15 +741,6 @@ private fun Mimidoku() {
         AboutDialog(
             version = BuildConfig.VERSION_NAME,
             onDismiss = { showAbout = false },
-        )
-    }
-
-    removing?.let { id ->
-        ConfirmDialog(
-            title = "Remove this bookmark?",
-            action = "Remove",
-            onDismiss = { removing = null },
-            onConfirm = { scope.launch { library.deleteBookmark(id) } },
         )
     }
 
