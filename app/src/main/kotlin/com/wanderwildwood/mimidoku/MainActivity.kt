@@ -687,6 +687,13 @@ private fun Mimidoku() {
                     add(SettingRow("skip", "Skip amount", "${preferences.skipSeconds} seconds"))
                     add(SettingRow("rewind", "Auto rewind", "${preferences.autoRewindSeconds} seconds"))
                     add(SettingRow("sleep", "Sleep timer duration", "${preferences.sleepMinutes} minutes"))
+                    // Under the duration, because it is the other half of the same thing:
+                    // how long the timer runs, and how hard you have to shake to keep it
+                    // running when it is about to stop on you and you are still awake.
+                    add(SettingRow("shake", "Shake sensitivity", preferences.shake.label))
+                    // Last, with the two hours it governs. It is the one setting here that
+                    // is a standing arrangement rather than a value, and it brings rows of
+                    // its own, so it does not belong in the middle of a list of numbers.
                     add(
                         SettingRow(
                             key = "autosleep",
@@ -714,7 +721,6 @@ private fun Mimidoku() {
                             )
                         )
                     }
-                    add(SettingRow("shake", "Shake sensitivity", preferences.shake.label))
                 },
                 onClose = { screen = Screen.Library },
                 onAbout = { showAbout = true },
