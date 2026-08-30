@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -25,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One folder the reader has granted, and what the app made of it. */
 data class FolderRow(
@@ -80,7 +80,7 @@ fun FoldersScreen(
                 modifier = Modifier.padding(start = 16.dp),
             )
 
-            LazyColumn(modifier = Modifier.weight(1f).padding(top = 36.dp)) {
+            LazyColumnMMD(modifier = Modifier.weight(1f).padding(top = 36.dp)) {
                 items(folders, key = { it.id }) { folder ->
                     FolderLine(folder = folder, onRemove = { onRemove(folder) })
                 }

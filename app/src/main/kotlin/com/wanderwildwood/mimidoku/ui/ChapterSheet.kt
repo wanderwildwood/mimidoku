@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One chapter, as the list shows it: which one it is, what it is called, where it starts. */
 data class ChapterRow(
@@ -75,7 +75,7 @@ fun ChapterSheet(
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(Color.White),
         ) {
-            LazyColumn(
+            LazyColumnMMD(
                 state = listState,
                 contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
             ) {

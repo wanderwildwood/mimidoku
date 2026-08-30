@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /**
  * Search.
@@ -77,7 +77,7 @@ fun SearchScreen(
         // ignoring. Once there is a query it is books that were asked for, and a book takes the
         // same card here as it does on its shelf.
         if (query.isBlank()) {
-            LazyColumn(
+            LazyColumnMMD(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(top = 72.dp),
             ) {
@@ -101,7 +101,7 @@ fun SearchScreen(
                 }
             }
         } else {
-            LazyColumn(
+            LazyColumnMMD(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(start = 7.dp, end = 7.dp, top = 15.dp),
             ) {
