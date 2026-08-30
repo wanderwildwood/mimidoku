@@ -10,6 +10,11 @@ fine way to build something and a poor way to own it. This one starts empty and 
 it needs: [Media3](https://developer.android.com/media/media3) for playback, which is the part
 nobody should write twice.
 
+| | |
+|---|---|
+| ![The library, which is just the folders on the card](screenshots/1-library.png) | ![One book's chapters](screenshots/2-shelf.png) |
+| ![Playing, with the controls a thumb can find](screenshots/3-player.png) | ![Preferences](screenshots/4-preferences.png) |
+
 ## State
 
 It plays. The order of work was deliberate — the parts that are hard to get right and invisible
