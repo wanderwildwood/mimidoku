@@ -1,9 +1,9 @@
-# Audio Reading
+# 耳読 mimidoku — Audio Reading
 
 An audiobook player for the Mudita Kompakt, written from scratch.
 
-Internally the project is **mimidoku** — 耳読, "ear reading": a Japanese coinage for taking in books
-by ear rather than by eye. It names what the reader is doing rather than the machine doing it.
+*Mimidoku* is 耳読, "ear reading" — a Japanese coinage for taking in books by ear rather than by
+eye. It names what the reader is doing rather than the machine doing it.
 
 This is not a fork. The four apps that came before it were forks of other people's work, which is a
 fine way to build something and a poor way to own it. This one starts empty and takes on only what
