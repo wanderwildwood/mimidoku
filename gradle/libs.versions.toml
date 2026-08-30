@@ -9,6 +9,9 @@ activityCompose = "1.10.0"
 composeBom = "2025.09.00"
 
 [libraries]
+# Mudita's own design system, for the list behaviour the stock apps use: a swipe is a
+# discrete jump rather than a smear, with chevrons and a track to move by.
+mmd = { module = "com.mudita:MMD", version = "1.0.2" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }

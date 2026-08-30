@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One marked place, as the list needs it. */
 data class BookmarkRow(
@@ -59,7 +59,7 @@ fun BookmarksScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenTopBar(title = "Bookmark", onClose = onClose)
-            LazyColumn(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
+            LazyColumnMMD(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
                 items(bookmarks, key = { it.id }) { bookmark ->
                     BookmarkLine(
                         bookmark = bookmark,

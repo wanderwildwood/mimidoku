@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -26,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One row in the library: a shelf holding books, or a book itself. */
 data class LibraryRow(
@@ -82,7 +82,7 @@ fun LibraryScreen(
             )
         }
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
+        LazyColumnMMD(modifier = Modifier.weight(1f)) {
             items(rows, key = { it.id }) { row ->
                 ShelfRow(row = row, onClick = { onRowClick(row) })
             }

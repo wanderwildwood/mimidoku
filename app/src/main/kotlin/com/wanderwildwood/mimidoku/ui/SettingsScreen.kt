@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -26,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One preference: what it is called, what it is set to, and what it looks like. */
 data class SettingRow(
@@ -79,7 +79,7 @@ fun SettingsScreen(
                 )
             },
         )
-        LazyColumn(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
+        LazyColumnMMD(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
             items(rows, key = { it.key }) { row ->
                 SettingLine(row = row, onClick = onRowClick)
             }
