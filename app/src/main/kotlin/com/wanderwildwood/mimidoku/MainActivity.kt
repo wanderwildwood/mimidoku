@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.DisposableEffect as ComposeDisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,7 +40,6 @@ import com.wanderwildwood.mimidoku.data.Shelving
 import com.wanderwildwood.mimidoku.library.TreeShape
 import com.wanderwildwood.mimidoku.playback.CoverArt
 import com.wanderwildwood.mimidoku.playback.PlaybackService
-import com.wanderwildwood.mimidoku.playback.ShakeDetector
 import com.wanderwildwood.mimidoku.ui.BookRow
 import com.wanderwildwood.mimidoku.ui.BooksScreen
 import com.wanderwildwood.mimidoku.ui.LibraryRow
@@ -112,7 +110,7 @@ private fun Mimidoku() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val library = remember { LibraryRepository(context) }
-    val preferences = remember { Preferences(context) }
+    val preferences = remember { Preferences.of(context) }
 
     // An hour is written the way the phone writes hours, so that a reader who has set a 24-hour
     // clock is not handed "10:00 PM" by this one app.
@@ -134,7 +132,10 @@ private fun Mimidoku() {
     var editing by remember { mutableStateOf<Editing?>(null) }
     var query by remember { mutableStateOf("") }
     var announcement by remember { mutableStateOf<String?>(null) }
-    var sleepRemainingMs by remember { mutableStateOf<Long?>(null) }
+    // The sleep timer belongs to the service. These are the screen's copy of what it says.
+    var sleepArmed by remember { mutableStateOf(false) }
+    var sleepRemainingMs by remember { mutableStateOf(0L) }
+    var sleepEventId by remember { mutableStateOf(0) }
     var showAbout by remember { mutableStateOf(false) }
     // The granted folders are held by the system, not by the app. This is the app's view of them,
     // refreshed whenever one is added or given up.
@@ -163,6 +164,20 @@ private fun Mimidoku() {
             controller?.let {
                 isPlaying = it.isPlaying
                 position = it.currentPosition
+
+                // The timer's own state, kept by the service. A controller holds a copy of the
+                // session's extras, so reading them here costs nothing across the binder.
+                val extras = it.sessionExtras
+                sleepArmed = extras.getBoolean(PlaybackService.SLEEP_ARMED)
+                sleepRemainingMs = extras.getLong(PlaybackService.SLEEP_REMAINING)
+                val said = extras.getInt(PlaybackService.SLEEP_EVENT_ID)
+                if (said != sleepEventId) {
+                    sleepEventId = said
+                    extras.getString(PlaybackService.SLEEP_EVENT)?.let { word ->
+                        announcement = word
+                    }
+                }
+
                 duration = it.duration.takeIf { d -> d > 0 } ?: 0L
                 chapterUri = it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }
 
@@ -218,65 +233,6 @@ private fun Mimidoku() {
         if (announcement == null) return@LaunchedEffect
         delay(ANNOUNCEMENT_MS)
         announcement = null
-    }
-
-    // The sleep timer counts in whole seconds because that is how it is shown. When it runs out it
-    // marks the place before pausing, so a reader who fell asleep can find where they stopped
-    // following rather than where the audio stopped.
-    //
-    // It counts only while something is playing. The timer is for falling asleep listening, so a
-    // book paused halfway through it should find the same time still on the clock when it starts
-    // again -- not a timer that ran down in a pocket and then paused a book that was already
-    // stopped. The loop keeps running so that resuming picks the count straight back up.
-    LaunchedEffect(sleepRemainingMs != null) {
-        while (sleepRemainingMs != null) {
-            delay(1_000)
-            if (!isPlaying) continue
-            val left = (sleepRemainingMs ?: return@LaunchedEffect) - 1_000
-            if (left > 0) {
-                sleepRemainingMs = left
-            } else {
-                sleepRemainingMs = null
-                val book = playing
-                val chapter = chapterUri
-                if (book != null && chapter != null) {
-                    library.addBookmark(book.uri, chapter, position, automatic = true)
-                }
-                controller?.pause()
-                announcement = "Sleep timer ended"
-            }
-        }
-    }
-
-    // And the timer lets itself on, if the reader has asked for that and it is late enough.
-    //
-    // Starting a book at bedtime and pressing the timer are the same gesture every night, so the
-    // second one is worth not having to remember -- which is the whole of the feature. It fires on
-    // the moment playback starts rather than on a clock of its own: a window that armed the timer
-    // at ten sharp would arm it while the phone sat on a shelf, and the timer only means anything
-    // over a book that is playing.
-    //
-    // A timer already running is left alone, including one the reader has just switched off by
-    // hand and is presumably not wanting back. Nothing is bookmarked here: this is the reader
-    // settling in, not the place they stopped following, and the countdown above already marks
-    // that when it runs out.
-    LaunchedEffect(isPlaying) {
-        if (!isPlaying || sleepRemainingMs != null || !preferences.autoSleep) return@LaunchedEffect
-        if (!withinWindow(preferences.autoSleepStart, preferences.autoSleepEnd)) return@LaunchedEffect
-        sleepRemainingMs = preferences.sleepMinutes * 60_000L
-        announcement = "Sleep timer on"
-    }
-
-    // Listening for a shake costs battery, so it happens only while there is a timer to call off.
-    val shakeSetting = preferences.shake
-    ComposeDisposableEffect(sleepRemainingMs != null, shakeSetting) {
-        if (sleepRemainingMs == null || shakeSetting == Shake.Off) return@ComposeDisposableEffect onDispose { }
-        val detector = ShakeDetector(context, shakeSetting.threshold) {
-            sleepRemainingMs = preferences.sleepMinutes * 60_000L
-            announcement = "Sleep timer restarted"
-        }
-        detector.start()
-        onDispose { detector.stop() }
     }
 
     val pickFolder = rememberLauncherForActivityResult(
@@ -478,7 +434,8 @@ private fun Mimidoku() {
                         isPlaying = isPlaying,
                         announcement = announcement,
                         skipSeconds = preferences.skipSeconds,
-                        sleepRemaining = sleepRemainingMs?.asMinutes(),
+                        sleepArmed = sleepArmed,
+                        sleepRemaining = sleepRemainingMs.takeIf { sleepArmed }?.asMinutes(),
                         volumeBoosted = preferences.volumeBoosted,
                         skipSilence = preferences.skipSilence,
                         locked = locked,
@@ -486,13 +443,7 @@ private fun Mimidoku() {
                     tools = PlaybackTools(
                         onClose = { screen = Screen.Library },
                         onSleepTimer = {
-                            if (sleepRemainingMs != null) {
-                                sleepRemainingMs = null
-                                announcement = "Sleep timer off"
-                            } else {
-                                sleepRemainingMs = preferences.sleepMinutes * 60_000L
-                                announcement = "Sleep timer on"
-                            }
+                            controller?.ask(PlaybackService.SLEEP_TIMER, !sleepArmed)
                         },
                         onVolume = {
                             preferences.volumeBoosted = !preferences.volumeBoosted
@@ -939,24 +890,6 @@ private const val ANNOUNCEMENT_MS = 2_500L
 private fun Long.asMinutes(): String {
     val total = (this / 1000).coerceAtLeast(0)
     return "${total / 60}:${(total % 60).toString().padStart(2, '0')}"
-}
-
-/**
- * Whether the clock is now inside the nightly window, both ends given in minutes since midnight.
- *
- * The window almost always crosses midnight, which is why this is not a comparison. Ten at night
- * until six in the morning is `start > end`, and the hours inside it are the ones at or after
- * start *or* before end -- the opposite of what reading the two numbers in order suggests. A
- * window whose ends are the same hour is no window, and never fires.
- */
-private fun withinWindow(startMinutes: Int, endMinutes: Int): Boolean {
-    val now = Calendar.getInstance()
-    val minutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-    return if (startMinutes <= endMinutes) {
-        minutes >= startMinutes && minutes < endMinutes
-    } else {
-        minutes >= startMinutes || minutes < endMinutes
-    }
 }
 
 /** Minutes since midnight as a moment today, which is all a time formatter will take. */

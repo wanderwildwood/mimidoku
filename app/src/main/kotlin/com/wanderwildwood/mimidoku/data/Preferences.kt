@@ -35,7 +35,7 @@ enum class Shake(val label: String, val threshold: Float) {
  * screen and written about twice a year. Each one writes itself through the moment it changes, so
  * there is no save step to forget.
  */
-class Preferences(context: Context) {
+class Preferences private constructor(context: Context) {
 
     private val prefs = context.getSharedPreferences("mimidoku", Context.MODE_PRIVATE)
 
@@ -44,6 +44,15 @@ class Preferences(context: Context) {
     var autoRewindSeconds: Int by number("autoRewindSeconds", 2)
     var sleepMinutes: Int by number("sleepMinutes", 10)
     var shake: Shake by choice("shake", Shake.High, Shake.entries)
+
+    /**
+     * Whether the sleep timer is on, which is a setting rather than something that happened.
+     *
+     * A reader who wants a timer tonight wanted one last night, so it is remembered: left on, it
+     * is still on when the app is opened again, and running out does not turn it off. The clock is
+     * what resets.
+     */
+    var sleepArmed: Boolean by flag("sleepArmed", false)
 
     /**
      * The nightly window, kept as minutes since midnight.
@@ -87,6 +96,24 @@ class Preferences(context: Context) {
             held = value
             prefs.edit().putBoolean(key, value).apply()
         }
+    }
+
+    companion object {
+        @Volatile
+        private var held: Preferences? = null
+
+        /**
+         * One set of settings per process.
+         *
+         * The screen and the playback service both read these, and each holds its values in
+         * memory rather than going back to the file. Two copies would disagree the moment either
+         * one wrote -- a sleep timer duration changed on the settings screen would never reach the
+         * timer that counts it.
+         */
+        fun of(context: Context): Preferences =
+            held ?: synchronized(this) {
+                held ?: Preferences(context.applicationContext).also { held = it }
+            }
     }
 
     private fun <T : Enum<T>> choice(key: String, default: T, all: List<T>) =
