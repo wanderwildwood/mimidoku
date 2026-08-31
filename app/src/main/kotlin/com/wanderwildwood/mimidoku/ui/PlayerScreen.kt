@@ -51,7 +51,8 @@ data class Playback(
     /** What the last button press did, shown for a moment and then gone. */
     val announcement: String?,
     val skipSeconds: Int,
-    /** How long the sleep timer has left, or null when it is not running. */
+    /** Whether the sleep timer is on at all, and how long is left on it when it is. */
+    val sleepArmed: Boolean,
     val sleepRemaining: String?,
     val volumeBoosted: Boolean,
     val skipSilence: Boolean,
@@ -115,7 +116,7 @@ fun PlayerScreen(
         ) {
             Tool(Icons.Close, "Close", onClick = tools.onClose)
             Tool(
-                icon = if (playback.sleepRemaining != null) Icons.SleepTimerOn else Icons.SleepTimerOff,
+                icon = if (playback.sleepArmed) Icons.SleepTimerOn else Icons.SleepTimerOff,
                 description = "Sleep timer",
                 label = playback.sleepRemaining,
                 enabled = !locked,

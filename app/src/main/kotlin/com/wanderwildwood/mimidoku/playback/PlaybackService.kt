@@ -2,8 +2,10 @@ package com.wanderwildwood.mimidoku.playback
 
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Bundle
+import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
@@ -13,6 +15,13 @@ import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.wanderwildwood.mimidoku.R
+import com.wanderwildwood.mimidoku.data.LibraryRepository
+import com.wanderwildwood.mimidoku.data.Preferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Holds the player for as long as something is listening.
@@ -34,6 +43,27 @@ class PlaybackService : MediaSessionService() {
      */
     private var boost: LoudnessEnhancer? = null
 
+    /**
+     * What the reader last asked for, and the session the effect was built against.
+     *
+     * The screen sends its saved settings the moment it connects, which is the moment the player
+     * was built, and the player does not have an audio session id yet -- it generates one on a
+     * background thread. An answer of "not yet" used to be the end of it: the boost was left off
+     * until the reader noticed and pressed the tool twice. So the wish is kept, and applied again
+     * whenever the session it needs turns up or is replaced.
+     */
+    private var boostWanted = false
+    private var boostSession = C.AUDIO_SESSION_ID_UNSET
+
+    /**
+     * The sleep timer runs here, beside the player it stops, rather than on the screen that shows
+     * it. A screen is something Android may take back at any time; a book playing is not.
+     */
+    private var sleep: SleepTimer? = null
+
+    /** For the one thing the timer has to write down: where the reader stopped following. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     override fun onCreate() {
         super.onCreate()
 
@@ -51,12 +81,37 @@ class PlaybackService : MediaSessionService() {
             )
             // Pause when the headphones are pulled out, instead of continuing on the speaker.
             .setHandleAudioBecomingNoisy(true)
+            // The screen is off for most of what this app is for, and a sleeping processor
+            // is a stopped book. It is also what the accelerometer needs to keep reporting,
+            // which is how the sleep timer is called off in the dark.
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .setSeekBackIncrementMs(SEEK_BACK_MS)
             .setSeekForwardIncrementMs(SEEK_FORWARD_MS)
             .build()
 
         player = exoPlayer
         session = MediaSession.Builder(this, exoPlayer).setCallback(Commands()).build()
+
+        val library = LibraryRepository(this)
+        val timer = SleepTimer(
+            context = this,
+            preferences = Preferences.of(this),
+            player = exoPlayer,
+            onChanged = ::publishSleep,
+            onEnded = { chapterUri, positionMs ->
+                scope.launch {
+                    val book = library.bookOfChapter(chapterUri) ?: return@launch
+                    library.addBookmark(book.uri, chapterUri, positionMs, automatic = true)
+                }
+            },
+        )
+        sleep = timer
+        publishSleep()
+
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) = applyBoost()
+            override fun onIsPlayingChanged(isPlaying: Boolean) = timer.onPlayingChanged(isPlaying)
+        })
 
         // Media3's own notification icon is a musical note, and it is what the home screen
         // shows beside whatever is playing. A book is not music.
@@ -85,6 +140,7 @@ class PlaybackService : MediaSessionService() {
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                         .add(SessionCommand(SKIP_SILENCE, Bundle.EMPTY))
                         .add(SessionCommand(VOLUME_BOOST, Bundle.EMPTY))
+                        .add(SessionCommand(SLEEP_TIMER, Bundle.EMPTY))
                         .build(),
                 )
                 .build()
@@ -99,6 +155,7 @@ class PlaybackService : MediaSessionService() {
             when (command.customAction) {
                 SKIP_SILENCE -> player?.skipSilenceEnabled = on
                 VOLUME_BOOST -> setBoost(on)
+                SLEEP_TIMER -> sleep?.arm(on)
                 else -> return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -106,18 +163,55 @@ class PlaybackService : MediaSessionService() {
     }
 
     /**
+     * What the screen needs to draw the sleep timer, published rather than asked for.
+     *
+     * The screen holds none of this. It reads the extras its controller already keeps a copy of,
+     * in the same half-second loop it reads the position, so a screen that has just been opened
+     * onto a book that has been playing for an hour shows the right clock immediately.
+     */
+    private fun publishSleep() {
+        val timer = sleep ?: return
+        session?.setSessionExtras(
+            Bundle().apply {
+                putBoolean(SLEEP_ARMED, timer.armed)
+                putLong(SLEEP_REMAINING, timer.remainingMs)
+                putString(SLEEP_EVENT, timer.event)
+                putInt(SLEEP_EVENT_ID, timer.eventId)
+            }
+        )
+    }
+
+    private fun setBoost(on: Boolean) {
+        boostWanted = on
+        applyBoost()
+    }
+
+    /**
      * A gain of a few decibels, which is what "boost" is worth for a quietly mastered audiobook.
      * More than this and speech starts to clip rather than get clearer.
+     *
+     * An effect belongs to one audio session, so a new session means a new effect: the old one
+     * would be quietly boosting something that no longer plays. Nothing here is fatal -- a device
+     * may simply not offer the effect -- but a failure says so in the log rather than leaving a
+     * reader to wonder why the tool does nothing.
      */
-    private fun setBoost(on: Boolean) {
+    private fun applyBoost() {
         val id = player?.audioSessionId ?: return
-        if (boost == null && id != C.AUDIO_SESSION_ID_UNSET) {
-            boost = runCatching { LoudnessEnhancer(id) }.getOrNull()
+        if (id == C.AUDIO_SESSION_ID_UNSET) return
+        if (id != boostSession) {
+            runCatching { boost?.release() }
+            boost = null
+            boostSession = id
+        }
+        if (boost == null) {
+            boost = runCatching { LoudnessEnhancer(id) }
+                .onFailure { Log.w(TAG, "No loudness enhancer on session $id", it) }
+                .getOrNull()
         }
         runCatching {
-            boost?.setTargetGain(if (on) BOOST_MILLIBELS else 0)
-            boost?.enabled = on
-        }
+            boost?.setTargetGain(if (boostWanted) BOOST_MILLIBELS else 0)
+            boost?.enabled = boostWanted
+        }.onFailure { Log.w(TAG, "Loudness enhancer refused", it) }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -134,8 +228,12 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        sleep?.release()
+        sleep = null
+        scope.cancel()
         runCatching { boost?.release() }
         boost = null
+        boostSession = C.AUDIO_SESSION_ID_UNSET
         session?.release()
         player?.release()
         session = null
@@ -144,10 +242,19 @@ class PlaybackService : MediaSessionService() {
     }
 
     companion object {
+        private const val TAG = "PlaybackService"
+
         /** Named commands the screen may send. The Bundle carries a single boolean, [ON]. */
         const val SKIP_SILENCE = "com.wanderwildwood.mimidoku.SKIP_SILENCE"
         const val VOLUME_BOOST = "com.wanderwildwood.mimidoku.VOLUME_BOOST"
+        const val SLEEP_TIMER = "com.wanderwildwood.mimidoku.SLEEP_TIMER"
         const val ON = "on"
+
+        /** What the session says about the sleep timer, for the screen to read. */
+        const val SLEEP_ARMED = "sleepArmed"
+        const val SLEEP_REMAINING = "sleepRemaining"
+        const val SLEEP_EVENT = "sleepEvent"
+        const val SLEEP_EVENT_ID = "sleepEventId"
 
         /**
          * Asymmetric on purpose: going back is usually "I missed that", which needs enough to
