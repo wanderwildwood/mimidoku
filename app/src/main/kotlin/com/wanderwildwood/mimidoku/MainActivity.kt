@@ -321,12 +321,51 @@ private fun Mimidoku() {
             .takeIf { it >= 0 }
             ?: parts.indexOfFirst { it.chapterUri == inPart }.coerceAtLeast(0)
     }
+    /**
+     * Does something to the player, handing it the book first if it has never been given one.
+     *
+     * A book offered back after a cold start is known to the app and unknown to the player, and
+     * everything that moves through a book asks the player - so pressing any of it did nothing at
+     * all until play had been pressed once. The first press now loads the book and then does what
+     * it was pressed for. Loading it earlier, on arrival at the screen, would work as well and put
+     * a paused notification in the shade for a book nobody has touched yet.
+     */
+    val withPlayer = { action: (MediaController) -> Unit ->
+        val c = controller
+        val book = playing
+        if (c != null && book != null) {
+            if (c.mediaItemCount == 0 && chapters.isNotEmpty()) {
+                scope.launch {
+                    c.load(context, chapters, book)
+                    action(c)
+                }
+            } else {
+                action(c)
+            }
+        }
+        Unit
+    }
+
     val goToPart = { index: Int ->
         parts.getOrNull(index)?.let { part ->
             val at = chapters.indexOfFirst { it.uri == part.chapterUri }
-            if (at >= 0) controller?.seekTo(at, part.startMs)
+            if (at >= 0) withPlayer { it.seekTo(at, part.startMs) }
         }
         Unit
+    }
+
+    // Where the reader is, and how long the part is, as the screen should say it: from the player
+    // when it holds the book, and from what was written down when it does not. Without this a
+    // book that has not been started reads 0:00:00 of 0:00:00 however far into it the reader is,
+    // and the bar sits at the beginning of a book they are eleven hours through.
+    val shownPosition = if (chapterUri != null) position else playing?.positionMs ?: 0L
+    val shownDuration = if (chapterUri != null && duration > 0) {
+        duration
+    } else {
+        // A book that has never been started has no chapter written down, and pressing play would
+        // start it at the first one, so that is the length to show.
+        val part = chapters.firstOrNull { it.uri == playing?.currentChapterUri } ?: chapters.firstOrNull()
+        part?.durationMs?.coerceAtLeast(0) ?: 0L
     }
 
     val nowPlaying = playing?.let {
@@ -355,18 +394,6 @@ private fun Mimidoku() {
                 c.play()
             }
         }
-    }
-
-    // A book offered back after the app was closed has not been handed to the player yet. On the
-    // library that does not matter - the strip asks the database where the reader was - but the
-    // playback screen is the player's own screen, and until it has the book every control on it
-    // does nothing at all. So opening it hands the book over, without starting it.
-    LaunchedEffect(screen, controller, playing, chapters) {
-        val c = controller ?: return@LaunchedEffect
-        val book = playing ?: return@LaunchedEffect
-        if (screen != Screen.Player || chapters.isEmpty()) return@LaunchedEffect
-        if (c.mediaItemCount > 0) return@LaunchedEffect
-        c.load(context, chapters, book)
     }
 
     // The hardware key means exactly what that screen's cross means, and a reader who presses it
@@ -445,8 +472,8 @@ private fun Mimidoku() {
                         author = book.shownAuthor(),
                         title = book.shownTitle(),
                         chapter = if (parts.size > 1) parts.getOrNull(atPart)?.title.orEmpty() else "",
-                        positionMs = position,
-                        durationMs = duration,
+                        positionMs = shownPosition,
+                        durationMs = shownDuration,
                         isPlaying = isPlaying,
                         announcement = announcement,
                         skipSeconds = preferences.skipSeconds,
@@ -485,20 +512,20 @@ private fun Mimidoku() {
                         // reader is already at the start - which is how every other player
                         // behaves and what the button is reached for in the dark.
                         onPreviousChapter = {
-                            val into = position - (parts.getOrNull(atPart)?.startMs ?: 0L)
+                            val into = shownPosition - (parts.getOrNull(atPart)?.startMs ?: 0L)
                             goToPart(if (into > RESTART_MS || atPart <= 0) atPart else atPart - 1)
                         },
                         onRewind = {
                             val skip = preferences.skipSeconds * 1_000L
-                            controller?.let { it.seekTo((it.currentPosition - skip).coerceAtLeast(0)) }
+                            withPlayer { it.seekTo((it.currentPosition - skip).coerceAtLeast(0)) }
                         },
                         onPlayPause = playPause,
                         onForward = {
                             val skip = preferences.skipSeconds * 1_000L
-                            controller?.let { it.seekTo(it.currentPosition + skip) }
+                            withPlayer { it.seekTo(it.currentPosition + skip) }
                         },
                         onNextChapter = { goToPart((atPart + 1).coerceAtMost(parts.size - 1)) },
-                        onSeekTo = { controller?.seekTo(it) },
+                        onSeekTo = { to -> withPlayer { it.seekTo(to) } },
                     ),
                     chapters = Chapters(
                         // Where a chapter begins is where everything before it ended, which is
@@ -588,7 +615,7 @@ private fun Mimidoku() {
                     onGoTo = { row ->
                         val mark = marks.firstOrNull { it.id == row.id } ?: return@BookmarksScreen
                         val at = chapters.indexOfFirst { it.uri == mark.chapterUri }
-                        if (at >= 0) controller?.seekTo(at, mark.positionMs)
+                        if (at >= 0) withPlayer { it.seekTo(at, mark.positionMs) }
                         screen = Screen.Player
                     },
                     onDelete = { row -> scope.launch { library.deleteBookmark(row.id) } },
