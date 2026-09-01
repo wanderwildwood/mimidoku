@@ -74,6 +74,9 @@ android {
     named("main") {
       kotlin.srcDir("src/main/kotlin")
     }
+    named("test") {
+      kotlin.srcDir("src/test/kotlin")
+    }
   }
 }
 
