@@ -226,6 +226,10 @@ private fun Mimidoku() {
         if (playing != null) return@LaunchedEffect
         playing = book
         chapters = library.chaptersOf(book.uri)
+        // Its marks as well as its files. Without them a book that is one long recording is
+        // offered back with no chapters at all, and the way into its chapter list - the line
+        // naming what is playing - is not drawn.
+        marks = library.marksOf(book.uri)
     }
 
     // An announcement is a thing the app said, not a thing it is saying. It goes away on its own.
@@ -351,6 +355,18 @@ private fun Mimidoku() {
                 c.play()
             }
         }
+    }
+
+    // A book offered back after the app was closed has not been handed to the player yet. On the
+    // library that does not matter - the strip asks the database where the reader was - but the
+    // playback screen is the player's own screen, and until it has the book every control on it
+    // does nothing at all. So opening it hands the book over, without starting it.
+    LaunchedEffect(screen, controller, playing, chapters) {
+        val c = controller ?: return@LaunchedEffect
+        val book = playing ?: return@LaunchedEffect
+        if (screen != Screen.Player || chapters.isEmpty()) return@LaunchedEffect
+        if (c.mediaItemCount > 0) return@LaunchedEffect
+        c.load(context, chapters, book)
     }
 
     // The hardware key means exactly what that screen's cross means, and a reader who presses it
@@ -860,6 +876,24 @@ private suspend fun MediaController.play(
     chapters: List<ChapterEntity>,
     book: BookEntity,
 ) {
+    load(context, chapters, book)
+    playWhenReady = true
+}
+
+/**
+ * Hands the player a book and leaves it standing there.
+ *
+ * Until this has happened the player holds nothing, and everything on the playback screen that
+ * moves through a book — the bar, the two skips, the chapter list — is asking an empty player to
+ * move and being answered with nothing, over a screen that reads 0:00:00 of 0:00:00 because that
+ * is all an empty player can say. Loading the book without starting it makes the screen true and
+ * the controls work; pressing play stays the reader's to do.
+ */
+private suspend fun MediaController.load(
+    context: android.content.Context,
+    chapters: List<ChapterEntity>,
+    book: BookEntity,
+) {
     // Only the artwork is set here. Everything else the notification shows - the title, the
     // author - is read out of the file itself, and a field set on the item would override it.
     val cover = CoverArt.forBook(context, chapters.firstOrNull()?.uri)
@@ -880,7 +914,6 @@ private suspend fun MediaController.play(
     val resumeAt = chapters.indexOfFirst { it.uri == book.currentChapterUri }
     if (resumeAt >= 0) seekTo(resumeAt, book.positionMs)
     prepare()
-    playWhenReady = true
 }
 
 /** Long enough to read a three-word sentence, short enough not to become part of the screen. */
