@@ -221,7 +221,9 @@ fun PlayerScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(44.dp))
+        // The bar is drawn where it always was: what stands above and below it gives up exactly
+        // what the bar took for somewhere to be pressed.
+        Spacer(modifier = Modifier.height(44.dp - (SeekBarHeight - KnobSize) / 2))
 
         SeekBar(
             positionMs = playback.positionMs,
@@ -230,7 +232,7 @@ fun PlayerScreen(
             onSeekTo = transport.onSeekTo,
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(20.dp - (SeekBarHeight - KnobSize) / 2))
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -392,7 +394,10 @@ private fun SeekBar(positionMs: Long, durationMs: Long, enabled: Boolean, onSeek
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .height(KnobSize)
+            // Sixteen dense pixels of line is something to look at, not something to catch: a
+            // drag has to start inside it, and a thumb on a bus does not land that accurately.
+            // The strip that takes the press is as tall as a button; the line stays a line.
+            .height(SeekBarHeight)
             .onSizeChanged { width = it.width }
             .pointerInput(durationMs, width) {
                 detectHorizontalDragGestures { change, _ -> seek(change.position.x) }
@@ -423,6 +428,9 @@ private fun SeekBar(positionMs: Long, durationMs: Long, enabled: Boolean, onSeek
 }
 
 private val KnobSize = 16.dp
+
+/** How much of the screen listens for the bar. Twice a fingertip, and all of it pressable. */
+private val SeekBarHeight = 44.dp
 
 private val TrackGrey = Color(0xFFB2B2B2)
 
