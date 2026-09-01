@@ -27,7 +27,10 @@ class DurationReader(private val context: Context) {
         while (true) {
             coroutineContext.ensureActive()
             val batch = dao.chaptersWithoutDuration(BATCH)
-            if (batch.isEmpty()) return@withContext
+            if (batch.isEmpty()) {
+                reread()
+                return@withContext
+            }
             val touched = mutableSetOf<String>()
             for (chapter in batch) {
                 coroutineContext.ensureActive()
@@ -51,6 +54,25 @@ class DurationReader(private val context: Context) {
             }
             touched.forEach { dao.refreshBookDuration(it) }
         }
+    }
+
+    /**
+     * Asks the books that are already known for their chapters again, once.
+     *
+     * A file is only ever opened for its marks when its length is read, which happens the first
+     * time it is seen — so when this app learns to read a kind of chapter list it could not read
+     * before, every book already in the library would go on showing none. [Preferences.marksPass]
+     * says which reading a library has had; a library behind the current one is read again, and
+     * only the books that have nothing are opened.
+     */
+    private suspend fun reread() {
+        val preferences = Preferences.of(context)
+        if (preferences.marksPass >= MARKS_PASS) return
+        for (chapter in dao.singleChaptersWithoutMarks()) {
+            coroutineContext.ensureActive()
+            marks(chapter, single = true)
+        }
+        preferences.marksPass = MARKS_PASS
     }
 
     /**
@@ -112,5 +134,8 @@ class DurationReader(private val context: Context) {
     private companion object {
         /** Small enough that stopping mid-library loses a second of work, not a minute of it. */
         const val BATCH = 40
+
+        /** Raised whenever the reading of chapter lists changes, which asks every book again. */
+        const val MARKS_PASS = 1
     }
 }
