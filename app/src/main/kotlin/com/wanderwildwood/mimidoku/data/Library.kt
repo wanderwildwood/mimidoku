@@ -205,6 +205,20 @@ interface LibraryDao {
     @Query("SELECT COUNT(*) FROM marks WHERE bookUri = :bookUri")
     suspend fun markCount(bookUri: String): Int
 
+    /**
+     * The one file of every book that is one file and has no marks against it.
+     *
+     * Marks are read when a file's length is, which happens once and never again — so a book
+     * already in the library when the app learnt to read a new kind of chapter list would keep
+     * its empty list for ever. This is how those books are found and asked a second time.
+     */
+    @Query(
+        "SELECT * FROM chapters WHERE bookUri IN " +
+            "(SELECT uri FROM books WHERE chapterCount = 1) " +
+            "AND bookUri NOT IN (SELECT bookUri FROM marks)",
+    )
+    suspend fun singleChaptersWithoutMarks(): List<ChapterEntity>
+
     @Insert
     suspend fun addMarks(marks: List<MarkEntity>)
 

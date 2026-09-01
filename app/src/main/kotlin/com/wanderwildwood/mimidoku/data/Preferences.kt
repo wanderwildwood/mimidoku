@@ -80,6 +80,16 @@ class Preferences private constructor(context: Context) {
     var volumeBoosted: Boolean by flag("volumeBoosted", false)
     var skipSilence: Boolean by flag("skipSilence", false)
 
+    /**
+     * Which reading of chapter lists this library has had.
+     *
+     * Not a setting — nothing on the settings screen shows it. A file is opened for its chapters
+     * once, when its length is read, so when the app learns to read a kind of list it could not
+     * read before, the books already known would keep their empty lists. This is what tells it
+     * to ask them again, and to ask only once.
+     */
+    var marksPass: Int by number("marksPass", 0)
+
     private fun number(key: String, default: Int) = object : ReadWriteProperty<Any?, Int> {
         private var held by mutableStateOf(prefs.getInt(key, default))
         override fun getValue(thisRef: Any?, property: KProperty<*>) = held
