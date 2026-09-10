@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,7 +125,7 @@ private fun indent(row: SettingRow) = if (row.beneath) 32.dp else 16.dp
 @Composable
 private fun Label(row: SettingRow, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Text(
+        TextMMD(
             text = row.title,
             fontSize = 19.5.sp,
             lineHeight = 24.sp,
@@ -133,7 +133,7 @@ private fun Label(row: SettingRow, modifier: Modifier = Modifier) {
             color = Color.Black,
         )
         if (row.value != null) {
-            Text(
+            TextMMD(
                 text = row.value,
                 fontSize = 17.5.sp,
                 lineHeight = 22.sp,

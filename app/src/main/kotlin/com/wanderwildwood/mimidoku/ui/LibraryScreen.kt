@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +74,7 @@ fun LibraryScreen(
         )
 
         if (status != null) {
-            Text(
+            TextMMD(
                 text = status,
                 fontSize = 14.sp,
                 color = Color.Black,
@@ -115,7 +115,7 @@ private fun ShelfRow(row: LibraryRow, onClick: () -> Unit) {
             modifier = Modifier.size(34.dp),
         )
         Spacer(modifier = Modifier.width(18.dp))
-        Text(
+        TextMMD(
             text = row.title,
             fontSize = 24.sp,
             color = Color.Black,

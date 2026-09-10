@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -104,9 +104,9 @@ private fun ChapterLine(chapter: ChapterRow, playing: Boolean, onClick: () -> Un
             .padding(start = 15.dp, end = 15.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "${chapter.number}", fontSize = 20.sp, lineHeight = 24.sp, color = ink)
+        TextMMD(text = "${chapter.number}", fontSize = 20.sp, lineHeight = 24.sp, color = ink)
         Spacer(modifier = Modifier.width(21.dp))
-        Text(
+        TextMMD(
             text = chapter.name,
             fontSize = 20.sp,
             lineHeight = 24.sp,
@@ -114,7 +114,7 @@ private fun ChapterLine(chapter: ChapterRow, playing: Boolean, onClick: () -> Un
             modifier = Modifier.weight(1f),
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = chapter.startsAt, fontSize = 15.sp, lineHeight = 22.sp, color = ink)
+        TextMMD(text = chapter.startsAt, fontSize = 15.sp, lineHeight = 22.sp, color = ink)
     }
 }
 

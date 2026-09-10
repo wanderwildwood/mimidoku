@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -150,7 +150,7 @@ fun PlayerScreen(
             contentAlignment = Alignment.Center,
         ) {
             if (playback.announcement != null) {
-                Text(
+                TextMMD(
                     text = playback.announcement,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
@@ -169,7 +169,7 @@ fun PlayerScreen(
                 // block reads as a name over a work rather than three lines of one weight.
                 // Measured against that player on the phone: 24sp lands on its ascender, 23
                 // falls a pixel short.
-                Text(
+                TextMMD(
                     text = playback.author,
                     fontSize = 24.sp,
                     lineHeight = 29.5.sp,
@@ -178,7 +178,7 @@ fun PlayerScreen(
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
+            TextMMD(
                 text = playback.title,
                 fontSize = 27.5.sp,
                 lineHeight = 34.sp,
@@ -199,7 +199,7 @@ fun PlayerScreen(
                         .clickable(enabled = !locked, onClick = chapters.onOpen),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
+                    TextMMD(
                         text = playback.chapter,
                         fontSize = 24.sp,
                         lineHeight = 29.5.sp,
@@ -311,7 +311,7 @@ private fun Tool(
             modifier = Modifier.size(24.dp).clickable(enabled = enabled, onClick = onClick),
         )
         if (label != null) {
-            Text(
+            TextMMD(
                 text = label,
                 fontSize = 14.sp,
                 lineHeight = 14.sp,
@@ -349,7 +349,7 @@ private fun TransportButton(
             modifier = Modifier.size(size),
         )
         if (label != null) {
-            Text(
+            TextMMD(
                 text = label(),
                 fontSize = 14.sp,
                 lineHeight = 14.sp,
@@ -362,7 +362,7 @@ private fun TransportButton(
 
 @Composable
 private fun Clock(ms: Long, hourDigits: Int, locked: Boolean) {
-    Text(
+    TextMMD(
         text = ms.asClock(hourDigits),
         fontSize = 20.sp,
         lineHeight = 24.sp,
