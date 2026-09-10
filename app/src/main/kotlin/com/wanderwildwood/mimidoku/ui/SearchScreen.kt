@@ -15,8 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +67,9 @@ fun SearchScreen(
                 value = query,
                 onValueChange = onQueryChange,
                 singleLine = true,
-                textStyle = TextStyle(fontFamily = Lato, fontWeight = Reading, fontSize = 21.sp, color = Color.Black),
+                // Taken from the theme rather than naming a face here, so this field cannot
+                //  drift away from every other piece of text in the app.
+                textStyle = LocalTextStyle.current.copy(fontSize = 21.sp, color = Color.Black),
                 cursorBrush = SolidColor(Color.Black),
                 modifier = Modifier.weight(1f),
             )
@@ -90,7 +93,7 @@ fun SearchScreen(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
+                        TextMMD(
                             text = shelf.title,
                             fontSize = 21.sp,
                             color = Color.Black,

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +63,7 @@ fun FoldersScreen(
                     modifier = Modifier.size(24.dp).clickable(onClick = onBack),
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
+                TextMMD(
                     text = "Scan now",
                     fontSize = 17.5.sp,
                     lineHeight = 22.sp,
@@ -72,7 +72,7 @@ fun FoldersScreen(
                 )
             }
 
-            Text(
+            TextMMD(
                 text = "Audiobook folders",
                 fontSize = 24.sp,
                 lineHeight = 32.sp,
@@ -105,7 +105,7 @@ fun FoldersScreen(
                 modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(text = "Add", fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.White)
+            TextMMD(text = "Add", fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.White)
         }
     }
 }
@@ -123,7 +123,7 @@ private fun FolderLine(folder: FolderRow, onRemove: () -> Unit) {
             modifier = Modifier.size(24.dp),
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Text(
+        TextMMD(
             text = folder.name,
             fontSize = 21.sp,
             color = Color.Black,

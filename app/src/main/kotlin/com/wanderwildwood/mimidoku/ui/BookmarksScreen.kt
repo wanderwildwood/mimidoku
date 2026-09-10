@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -112,7 +112,7 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                TextMMD(
                     text = if (armed) "Remove this mark — tap again" else bookmark.when_,
                     fontSize = 20.sp,
                     lineHeight = 24.sp,
@@ -132,7 +132,7 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
                     )
                 }
             }
-            Text(text = bookmark.position, fontSize = 17.5.sp, lineHeight = 22.sp, color = Color.Black)
+            TextMMD(text = bookmark.position, fontSize = 17.5.sp, lineHeight = 22.sp, color = Color.Black)
         }
         Icon(
             imageVector = Icons.More,

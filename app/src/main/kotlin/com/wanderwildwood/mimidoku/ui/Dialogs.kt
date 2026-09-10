@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,7 +54,7 @@ private fun DialogCard(onDismiss: () -> Unit, content: @Composable () -> Unit) {
 
 @Composable
 private fun DialogTitle(text: String) {
-    Text(text = text, fontSize = 24.sp, lineHeight = 32.sp, color = Color.Black)
+    TextMMD(text = text, fontSize = 24.sp, lineHeight = 32.sp, color = Color.Black)
 }
 
 /**
@@ -98,7 +98,7 @@ fun StepperDialog(
                     .size(24.dp)
                     .clickable { change((value - range.step).coerceAtLeast(range.first)) },
             )
-            Text(text = label(value), fontSize = 29.sp, lineHeight = 36.sp, color = Color.Black)
+            TextMMD(text = label(value), fontSize = 29.sp, lineHeight = 36.sp, color = Color.Black)
             Icon(
                 imageVector = Icons.Plus,
                 contentDescription = "More",
@@ -188,7 +188,7 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
 
 @Composable
 private fun AboutText(text: String) {
-    Text(
+    TextMMD(
         text = text,
         fontSize = 16.sp,
         lineHeight = 21.sp,
@@ -220,7 +220,7 @@ fun <T> ChoiceDialog(
             ) {
                 Radio(selected = option == chosen)
                 Spacer(modifier = Modifier.width(28.dp))
-                Text(text = label(option), fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.Black)
+                TextMMD(text = label(option), fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.Black)
             }
         }
         Spacer(modifier = Modifier.height(35.dp))
@@ -251,7 +251,7 @@ private fun Radio(selected: Boolean) {
 
 @Composable
 private fun DialogAction(text: String, onClick: () -> Unit) {
-    Text(
+    TextMMD(
         text = text,
         fontSize = 17.5.sp,
         lineHeight = 22.sp,
