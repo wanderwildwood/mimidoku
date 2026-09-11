@@ -29,6 +29,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.wanderwildwood.mimidoku.R
 
 /**
  * The shell every dialog here is built in: a white card over a dimmed screen.
@@ -176,6 +182,9 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         AboutText("github.com/wanderwildwood/mimidoku")
 
+        Spacer(modifier = Modifier.height(14.dp))
+        Llama()
+
         Spacer(modifier = Modifier.height(20.dp))
         Row(
             modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
@@ -258,4 +267,40 @@ private fun DialogAction(text: String, onClick: () -> Unit) {
         color = Color.Black,
         modifier = Modifier.clickable(onClick = onClick),
     )
+}
+
+/**
+ * A llama at the foot of the About, which opens the page a donation goes to.
+ *
+ * Three words rather than an address: a verb and an object, so what happens when you press
+ * them is not a surprise even though the page is not named. The drawing is his own, and it is
+ * ink rather than an emoji, which is a colour glyph and reaches the panel as a pale smudge.
+ *
+ * The Kompakt may have nothing registered for a web address, so the intent is allowed to fail
+ * quietly rather than take the dialog down with it.
+ */
+@Composable
+private fun Llama() {
+    val context = LocalContext.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://hotspringsllamas.org/donate/")),
+                    )
+                }
+            }
+            .padding(vertical = 4.dp),
+    ) {
+        Image(
+            painter = painterResource(R.drawable.llama),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        AboutText("Feed the llamas")
+    }
 }
