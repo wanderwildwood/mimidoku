@@ -86,7 +86,8 @@ class MainActivity : ComponentActivity() {
 /** Where the reader is. Shallow on purpose: everything here is one step from the library. */
 private sealed interface Screen {
     data object Library : Screen
-    data class Shelf(val name: String) : Screen
+    /** One shelf, or - where [name] is null - the books whose files never said. */
+    data class Shelf(val name: String?) : Screen
     data object Player : Screen
     data object Settings : Screen
     data object Search : Screen
@@ -423,13 +424,21 @@ private fun Mimidoku() {
 
     when (val current = screen) {
         Screen.Library -> {
-            // A shelf is whatever the reader chose to group by. Books that cannot answer — no
-            // author, no genre — are left off rather than filed under a made-up heading.
+            // A shelf is whatever the reader chose to group by. Books that cannot answer -- no
+            // author, no genre -- get one shelf of their own at the end, because a book the app
+            // can see and the reader cannot is worse than a plain heading saying so. It is not a
+            // made-up author: it says the files do not name one. The row is only there when
+            // something is on it, so a tidy library never sees it.
             val shelves = remember(books, preferences.shelving) {
-                books.mapNotNull { it.shelf(preferences.shelving) }
+                val named = books.mapNotNull { it.shelf(preferences.shelving) }
                     .collateIgnoringCase()
                     .sortedWith(String.CASE_INSENSITIVE_ORDER)
                     .map { LibraryRow(title = it, id = it) }
+                if (books.any { it.shelf(preferences.shelving) == null }) {
+                    named + LibraryRow(title = preferences.shelving.unnamed(), id = UNNAMED)
+                } else {
+                    named
+                }
             }
             LibraryScreen(
                 rows = shelves,
@@ -439,7 +448,7 @@ private fun Mimidoku() {
                     else -> null
                 },
                 nowPlaying = nowPlaying,
-                onRowClick = { screen = Screen.Shelf(it.title) },
+                onRowClick = { screen = Screen.Shelf(it.title.takeIf { _ -> it.id != UNNAMED }) },
                 onSearchClick = { query = ""; screen = Screen.Search },
                 onSettingsClick = { screen = Screen.Settings },
                 onNowPlayingClick = { screen = Screen.Player },
@@ -451,12 +460,14 @@ private fun Mimidoku() {
             val shelved = remember(books, current.name, preferences.shelving) {
                 // Matched the same way the shelf was named, or a shelf collated from two
                 // spellings would open holding only the books that used one of them.
-                books.filter { it.shelf(preferences.shelving).equals(current.name, ignoreCase = true) }
-                    .map { it.toRow() }
+                books.filter { book ->
+                    val shelf = book.shelf(preferences.shelving)
+                    if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
+                }.map { it.toRow() }
             }
 
             BooksScreen(
-                shelf = current.name,
+                shelf = current.name ?: preferences.shelving.unnamed(),
                 books = shelved,
                 nowPlaying = nowPlaying,
                 onClose = { screen = Screen.Library },
@@ -916,6 +927,26 @@ private fun List<String>.collateIgnoringCase(): List<String> =
                 )
                 .first().key
         }
+
+/**
+ * The name of the shelf for books that cannot answer.
+ *
+ * Named after what is missing rather than after a person, because that is all the files say.
+ * Status always answers -- a book has either been started or it has not -- so its heading is
+ * there for the compiler and nothing else.
+ */
+private fun Shelving.unnamed(): String = when (this) {
+    Shelving.Author -> "No author"
+    Shelving.Genre -> "No genre"
+    Shelving.Status -> "No status"
+}
+
+/**
+ * The key for that shelf, which is not a name anyone could have.
+ *
+ * A plain heading string would be a real author on the day somebody tags a book "No author".
+ */
+private const val UNNAMED = "\u0000unnamed"
 
 private fun BookEntity.shelf(shelving: Shelving): String? = when (shelving) {
     Shelving.Author -> shownAuthor()
