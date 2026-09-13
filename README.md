@@ -26,11 +26,15 @@ when they work came first, and the screens came last — and all of it is now in
 - [x] The screens — library, shelf, player, search, bookmarks, settings
 
 The library is read through the storage access framework rather than from a path, so it works on
-a card without asking for permission to read everything on the phone. Three layouts are understood
-and a library may be more than one of them at once: audio sitting directly in the chosen folder is
-one book; a folder of folders is books; a folder of folders of folders is authors holding books.
-A book filed deeper than that -- under a series folder, say -- is followed down rather than lost:
-a folder holding audio is the book, and a folder holding none is looked through.
+a card without asking for permission to read everything on the phone. A folder holding audio is a
+book, a folder holding folders is a shelf, and a file loose on a shelf is a book of its own, so a
+folder of folders is books and a folder of folders of folders is authors holding books. A book
+filed deeper than that -- under a series folder, say -- is followed down rather than lost.
+
+The one thing a folder cannot say is what it is: files sitting in the folder you chose are one
+book in chapters to one reader and a shelf of one-file books to the next. So that is asked when a
+folder is added rather than guessed at, and every row on the folders screen says what the scan
+made of it -- which is the first thing worth knowing when a book has not turned up.
 
 A book that arrives as one long recording is read for the chapter marks inside it -- an mp3's own
 chapter frames, an m4b's chapter list -- so thirteen hours still opens as a list of chapters rather
