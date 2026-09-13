@@ -16,8 +16,8 @@ android {
     // The Kompakt runs 28; nothing here needs anything newer.
     minSdk = 28
     targetSdk = 36
-    versionCode = 131
-    versionName = "1.3.1"
+    versionCode = 132
+    versionName = "1.3.2"
   }
 
   // A real keystore in signing/ signs every build type when it is present, so the
@@ -45,6 +45,14 @@ android {
       realSigningConfig?.let { signingConfig = it }
     }
     getByName("release") {
+      // The one thing that differs between a release built here and the one GitHub
+      // publishes: AGP stamps the git revision into META-INF, and the build box works
+      // from an rsync with no .git, so it writes NO_SUPPORTED_VCS_FOUND where the CI
+      // runner writes the commit. Off, so the two have identical contents.
+      vcsInfo {
+        include = false
+      }
+
       // Off on purpose. R8 cannot be signed off from this desk - a release APK that
       // assembles proves nothing about one that runs. Turn it on when there is a
       // Kompakt to install the result on and hear it play a book.
