@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +33,13 @@ data class FolderRow(
     val name: String,
     /** True when the folder turned out to be authors holding books rather than books directly. */
     val byAuthor: Boolean,
+    /**
+     * How this folder was read, in the reader's words rather than the app's.
+     *
+     * A book that has not turned up is nearly always a folder read as something other than what it
+     * is, and until this line was here the only sign of that was which of two icons was drawn.
+     */
+    val how: String,
 )
 
 /**
@@ -49,6 +57,7 @@ fun FoldersScreen(
     onScanNow: () -> Unit,
     onAdd: () -> Unit,
     onRemove: (FolderRow) -> Unit,
+    onChange: (FolderRow) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -82,7 +91,11 @@ fun FoldersScreen(
 
             LazyColumnMMD(modifier = Modifier.weight(1f).padding(top = 36.dp)) {
                 items(folders, key = { it.id }) { folder ->
-                    FolderLine(folder = folder, onRemove = { onRemove(folder) })
+                    FolderLine(
+                        folder = folder,
+                        onRemove = { onRemove(folder) },
+                        onChange = { onChange(folder) },
+                    )
                 }
             }
         }
@@ -110,10 +123,16 @@ fun FoldersScreen(
     }
 }
 
+/**
+ * The folder, what was made of it, and the way out of a wrong answer.
+ *
+ * The line itself takes the press: a folder read the wrong way is the one thing a reader comes to
+ * this screen to put right, and it should not need a menu.
+ */
 @Composable
-private fun FolderLine(folder: FolderRow, onRemove: () -> Unit) {
+private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().height(56.dp).padding(start = 16.dp, end = 27.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 16.dp, end = 27.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -123,14 +142,24 @@ private fun FolderLine(folder: FolderRow, onRemove: () -> Unit) {
             modifier = Modifier.size(24.dp),
         )
         Spacer(modifier = Modifier.width(16.dp))
-        TextMMD(
-            text = folder.name,
-            fontSize = 21.sp,
-            color = Color.Black,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f).clickable(onClick = onChange).padding(vertical = 8.dp)) {
+            TextMMD(
+                text = folder.name,
+                fontSize = 21.sp,
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            TextMMD(
+                text = folder.how,
+                fontSize = 17.5.sp,
+                lineHeight = 22.sp,
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
         Icon(
             imageVector = Icons.Delete,
             contentDescription = "Stop reading this folder",

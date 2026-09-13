@@ -1,6 +1,7 @@
 package com.wanderwildwood.mimidoku.data
 
 import android.content.Context
+import com.wanderwildwood.mimidoku.library.Reading
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -90,6 +91,37 @@ class Preferences private constructor(context: Context) {
      */
     var marksPass: Int by number("marksPass", 0)
 
+    /**
+     * What the reader said one granted folder holds, or null where they have not been asked.
+     *
+     * Kept beside the settings rather than in the library database, because it is an answer about
+     * a folder and not something found in one: a rescan rebuilds every book it knows and must not
+     * be able to forget this. The grant itself stays the only record that the folder is read at
+     * all -- this only says how.
+     */
+    fun reading(folder: String): Reading? = readings[folder]
+
+    fun setReading(folder: String, reading: Reading) {
+        readings = readings + (folder to reading)
+        prefs.edit().putString(key(folder), reading.name).apply()
+    }
+
+    /** A folder the reader has given back keeps nothing, or it would come back changed. */
+    fun forgetReading(folder: String) {
+        readings = readings - folder
+        prefs.edit().remove(key(folder)).apply()
+    }
+
+    private var readings by mutableStateOf(
+        prefs.all.keys.filter { it.startsWith(READING) }.mapNotNull { stored ->
+            val folder = stored.removePrefix(READING)
+            val named = prefs.getString(stored, null)
+            Reading.entries.firstOrNull { it.name == named }?.let { folder to it }
+        }.toMap(),
+    )
+
+    private fun key(folder: String) = READING + folder
+
     private fun number(key: String, default: Int) = object : ReadWriteProperty<Any?, Int> {
         private var held by mutableStateOf(prefs.getInt(key, default))
         override fun getValue(thisRef: Any?, property: KProperty<*>) = held
@@ -109,6 +141,9 @@ class Preferences private constructor(context: Context) {
     }
 
     companion object {
+        /** What a per-folder answer is stored under, with the folder's own uri after it. */
+        private const val READING = "reading:"
+
         @Volatile
         private var held: Preferences? = null
 
