@@ -29,6 +29,8 @@ The library is read through the storage access framework rather than from a path
 a card without asking for permission to read everything on the phone. Three layouts are understood
 and a library may be more than one of them at once: audio sitting directly in the chosen folder is
 one book; a folder of folders is books; a folder of folders of folders is authors holding books.
+A book filed deeper than that -- under a series folder, say -- is followed down rather than lost:
+a folder holding audio is the book, and a folder holding none is looked through.
 
 A book that arrives as one long recording is read for the chapter marks inside it -- an mp3's own
 chapter frames, an m4b's chapter list -- so thirteen hours still opens as a list of chapters rather
