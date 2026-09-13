@@ -54,8 +54,12 @@ data class ScanResult(
  * Reads a document tree the reader has granted, and works out what is in it.
  *
  * Deliberately not clever. It looks at where the audio actually sits and takes that at face value,
- * rather than asking the reader to describe their own folders. Three layouts cover every library
- * worth supporting, and a library that is two of them at once is not a library anyone has.
+ * rather than asking the reader to describe their own folders: a folder holding audio is a book,
+ * a folder holding folders is a shelf, and a file loose on a shelf is a book of its own.
+ *
+ * The one thing it insists on is that a book is a folder of audio. Where that folder sits does not
+ * matter - an author who files a trilogy under a series folder, or a reader who hands over the
+ * folder above the one that was meant, is followed down rather than lost.
  */
 class BookScanner(private val resolver: ContentResolver) {
 
@@ -115,15 +119,32 @@ class BookScanner(private val resolver: ContentResolver) {
      * round trips that do not depend on each other. These run together instead, with a ceiling so
      * the provider is asked a reasonable amount at once rather than everything at once.
      */
-    private suspend fun readBooks(treeUri: Uri, folders: List<Entry>, author: String?): List<Book> =
-        coroutineScope {
-            folders.map { folder ->
-                async {
-                    val chapters = children(treeUri, folder.documentId).filter { it.isAudio }.toChapters()
-                    if (chapters.isEmpty()) null else Book(folder.name, author, chapters)
+    private suspend fun readBooks(
+        treeUri: Uri,
+        folders: List<Entry>,
+        author: String?,
+        depth: Int = 0,
+    ): List<Book> = coroutineScope {
+        folders.map { folder ->
+            async {
+                val inside = children(treeUri, folder.documentId)
+                val chapters = inside.filter { it.isAudio }.toChapters()
+                when {
+                    // Audio here: this folder is the book. Whatever else it holds - artwork, a
+                    // bonus disc, a folder of ripping logs - is not part of the reading.
+                    chapters.isNotEmpty() -> listOf(Book(folder.name, author, chapters))
+                    // No audio here, but folders that might hold some: a series filed between the
+                    // author and the books, or a shelf sitting a level deeper than this expected.
+                    // Following it costs one listing per folder. Not following it threw the books
+                    // underneath away without saying so - eleven folders and thirty-odd books in
+                    // the library this was found in, among them whole series.
+                    depth < DEEPEST ->
+                        readBooks(treeUri, inside.filter { it.isDirectory }, author, depth + 1)
+                    else -> emptyList()
                 }
-            }.awaitAll().filterNotNull()
-        }
+            }
+        }.awaitAll().flatten()
+    }
 
     /** One file that is a whole book on its own, named after itself until a tag says otherwise. */
     private fun Entry.asBook(author: String?) =
@@ -191,6 +212,15 @@ class BookScanner(private val resolver: ContentResolver) {
          * a dozen, so asking for more only queues.
          */
         const val CONCURRENT_QUERIES = 12
+
+        /**
+         * How far below a shelf to go on looking for books.
+         *
+         * A book is normally one level down, and a series folder puts it two. This is not a
+         * description of anyone's library: it is the point at which a tree that turns out to be
+         * something other than books - a whole card handed over by mistake - stops being walked.
+         */
+        const val DEEPEST = 6
 
         /**
          * Matched on extension rather than reported mime type: providers disagree about m4b, and
