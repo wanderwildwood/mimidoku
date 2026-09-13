@@ -31,10 +31,12 @@ book, a folder holding folders is a shelf, and a file loose on a shelf is a book
 folder of folders is books and a folder of folders of folders is authors holding books. A book
 filed deeper than that -- under a series folder, say -- is followed down rather than lost.
 
-The one thing a folder cannot say is what it is: files sitting in the folder you chose are one
-book in chapters to one reader and a shelf of one-file books to the next. So that is asked when a
-folder is added rather than guessed at, and every row on the folders screen says what the scan
-made of it -- which is the first thing worth knowing when a book has not turned up.
+The one thing a folder cannot say is what it is: numbered files in a folder are one book's
+chapters to one reader and one-file books to the next, and the folder above them is an author to
+one library and a book to another. So that is asked rather than guessed at -- authors, books, or
+one book -- once, when the folder is added, and it can be answered again by pressing the folder's
+row. Every row says what the scan made of that folder, which is the first thing worth knowing
+when a book has not turned up.
 
 A book that arrives as one long recording is read for the chapter marks inside it -- an mp3's own
 chapter frames, an m4b's chapter list -- so thirteen hours still opens as a list of chapters rather
