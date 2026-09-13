@@ -37,6 +37,7 @@ import com.wanderwildwood.mimidoku.data.LibraryRepository
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
 import com.wanderwildwood.mimidoku.data.Shelving
+import com.wanderwildwood.mimidoku.library.Reading
 import com.wanderwildwood.mimidoku.library.TreeShape
 import com.wanderwildwood.mimidoku.playback.CoverArt
 import com.wanderwildwood.mimidoku.playback.PlaybackService
@@ -141,6 +142,9 @@ private fun Mimidoku() {
     // refreshed whenever one is added or given up.
     var grants by remember { mutableStateOf(context.contentResolver.persistedUriPermissions.map { it.uri }) }
     var shapes by remember { mutableStateOf<Map<String, TreeShape>>(emptyMap()) }
+    // The folder whose reading is being asked about: set when one is granted, and again whenever
+    // a row is pressed to correct it.
+    var asking by remember { mutableStateOf<Uri?>(null) }
     var locked by remember { mutableStateOf(false) }
     var chaptersOpen by remember { mutableStateOf(false) }
 
@@ -246,7 +250,9 @@ private fun Mimidoku() {
         // Without taking the permission, the grant dies with this activity.
         context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         grants = context.contentResolver.persistedUriPermissions.map { it.uri }
-        scanning = true
+        // Asked before the scan rather than after it, so the first reading of a new folder is the
+        // right one and the reader never sees their books arrive wrong and then move.
+        asking = uri
     }
 
     // A folder the reader granted stays granted, so the card is re-read every time the app opens:
@@ -641,11 +647,21 @@ private fun Mimidoku() {
                         name = uri.lastPathSegment.orEmpty().substringAfterLast('/')
                             .substringAfterLast(':').ifBlank { uri.toString() },
                         byAuthor = shapes[uri.toString()] == TreeShape.AuthorsThenBooks,
+                        // What the scan made of it, which is the answer the reader needs when a
+                        // book has not turned up. Until one has run, what they said it was.
+                        how = when (shapes[uri.toString()]) {
+                            TreeShape.AuthorsThenBooks -> "Authors, then books"
+                            TreeShape.BooksInFolders -> "Books"
+                            TreeShape.SingleBook -> "One book"
+                            TreeShape.Empty -> "No books found"
+                            null -> preferences.reading(uri.toString())?.label.orEmpty()
+                        },
                     )
                 },
                 onBack = { screen = Screen.Settings },
                 onScanNow = { scanning = true },
                 onAdd = { pickFolder.launch(null) },
+                onChange = { row -> asking = row.id.toUri() },
                 onRemove = { row ->
                     // Giving the grant back is the removal: there is nowhere else the folder is
                     // written down, so it cannot come back out of step with what is permitted.
@@ -655,6 +671,7 @@ private fun Mimidoku() {
                             Intent.FLAG_GRANT_READ_URI_PERMISSION,
                         )
                     }
+                    preferences.forgetReading(row.id)
                     grants = context.contentResolver.persistedUriPermissions.map { it.uri }
                     scanning = true
                 },
@@ -735,6 +752,30 @@ private fun Mimidoku() {
                 },
             )
         }
+    }
+
+    // What a folder holds cannot be worked out from the folder: a shelf of books that each arrived
+    // as one file looks exactly like one book in chapters. So it is asked, once, and can be
+    // answered again from the row.
+    asking?.let { folder ->
+        ChoiceDialog(
+            title = "This folder holds",
+            options = Reading.entries,
+            chosen = preferences.reading(folder.toString()) ?: Reading.Books,
+            label = { it.label },
+            onDismiss = {
+                // Closing the question answers it. The dialog opens with an option already
+                // filled in, and a reader who presses OK on it has said that is the answer --
+                // leaving it unstored would show them one reading and then apply another.
+                preferences.setReading(
+                    folder.toString(),
+                    preferences.reading(folder.toString()) ?: Reading.Books,
+                )
+                asking = null
+                scanning = true
+            },
+            onChoose = { preferences.setReading(folder.toString(), it) },
+        )
     }
 
     if (showAbout) {

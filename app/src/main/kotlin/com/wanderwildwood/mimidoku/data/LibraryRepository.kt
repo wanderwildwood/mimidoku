@@ -30,7 +30,10 @@ class LibraryRepository(private val context: Context) {
      */
     suspend fun rescan(trees: List<Uri>): Map<String, TreeShape> {
         val scanner = BookScanner(context.contentResolver)
-        val results = trees.associate { it.toString() to scanner.scan(it) }
+        val preferences = Preferences.of(context)
+        val results = trees.associate {
+            it.toString() to scanner.scan(it, preferences.reading(it.toString()))
+        }
 
         // Merged across every granted folder before writing: merge() removes what it did not see,
         // so handing it one folder at a time would have each scan delete the others' books.

@@ -30,6 +30,21 @@ data class Book(
     val chapters: List<Chapter>,
 )
 
+/**
+ * What the reader says a granted folder holds.
+ *
+ * Two folders can look identical and mean opposite things: twenty numbered files are twenty
+ * chapters of one recording in one library and twenty whole books in another, and nothing in the
+ * folder says which. Where it cannot be known, the reader is asked instead of guessed at.
+ */
+enum class Reading(val label: String) {
+    /** Books, however they are filed - a folder each, a file each, or authors holding both. */
+    Books("Books"),
+
+    /** This folder is one book and everything under it is a chapter of it. */
+    OneBook("One book"),
+}
+
 /** What the chosen folder turned out to be. */
 enum class TreeShape {
     /** Audio sitting directly in the chosen folder: the folder is one book. */
@@ -53,32 +68,60 @@ data class ScanResult(
 /**
  * Reads a document tree the reader has granted, and works out what is in it.
  *
- * Deliberately not clever. It looks at where the audio actually sits and takes that at face value,
- * rather than asking the reader to describe their own folders: a folder holding audio is a book,
- * a folder holding folders is a shelf, and a file loose on a shelf is a book of its own.
+ * Deliberately not clever. It looks at where the audio actually sits and takes that at face value:
+ * a folder holding audio is a book, a folder holding folders is a shelf, and a file loose on a
+ * shelf is a book of its own. Where that book sits does not matter - an author who files a trilogy
+ * under a series folder, or a reader who hands over the folder above the one that was meant, is
+ * followed down rather than lost.
  *
- * The one thing it insists on is that a book is a folder of audio. Where that folder sits does not
- * matter - an author who files a trilogy under a series folder, or a reader who hands over the
- * folder above the one that was meant, is followed down rather than lost.
+ * The one thing it does not work out for itself is the chosen folder: a folder of audio files is
+ * one book to one reader and a shelf of one-file books to the next, and the folder cannot say
+ * which. That is [Reading], and it is answered rather than guessed.
  */
 class BookScanner(private val resolver: ContentResolver) {
 
-    suspend fun scan(treeUri: Uri): ScanResult = coroutineScope {
+    /**
+     * [reading] is what the reader said this folder holds, and null is what the app assumed before
+     * anyone was asked: a folder of audio with nothing else in it read as a single book. That
+     * assumption is kept for folders granted before there was a question, and dropped as soon as
+     * one is answered.
+     */
+    suspend fun scan(treeUri: Uri, reading: Reading? = null): ScanResult = coroutineScope {
         val root = DocumentsContract.getTreeDocumentId(treeUri)
         val entries = children(treeUri, root)
 
         val audioHere = entries.filter { it.isAudio }
         val foldersHere = entries.filter { it.isDirectory }
 
-        // Audio directly in the chosen folder: this is one book, named after the folder.
-        if (audioHere.isNotEmpty() && foldersHere.isEmpty()) {
+        if (reading == Reading.OneBook) {
+            // Said to be one book, so everything under it is a chapter of it - subfolders
+            // included, because a long book is often handed over as CD1 and CD2 rather than as
+            // one list. The discs come in the order their folders sort, the same order their
+            // files would have had.
+            val discs = foldersHere.sortedWith(compareBy(NATURAL) { it.name })
+                .flatMap { children(treeUri, it.documentId).filter { e -> e.isAudio }.toChapters() }
+            val chapters = audioHere.toChapters() + discs
+            return@coroutineScope if (chapters.isEmpty()) {
+                ScanResult(TreeShape.Empty, emptyList())
+            } else {
+                ScanResult(TreeShape.SingleBook, listOf(Book(nameOf(treeUri, root), null, chapters)))
+            }
+        }
+
+        // Audio directly in the chosen folder and nothing else: before the reader could say, this
+        // was taken for one book. It is as likely to be a shelf of books that each arrived as one
+        // file, which is why the question exists; the old reading is kept only where there is no
+        // answer to go by.
+        if (reading == null && audioHere.isNotEmpty() && foldersHere.isEmpty()) {
             return@coroutineScope ScanResult(
                 shape = TreeShape.SingleBook,
                 books = listOf(Book(nameOf(treeUri, root), null, audioHere.toChapters())),
             )
         }
 
-        if (foldersHere.isEmpty()) return@coroutineScope ScanResult(TreeShape.Empty, emptyList())
+        if (foldersHere.isEmpty() && audioHere.isEmpty()) {
+            return@coroutineScope ScanResult(TreeShape.Empty, emptyList())
+        }
 
         // Each folder is asked what it is rather than the tree being asked once, and it may be
         // both. Real libraries are mixed - an author with a folder per book and a handful of
