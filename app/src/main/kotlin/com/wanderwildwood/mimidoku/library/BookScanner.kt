@@ -38,7 +38,10 @@ data class Book(
  * folder says which. Where it cannot be known, the reader is asked instead of guessed at.
  */
 enum class Reading(val label: String) {
-    /** Books, however they are filed - a folder each, a file each, or authors holding both. */
+    /** What is in here is authors, and their books are inside those. */
+    Authors("Authors"),
+
+    /** What is in here is books - a folder each, or a file each. */
     Books("Books"),
 
     /** This folder is one book and everything under it is a chapter of it. */
@@ -108,6 +111,17 @@ class BookScanner(private val resolver: ContentResolver) {
             }
         }
 
+        if (reading == Reading.Books) {
+            // Books, then: every folder in here is one, and every file in here is one. Nothing is
+            // an author, so nobody is named after a book title.
+            val books = readBooks(treeUri, foldersHere, author = null) +
+                audioHere.map { it.asBook(author = null) }
+            return@coroutineScope ScanResult(
+                shape = if (books.isEmpty()) TreeShape.Empty else TreeShape.BooksInFolders,
+                books = books,
+            )
+        }
+
         // Audio directly in the chosen folder and nothing else: before the reader could say, this
         // was taken for one book. It is as likely to be a shelf of books that each arrived as one
         // file, which is why the question exists; the old reading is kept only where there is no
@@ -145,8 +159,12 @@ class BookScanner(private val resolver: ContentResolver) {
 
         val books = found.flatMap { it.books } + unshelved
         ScanResult(
+            // What the reader said it is, where they have said. The guess underneath is only for
+            // a folder granted before there was a question, and it is a guess: a folder of
+            // one-file books and a book of numbered chapters are the same shape.
             shape = when {
                 books.isEmpty() -> TreeShape.Empty
+                reading == Reading.Authors -> TreeShape.AuthorsThenBooks
                 found.any { it.author && it.books.isNotEmpty() } -> TreeShape.AuthorsThenBooks
                 else -> TreeShape.BooksInFolders
             },

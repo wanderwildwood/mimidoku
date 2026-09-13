@@ -145,6 +145,8 @@ private fun Mimidoku() {
     // The folder whose reading is being asked about: set when one is granted, and again whenever
     // a row is pressed to correct it.
     var asking by remember { mutableStateOf<Uri?>(null) }
+    // A folder just granted, waiting on the scan that will suggest an answer for it.
+    var newlyGranted by remember { mutableStateOf<Uri?>(null) }
     var locked by remember { mutableStateOf(false) }
     var chaptersOpen by remember { mutableStateOf(false) }
 
@@ -250,9 +252,10 @@ private fun Mimidoku() {
         // Without taking the permission, the grant dies with this activity.
         context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         grants = context.contentResolver.persistedUriPermissions.map { it.uri }
-        // Asked before the scan rather than after it, so the first reading of a new folder is the
-        // right one and the reader never sees their books arrive wrong and then move.
-        asking = uri
+        // Asked once the folder has been read, not before: what is in it decides which answer the
+        // question opens on, and the app cannot suggest one without looking.
+        newlyGranted = uri
+        scanning = true
     }
 
     // A folder the reader granted stays granted, so the card is re-read every time the app opens:
@@ -271,6 +274,10 @@ private fun Mimidoku() {
         }
         shapes = withContext(Dispatchers.IO) { library.rescan(grants) }
         scanning = false
+        newlyGranted?.let {
+            asking = it
+            newlyGranted = null
+        }
     }
 
     // Lengths are read after the library is on screen, and go on being read for as long as the app
@@ -758,19 +765,25 @@ private fun Mimidoku() {
     // as one file looks exactly like one book in chapters. So it is asked, once, and can be
     // answered again from the row.
     asking?.let { folder ->
+        // What they have said, or failing that what the scan made of it. A folder of one-file
+        // books and a book of numbered files are the same shape, so this is a suggestion and not
+        // an answer -- which is the whole reason for asking.
+        val shown = preferences.reading(folder.toString())
+            ?: when (shapes[folder.toString()]) {
+                TreeShape.BooksInFolders -> Reading.Books
+                TreeShape.SingleBook -> Reading.OneBook
+                else -> Reading.Authors
+            }
         ChoiceDialog(
             title = "This folder holds",
             options = Reading.entries,
-            chosen = preferences.reading(folder.toString()) ?: Reading.Books,
+            chosen = shown,
             label = { it.label },
             onDismiss = {
                 // Closing the question answers it. The dialog opens with an option already
                 // filled in, and a reader who presses OK on it has said that is the answer --
                 // leaving it unstored would show them one reading and then apply another.
-                preferences.setReading(
-                    folder.toString(),
-                    preferences.reading(folder.toString()) ?: Reading.Books,
-                )
+                preferences.setReading(folder.toString(), shown)
                 asking = null
                 scanning = true
             },
