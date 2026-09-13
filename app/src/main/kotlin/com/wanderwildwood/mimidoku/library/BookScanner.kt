@@ -172,10 +172,21 @@ class BookScanner(private val resolver: ContentResolver) {
             async {
                 val inside = children(treeUri, folder.documentId)
                 val chapters = inside.filter { it.isAudio }.toChapters()
+                val discs = inside.filter { it.isDirectory && it.name.isDisc() }
                 when {
                     // Audio here: this folder is the book. Whatever else it holds - artwork, a
                     // bonus disc, a folder of ripping logs - is not part of the reading.
                     chapters.isNotEmpty() -> listOf(Book(folder.name, author, chapters))
+                    // A book that came off discs, filed the way every audiobook server asks for:
+                    // the folder is the book and Disc 1, Disc 2 are where its files sit. Read as
+                    // folders they would be two books called Disc 1 and Disc 2, filed under the
+                    // author and named after nothing.
+                    discs.isNotEmpty() -> listOf(
+                        Book(folder.name, author, discs.sortedWith(compareBy(NATURAL) { it.name })
+                            .flatMap { disc ->
+                                children(treeUri, disc.documentId).filter { it.isAudio }.toChapters()
+                            }),
+                    ).filter { it.chapters.isNotEmpty() }
                     // No audio here, but folders that might hold some: a series filed between the
                     // author and the books, or a shelf sitting a level deeper than this expected.
                     // Following it costs one listing per folder. Not following it threw the books
@@ -273,6 +284,18 @@ class BookScanner(private val resolver: ContentResolver) {
         val AUDIO = setOf(
             "mp3", "m4a", "m4b", "aac", "ogg", "oga", "opus", "flac", "wav", "mka", "mp4", "3gp",
         )
+
+        /**
+         * A folder that is one disc of a book rather than a book.
+         *
+         * Only the three words every audiobook server documents, and only where the whole name is
+         * that word and a number: "Disc 1", "CD02", "Disk 3". Nothing looser - a book in a series
+         * is often filed as "Vol 1 - Wizards First Rule", and a folder called "Part 1" is as
+         * likely to be a whole book as half of one.
+         */
+        val DISC = Regex("(?i)(disc|disk|cd)\\s*[-_.]?\\s*\\d+")
+
+        fun String.isDisc(): Boolean = DISC.matches(trim())
 
         /** "Chapter 10" belongs after "Chapter 9", which a plain string sort gets wrong. */
         val NATURAL = Comparator<String> { a, b ->
