@@ -167,6 +167,21 @@ interface LibraryDao {
     @Query("UPDATE books SET durationMs = (SELECT IFNULL(SUM(durationMs), 0) FROM chapters WHERE bookUri = :bookUri) WHERE uri = :bookUri")
     suspend fun refreshBookDuration(bookUri: String)
 
+    /**
+     * Every book's length, against the chapters it has now.
+     *
+     * A length is normally written once, when the last of a book's files has been measured. But a
+     * scan can move a file from one book to another -- a folder the reader has just said holds
+     * books rather than one book hands eight chapters to eight books -- and none of those files is
+     * measured again, so nothing would ever correct the length left behind. Chapters that could
+     * not be read carry -1 and are left out rather than subtracted.
+     */
+    @Query(
+        "UPDATE books SET durationMs = IFNULL(" +
+            "(SELECT SUM(durationMs) FROM chapters WHERE chapters.bookUri = books.uri AND durationMs > 0), 0)",
+    )
+    suspend fun refreshEveryDuration()
+
     @Query(
         """
         UPDATE books SET
@@ -259,6 +274,7 @@ interface LibraryDao {
         deleteOrphanedChapters()
         deleteOrphanedBookmarks()
         deleteOrphanedMarks()
+        refreshEveryDuration()
     }
 }
 
