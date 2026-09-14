@@ -41,7 +41,7 @@ The screen-by-screen audit was worth more than everything before it. In order of
 4. **Whole screens missing:** Audiobook folders (multiple folders, Scan now, Add, remove) and the
    chapter list sheet.
 5. **Drawing:** the transport icons were the outlined Material cut, which has hollow arrowheads —
-   David caught this by eye after measurements said they matched. Use `/fill1/` for those five and
+   caught by eye after measurements said they matched. Use `/fill1/` for those five and
    the closed padlock. The locked screen dims its toolbar to `0xFF9F9F9F` and its body to
    `0xFF666666`.
 6. Progress percentage on started cards; search shows shelves until a query is typed, then cards;
