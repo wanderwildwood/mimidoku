@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -88,7 +89,7 @@ fun BookCard(book: BookRow, onClick: () -> Unit) {
         if (book.author != null) {
             TextMMD(
                 text = book.author.uppercase(),
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.labelSmall,
                 lineHeight = 16.5.sp,
                 color = Color.Black,
                 maxLines = 1,
@@ -97,7 +98,7 @@ fun BookCard(book: BookRow, onClick: () -> Unit) {
         }
         TextMMD(
             text = book.title,
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.titleSmall,
             lineHeight = 19.5.sp,
             color = Color.Black,
             overflow = TextOverflow.Ellipsis,
@@ -106,10 +107,10 @@ fun BookCard(book: BookRow, onClick: () -> Unit) {
             // How long it is and how far in you are belong on one line: they are the same
             // question asked from either end.
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextMMD(text = book.duration, fontSize = 15.sp, lineHeight = 18.sp, color = Color.Black)
+                TextMMD(text = book.duration, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
                 if (book.percent != null) {
                     Spacer(modifier = Modifier.weight(1f))
-                    TextMMD(text = book.percent, fontSize = 15.sp, lineHeight = 18.sp, color = Color.Black)
+                    TextMMD(text = book.percent, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
                 }
             }
         }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,7 +36,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -152,7 +152,7 @@ fun PlayerScreen(
             if (playback.announcement != null) {
                 TextMMD(
                     text = playback.announcement,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     lineHeight = 18.sp,
                     color = Color.Black,
                 )
@@ -171,7 +171,7 @@ fun PlayerScreen(
                 // falls a pixel short.
                 TextMMD(
                     text = playback.author,
-                    fontSize = 24.sp,
+                    style = MaterialTheme.typography.titleLarge,
                     lineHeight = 29.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = ink,
@@ -180,9 +180,8 @@ fun PlayerScreen(
             Spacer(modifier = Modifier.height(4.dp))
             TextMMD(
                 text = playback.title,
-                fontSize = 27.5.sp,
+                style = MaterialTheme.typography.headlineLarge,
                 lineHeight = 34.sp,
-                fontStyle = FontStyle.Italic,
                 fontWeight = FontWeight.Normal,
                 color = ink,
             )
@@ -201,7 +200,7 @@ fun PlayerScreen(
                 ) {
                     TextMMD(
                         text = playback.chapter,
-                        fontSize = 24.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         lineHeight = 29.5.sp,
                         fontWeight = FontWeight.Normal,
                         color = ink,
@@ -313,7 +312,7 @@ private fun Tool(
         if (label != null) {
             TextMMD(
                 text = label,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.labelSmall,
                 lineHeight = 14.sp,
                 color = Color.Black,
                 softWrap = false,
@@ -351,7 +350,7 @@ private fun TransportButton(
         if (label != null) {
             TextMMD(
                 text = label(),
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.labelSmall,
                 lineHeight = 14.sp,
                 color = if (locked) Dimmed else Color.Black,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -364,7 +363,7 @@ private fun TransportButton(
 private fun Clock(ms: Long, hourDigits: Int, locked: Boolean) {
     TextMMD(
         text = ms.asClock(hourDigits),
-        fontSize = 20.sp,
+        style = MaterialTheme.typography.bodyLarge,
         lineHeight = 24.sp,
         color = if (locked) Dimmed else Color.Black,
     )

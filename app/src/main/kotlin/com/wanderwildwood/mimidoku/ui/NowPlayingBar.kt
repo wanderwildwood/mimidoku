@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 /** What the Now Playing bar shows when there is something loaded. */
 data class NowPlaying(
@@ -52,14 +52,14 @@ fun NowPlayingBar(
     ) {
         TextMMD(
             text = nowPlaying.title,
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.titleSmall,
             color = Color.Black,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         Spacer(modifier = Modifier.width(8.dp))
-        TextMMD(text = nowPlaying.remaining, fontSize = 15.sp, color = Color.Black)
+        TextMMD(text = nowPlaying.remaining, style = MaterialTheme.typography.bodySmall, color = Color.Black)
         Spacer(modifier = Modifier.width(12.dp))
         Box(
             modifier = Modifier
