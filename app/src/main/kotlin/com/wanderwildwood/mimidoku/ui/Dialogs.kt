@@ -37,28 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.wanderwildwood.mimidoku.R
 
-/**
- * The shell every dialog here is built in: a white card over a dimmed screen.
- *
- * Deliberately not Material's AlertDialog, which sizes itself to its buttons and animates in. On
- * the panel an animated entrance is a smear, and a dialog that changes width with its content
- * reads as a different dialog each time.
- */
-@Composable
-private fun DialogCard(onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .width(320.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color.White)
-                .padding(start = 25.dp, end = 25.dp, top = 24.dp, bottom = 36.dp),
-        ) {
-            content()
-        }
-    }
-}
-
 @Composable
 private fun DialogTitle(text: String) {
     TextMMD(text = text, fontSize = 24.sp, lineHeight = 32.sp, color = Color.Black)
@@ -89,7 +67,7 @@ fun StepperDialog(
         value = to
         if (live) onSet(to)
     }
-    DialogCard(onDismiss = onDismiss) {
+    EInkDialog(onDismiss = onDismiss) {
         DialogTitle(title)
         Spacer(modifier = Modifier.height(21.dp))
         Row(
@@ -146,7 +124,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    DialogCard(onDismiss = onDismiss) {
+    EInkDialog(onDismiss = onDismiss) {
         DialogTitle(title)
         Spacer(modifier = Modifier.height(44.dp))
         Row(
@@ -169,7 +147,7 @@ fun ConfirmDialog(
  */
 @Composable
 fun AboutDialog(version: String, onDismiss: () -> Unit) {
-    DialogCard(onDismiss = onDismiss) {
+    EInkDialog(onDismiss = onDismiss) {
         DialogTitle("About")
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -217,7 +195,7 @@ fun <T> ChoiceDialog(
     onDismiss: () -> Unit,
     onChoose: (T) -> Unit,
 ) {
-    DialogCard(onDismiss = onDismiss) {
+    EInkDialog(onDismiss = onDismiss) {
         DialogTitle(title)
         Spacer(modifier = Modifier.height(16.dp))
         options.forEach { option ->
