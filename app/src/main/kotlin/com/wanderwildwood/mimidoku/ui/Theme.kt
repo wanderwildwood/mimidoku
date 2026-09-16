@@ -16,4 +16,4 @@ import com.mudita.mmd.ThemeMMD
  * type now comes from the same place as every other app's.
  */
 @Composable
-fun MimidokuTheme(content: @Composable () -> Unit) = ThemeMMD(content = content)
+fun MimidokuTheme(content: @Composable () -> Unit) = ThemeMMD(colorScheme = monochrome, content = content)
