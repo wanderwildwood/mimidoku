@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -74,7 +75,7 @@ fun FoldersScreen(
                 Spacer(modifier = Modifier.weight(1f))
                 TextMMD(
                     text = "Scan now",
-                    fontSize = 17.5.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     lineHeight = 22.sp,
                     color = Color.Black,
                     modifier = Modifier.clickable(onClick = onScanNow),
@@ -83,7 +84,7 @@ fun FoldersScreen(
 
             TextMMD(
                 text = "Audiobook folders",
-                fontSize = 24.sp,
+                style = MaterialTheme.typography.titleLarge,
                 lineHeight = 32.sp,
                 color = Color.Black,
                 modifier = Modifier.padding(start = 16.dp),
@@ -118,7 +119,7 @@ fun FoldersScreen(
                 modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(12.dp))
-            TextMMD(text = "Add", fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.White)
+            TextMMD(text = "Add", style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp, color = Color.White)
         }
     }
 }
@@ -145,14 +146,14 @@ private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> 
         Column(modifier = Modifier.weight(1f).clickable(onClick = onChange).padding(vertical = 8.dp)) {
             TextMMD(
                 text = folder.name,
-                fontSize = 21.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 color = Color.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             TextMMD(
                 text = folder.how,
-                fontSize = 17.5.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 22.sp,
                 color = Color.Black,
                 maxLines = 1,

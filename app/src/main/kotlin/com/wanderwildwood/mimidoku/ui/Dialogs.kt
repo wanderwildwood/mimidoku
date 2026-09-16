@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,7 +40,7 @@ import com.wanderwildwood.mimidoku.R
 
 @Composable
 private fun DialogTitle(text: String) {
-    TextMMD(text = text, fontSize = 24.sp, lineHeight = 32.sp, color = Color.Black)
+    TextMMD(text = text, style = MaterialTheme.typography.titleLarge, lineHeight = 32.sp, color = Color.Black)
 }
 
 /**
@@ -83,7 +84,7 @@ fun StepperDialog(
                     .size(24.dp)
                     .clickable { change((value - range.step).coerceAtLeast(range.first)) },
             )
-            TextMMD(text = label(value), fontSize = 29.sp, lineHeight = 36.sp, color = Color.Black)
+            TextMMD(text = label(value), style = MaterialTheme.typography.headlineLarge, lineHeight = 36.sp, color = Color.Black)
             Icon(
                 imageVector = Icons.Plus,
                 contentDescription = "More",
@@ -178,7 +179,7 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
 private fun AboutText(text: String) {
     TextMMD(
         text = text,
-        fontSize = 16.sp,
+        style = MaterialTheme.typography.titleSmall,
         lineHeight = 21.sp,
         color = Color.Black,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp),
@@ -208,7 +209,7 @@ fun <T> ChoiceDialog(
             ) {
                 Radio(selected = option == chosen)
                 Spacer(modifier = Modifier.width(28.dp))
-                TextMMD(text = label(option), fontSize = 19.5.sp, lineHeight = 24.sp, color = Color.Black)
+                TextMMD(text = label(option), style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp, color = Color.Black)
             }
         }
         Spacer(modifier = Modifier.height(35.dp))
@@ -241,7 +242,7 @@ private fun Radio(selected: Boolean) {
 private fun DialogAction(text: String, onClick: () -> Unit) {
     TextMMD(
         text = text,
-        fontSize = 17.5.sp,
+        style = MaterialTheme.typography.bodyMedium,
         lineHeight = 22.sp,
         color = Color.Black,
         modifier = Modifier.clickable(onClick = onClick),

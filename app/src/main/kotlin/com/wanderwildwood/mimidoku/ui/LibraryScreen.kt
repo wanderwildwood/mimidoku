@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One row in the library: a shelf holding books, or a book itself. */
@@ -76,7 +76,7 @@ fun LibraryScreen(
         if (status != null) {
             TextMMD(
                 text = status,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = Color.Black,
                 modifier = Modifier.padding(start = 16.dp, bottom = 22.dp),
             )
@@ -117,7 +117,7 @@ private fun ShelfRow(row: LibraryRow, onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(18.dp))
         TextMMD(
             text = row.title,
-            fontSize = 24.sp,
+            style = MaterialTheme.typography.titleLarge,
             color = Color.Black,
             maxLines = 1,
         )

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import com.mudita.mmd.components.switcher.SwitchMMD
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -70,14 +72,7 @@ fun SettingsScreen(
         ScreenTopBar(
             title = "Settings",
             onClose = onClose,
-            trailing = {
-                Icon(
-                    imageVector = Icons.Info,
-                    contentDescription = "About",
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp).clickable(onClick = onAbout),
-                )
-            },
+            trailing = { BarButton(Icons.Info, "About", onAbout) },
         )
         LazyColumnMMD(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
             items(rows, key = { it.key }) { row ->
@@ -113,7 +108,7 @@ private fun SettingLine(row: SettingRow, onClick: (SettingRow) -> Unit) {
         Label(row, Modifier.weight(1f))
         if (row.toggle != null) {
             Spacer(modifier = Modifier.width(16.dp))
-            Switch(on = row.toggle)
+            SwitchMMD(checked = row.toggle, onCheckedChange = null)
         }
     }
 }
@@ -127,7 +122,7 @@ private fun Label(row: SettingRow, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         TextMMD(
             text = row.title,
-            fontSize = 19.5.sp,
+            style = MaterialTheme.typography.bodyLarge,
             lineHeight = 24.sp,
             fontWeight = FontWeight.Normal,
             color = Color.Black,
@@ -135,7 +130,7 @@ private fun Label(row: SettingRow, modifier: Modifier = Modifier) {
         if (row.value != null) {
             TextMMD(
                 text = row.value,
-                fontSize = 17.5.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color.Black,
@@ -144,31 +139,3 @@ private fun Label(row: SettingRow, modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * On or off, drawn the way the phone's own settings draw it.
- *
- * Deliberately not Material's Switch: that one slides its thumb across, and a sliding thumb on a
- * panel that repaints in tenths of a second is a grey smear that ends up in the right place. This
- * one is simply in one position or the other. The size is the platform's -- a switch that is not
- * the size of every other switch on the phone stops reading as a switch.
- *
- * It draws the state and nothing else. The row around it takes the press, so that the whole line
- * is the target rather than a 52dp strip at the end of it.
- */
-@Composable
-private fun Switch(on: Boolean) {
-    Box(
-        modifier = Modifier
-            .size(width = 52.dp, height = 32.dp)
-            .border(2.dp, Color.Black, CircleShape)
-            .background(if (on) Color.Black else Color.White, CircleShape)
-            .padding(6.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .align(if (on) Alignment.CenterEnd else Alignment.CenterStart)
-                .size(20.dp)
-                .background(if (on) Color.White else Color.Black, CircleShape),
-        )
-    }
-}
