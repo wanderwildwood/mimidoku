@@ -34,9 +34,11 @@ import com.wanderwildwood.mimidoku.data.ChapterEntity
 import com.wanderwildwood.mimidoku.data.MarkEntity
 import com.wanderwildwood.mimidoku.data.DurationReader
 import com.wanderwildwood.mimidoku.data.LibraryRepository
+import com.wanderwildwood.mimidoku.data.SOURCE_LOCAL
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
 import com.wanderwildwood.mimidoku.data.Shelving
+import kotlin.math.abs
 import com.wanderwildwood.mimidoku.library.Reading
 import com.wanderwildwood.mimidoku.library.TreeShape
 import com.wanderwildwood.mimidoku.playback.CoverArt
@@ -130,6 +132,11 @@ private fun Mimidoku() {
     val clock = { minutesOfDay: Int -> timeFormat.format(dayAt(minutesOfDay)) }
 
     val books by library.books.collectAsState(initial = emptyList())
+
+    // What the shelves show. Everything on the card, and from a server only what is not already
+    // here -- see [withoutServerCopiesOfWhatIsHere]. The unfiltered list stays for the places
+    // that are counting what the *server* holds rather than showing what there is to read.
+    val shelvedBooks = remember(books) { books.withoutServerCopiesOfWhatIsHere() }
 
     var screen by remember { mutableStateOf<Screen>(Screen.Library) }
     var controller by remember { mutableStateOf<MediaController?>(null) }
@@ -498,12 +505,12 @@ private fun Mimidoku() {
             // can see and the reader cannot is worse than a plain heading saying so. It is not a
             // made-up author: it says the files do not name one. The row is only there when
             // something is on it, so a tidy library never sees it.
-            val shelves = remember(books, preferences.shelving) {
-                val named = books.mapNotNull { it.shelf(preferences.shelving) }
+            val shelves = remember(shelvedBooks, preferences.shelving) {
+                val named = shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }
                     .collateIgnoringCase()
                     .sortedWith(String.CASE_INSENSITIVE_ORDER)
                     .map { LibraryRow(title = it, id = it) }
-                if (books.any { it.shelf(preferences.shelving) == null }) {
+                if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
                     named + LibraryRow(title = preferences.shelving.unnamed(), id = UNNAMED)
                 } else {
                     named
@@ -513,7 +520,7 @@ private fun Mimidoku() {
                 rows = shelves,
                 status = when {
                     scanning -> "Scanning library…"
-                    books.isEmpty() -> "No books yet"
+                    shelvedBooks.isEmpty() -> "No books yet"
                     else -> null
                 },
                 nowPlaying = nowPlaying,
@@ -526,10 +533,10 @@ private fun Mimidoku() {
         }
 
         is Screen.Shelf -> {
-            val shelved = remember(books, current.name, preferences.shelving, keepingNow) {
+            val shelved = remember(shelvedBooks, current.name, preferences.shelving, keepingNow) {
                 // Matched the same way the shelf was named, or a shelf collated from two
                 // spellings would open holding only the books that used one of them.
-                books.filter { book ->
+                shelvedBooks.filter { book ->
                     val shelf = book.shelf(preferences.shelving)
                     if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
                 }.map { book ->
@@ -644,18 +651,18 @@ private fun Mimidoku() {
         Screen.Search -> {
             // Matched on both the book and whoever wrote it, because a reader looking for a book
             // by author does not think of that as a different kind of search.
-            val found = remember(books, query) {
+            val found = remember(shelvedBooks, query) {
                 if (query.isBlank()) {
                     emptyList()
                 } else {
-                    books.filter {
+                    shelvedBooks.filter {
                         it.shownTitle().contains(query, true) ||
                             it.shownAuthor()?.contains(query, true) == true
                     }.map { it.toRow() }
                 }
             }
-            val searchShelves = remember(books, preferences.shelving) {
-                books.mapNotNull { it.shelf(preferences.shelving) }.distinct()
+            val searchShelves = remember(shelvedBooks, preferences.shelving) {
+                shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }.distinct()
                     .sortedWith(String.CASE_INSENSITIVE_ORDER)
                     .map { LibraryRow(title = it, id = it) }
             }
@@ -1166,6 +1173,46 @@ private fun Long.asSize(): String = when {
     this > 0L -> "${this / 1_000} kB"
     // A book whose files have gone from under it. The row still has a name and a way out.
     else -> "nothing on disk"
+}
+
+/**
+ * How far apart two measurements of the same recording may sit and still be the same recording.
+ *
+ * The server reads a file's length with one tool and this phone reads it with another, so the
+ * same book can come back a few tenths of a second apart. Two seconds is wider than that gap and
+ * far narrower than the gap between two different books.
+ */
+private const val SAME_BOOK_MS = 2_000L
+
+/**
+ * Everything on the card, and from a server only what is not already here.
+ *
+ * A card and a server often hold the same library -- one is usually a copy of the other -- and
+ * when they do, every book was listed twice: once to play and once to fetch, the same title
+ * above the same length. A book you already have is not a book to fetch, which is the whole of
+ * what the server support claims, so the copy that would have to be downloaded is the one that
+ * goes.
+ *
+ * Matched on title *and* length together, because either alone is not enough: a library can hold
+ * two recordings of one book by different readers, and they differ in length. Two different books
+ * agreeing on both, to the second, is not a thing that happens.
+ *
+ * Two books deliberately survive this. A book whose length is not yet known matches nothing and
+ * stays -- the card's lengths are read in the background, so the pairing simply arrives a moment
+ * later. And a book already **kept** stays whatever else is true: hiding it would leave hours of
+ * audio on the phone that nothing on screen could reach or give back.
+ */
+private fun List<BookEntity>.withoutServerCopiesOfWhatIsHere(): List<BookEntity> {
+    val here = filter { it.sourceType == SOURCE_LOCAL && it.durationMs > 0 }
+        .groupBy { it.shownTitle().trim().lowercase() }
+    if (here.isEmpty()) return this
+    return filterNot { book ->
+        book.sourceType != SOURCE_LOCAL &&
+            !book.kept &&
+            book.durationMs > 0 &&
+            here[book.shownTitle().trim().lowercase()]
+                ?.any { abs(it.durationMs - book.durationMs) <= SAME_BOOK_MS } == true
+    }
 }
 
 /** A chapter is named by its file, and the extension is not part of the name to a reader. */

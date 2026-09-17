@@ -96,7 +96,17 @@ class AbsClient(private val server: AbsServer) {
             AbsBook(
                 id = id,
                 title = metadata.optString("title", "").ifBlank { "Untitled" },
-                author = metadata.optString("authorName", "").ifBlank { null },
+                // The first of the authors the server lists, not its `authorName`, which is a
+                // display string built by joining them: a book tagged
+                // "Bessel Van der Kolk, M.D./Sean Pratt" arrives with an authorName carrying the
+                // narrator too, and shelves under a name no card folder will ever match. The
+                // array is the same tag already split up, and its first entry is the author.
+                author = metadata.optJSONArray("authors")
+                    ?.optJSONObject(0)
+                    ?.optString("name")
+                    ?.trim()
+                    ?.ifBlank { null }
+                    ?: metadata.optString("authorName", "").trim().ifBlank { null },
                 // A list, of which the first is the one a shelf would file it under.
                 genre = metadata.optJSONArray("genres")?.takeIf { it.length() > 0 }?.optString(0),
                 tracks = media.optJSONArray("audioFiles").orEmpty().objects()
