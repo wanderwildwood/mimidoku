@@ -33,6 +33,13 @@ data class BookRow(
     val duration: String?,
     /** How far in the reader is, once they have started. Null until they have. */
     val percent: String?,
+    /**
+     * Where the book is, when that is not simply "here". A book on a server has to be fetched
+     * before it can be read, and this is the only place a shelf can say so -- it shares the slot
+     * with [percent] because a book that is not on the phone cannot have been started, so the two
+     * are never both worth showing.
+     */
+    val state: String? = null,
 )
 
 /**
@@ -108,9 +115,10 @@ fun BookCard(book: BookRow, onClick: () -> Unit) {
             // question asked from either end.
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TextMMD(text = book.duration, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
-                if (book.percent != null) {
+                val trailing = book.state ?: book.percent
+                if (trailing != null) {
                     Spacer(modifier = Modifier.weight(1f))
-                    TextMMD(text = book.percent, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
+                    TextMMD(text = trailing, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
                 }
             }
         }

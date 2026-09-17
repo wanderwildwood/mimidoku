@@ -34,7 +34,7 @@ class DurationReader(private val context: Context) {
             val touched = mutableSetOf<String>()
             for (chapter in batch) {
                 coroutineContext.ensureActive()
-                val read = read(chapter.uri)
+                val read = read(chapter.audioUri)
                 // A book that is one file names itself in its title tag and usually has no album
                 // at all; a book that is a folder of files puts the book in the album and the
                 // chapter in the title. Taking the title as the book's name in that second case
@@ -83,7 +83,7 @@ class DurationReader(private val context: Context) {
     private suspend fun marks(chapter: ChapterEntity, single: Boolean) {
         if (!single) return
         if (dao.markCount(chapter.bookUri) > 0) return
-        val found = ChapterMarks.read(context.contentResolver, chapter.uri.toUri())
+        val found = ChapterMarks.read(context.contentResolver, chapter.audioUri.toUri())
         // One mark at the start is the same as no marks, and a list of one is worse than none:
         // it looks like a book whose chapters failed to load.
         if (found.size < 2) return
