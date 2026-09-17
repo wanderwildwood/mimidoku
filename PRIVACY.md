@@ -1,7 +1,8 @@
 # Privacy
 
-Audio Reading plays audiobooks that are already on your phone. It sends nothing anywhere,
-because there is no code in it that could.
+Audio Reading plays audiobooks that are on your phone. It talks to nothing on the internet
+and to no one at all, unless you give it the address of your own audiobook server — and then
+it talks only to that.
 
 This file describes what is true of the code in this repository *today*. When that changes,
 this file changes in the same commit as the code that changed it.
@@ -21,22 +22,47 @@ Nothing is copied. The audio stays where you put it.
 
 ## What leaves the phone
 
-Nothing. The app declares no internet permission — see `app/src/main/AndroidManifest.xml`.
-Not for cover art, not for metadata, not for a catalogue lookup, not for crash reports.
-A book you are reading is not something anyone else needs to know about.
+Nothing, until you add a server. Then: requests to that server, and nowhere else. Not for
+cover art, not for metadata, not for a catalogue lookup, not for crash reports. There is no
+analytics code here and no third party to send anything to. A book you are reading is not
+something anyone else needs to know about.
+
+## Your own server
+
+The app can fetch books from an Audiobookshelf server you run. It is off until you fill it
+in, and what it does is narrow on purpose:
+
+- It asks that server what books it has, and downloads the ones you ask it to. Nothing else.
+- **It never tells the server where you are in a book.** Your place is yours and stays on the
+  phone. The server's own record of your listening is left exactly as it was — if you also use
+  the web player, the two will not agree, and that is deliberate rather than a missing feature.
+- It authenticates with an API key you make on the server and paste in. Not your password. You
+  can revoke that key on the server at any time and the app simply stops working, which is the
+  point of a key.
+- The key is kept in the app's private settings, which other apps cannot read. It is kept in
+  the clear, the way a key has to be to be usable. Anyone who can already read your app's
+  private data can read it.
+- **A server on your home network is plain http, and this app permits that** — otherwise
+  Android would refuse to talk to it at all. Over plain http, the key and the audio are
+  readable by anyone else on that network. On a home wifi that is a fair trade. If your server
+  is reachable from outside your house, give it an https address and use that one.
+
+Books you download are kept in the app's own folder, which means uninstalling the app takes
+them with it, and no other app can read them.
 
 ## What is stored
 
 | Where | What |
 |---|---|
 | App database | Your books, chapters, bookmarks, and your place in each. App-private. |
-| Shared preferences | Your settings, and the folder you granted. App-private. |
+| Shared preferences | Your settings, the folder you granted, and your server's address and key. App-private. |
+| App files folder | Books you downloaded from your server. Goes away when the app does. |
 
 App-private means other apps cannot read it and it goes away when you uninstall.
 
 ## The permissions it does declare
 
-Four, and none of them reach your data:
+Five, and none of them reach your data:
 
 | Permission | Why |
 |---|---|
@@ -44,5 +70,6 @@ Four, and none of them reach your data:
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The kind of foreground service it is, which Android requires it to name. |
 | `POST_NOTIFICATIONS` | The player notification — the thing with the pause button in it. You may refuse it and the app still plays. |
 | `WAKE_LOCK` | The processor stays awake while audio is playing, and not otherwise. |
+| `INTERNET` | Talking to your own audiobook server, if you have given it one. Nothing else in this app uses the network. |
 
-No microphone, no location, no contacts, no storage-wide read, and **no internet**.
+No microphone, no location, no contacts, and no storage-wide read.

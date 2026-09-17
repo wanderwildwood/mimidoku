@@ -92,6 +92,21 @@ class Preferences private constructor(context: Context) {
     var marksPass: Int by number("marksPass", 0)
 
     /**
+     * An Audiobookshelf server, if the reader has one.
+     *
+     * The key is an api key made on the server rather than a password, because that is the thing
+     * a reader can take back without changing anything else. It is kept here in the app's own
+     * preferences, which other apps cannot read -- but it is kept in the clear, and a key is a
+     * way in to a library, so the server screen says so in as many words.
+     */
+    var serverUrl: String by text("serverUrl", "")
+    var serverToken: String by text("serverToken", "")
+    var serverLibraryId: String by text("serverLibraryId", "")
+
+    /** Whether there is a server to talk to at all. */
+    val hasServer: Boolean get() = serverUrl.isNotBlank() && serverToken.isNotBlank()
+
+    /**
      * What the reader said one granted folder holds, or null where they have not been asked.
      *
      * Kept beside the settings rather than in the library database, because it is an answer about
@@ -128,6 +143,15 @@ class Preferences private constructor(context: Context) {
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: Int) {
             held = value
             prefs.edit().putInt(key, value).apply()
+        }
+    }
+
+    private fun text(key: String, default: String) = object : ReadWriteProperty<Any?, String> {
+        private var held by mutableStateOf(prefs.getString(key, default) ?: default)
+        override fun getValue(thisRef: Any?, property: KProperty<*>) = held
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+            held = value
+            prefs.edit().putString(key, value).apply()
         }
     }
 

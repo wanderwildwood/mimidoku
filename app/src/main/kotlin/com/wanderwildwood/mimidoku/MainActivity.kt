@@ -52,6 +52,7 @@ import com.wanderwildwood.mimidoku.ui.PlaybackTools
 import com.wanderwildwood.mimidoku.ui.PlayerScreen
 import com.wanderwildwood.mimidoku.ui.AboutDialog
 import com.wanderwildwood.mimidoku.ui.ChoiceDialog
+import com.wanderwildwood.mimidoku.ui.ConfirmDialog
 import com.wanderwildwood.mimidoku.ui.Icons
 import com.wanderwildwood.mimidoku.ui.BookmarkRow
 import com.wanderwildwood.mimidoku.ui.ChapterRow
@@ -62,6 +63,14 @@ import com.wanderwildwood.mimidoku.ui.BookmarksScreen
 import com.wanderwildwood.mimidoku.ui.SearchScreen
 import com.wanderwildwood.mimidoku.ui.SettingRow
 import com.wanderwildwood.mimidoku.ui.SettingsScreen
+import com.wanderwildwood.mimidoku.ui.ServerScreen
+import com.wanderwildwood.mimidoku.ui.ServerEntry
+import com.wanderwildwood.mimidoku.ui.KeptBook
+import com.wanderwildwood.mimidoku.server.AbsClient
+import com.wanderwildwood.mimidoku.server.AbsDownloader
+import com.wanderwildwood.mimidoku.server.AbsResult
+import com.wanderwildwood.mimidoku.server.AbsServer
+import com.wanderwildwood.mimidoku.server.AbsSync
 import com.wanderwildwood.mimidoku.ui.StepperDialog
 import com.wanderwildwood.mimidoku.ui.Transport
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +102,7 @@ private sealed interface Screen {
     data object Search : Screen
     data object Bookmarks : Screen
     data object Folders : Screen
+    data object Server : Screen
 }
 
 /** A preference the reader has opened, and is about to change or leave alone. */
@@ -143,6 +153,21 @@ private fun Mimidoku() {
     // refreshed whenever one is added or given up.
     var grants by remember { mutableStateOf(context.contentResolver.persistedUriPermissions.map { it.uri }) }
     var shapes by remember { mutableStateOf<Map<String, TreeShape>>(emptyMap()) }
+    // The server, and whatever it is in the middle of. One job at a time: syncing a catalogue and
+    // fetching a book both talk to the same server over the same wifi, and a reader who starts
+    // both gets neither any sooner.
+    var serverBusy by remember { mutableStateOf(false) }
+    var serverStatus by remember { mutableStateOf<String?>(null) }
+    // The book a reader has asked about keeping, waiting on the question being answered.
+    var keeping by remember { mutableStateOf<BookEntity?>(null) }
+    // Which book is being fetched and how far along, so the row it belongs to can say so. A
+    // download is minutes of waiting and the shelf is where the reader will be waiting.
+    var keepingNow by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // What each kept book takes up. Read off the files rather than trusted from the server,
+    // because the question is what this phone is carrying.
+    var keptSizes by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    // A book the reader has asked to give back, waiting on the question being answered.
+    var givingBack by remember { mutableStateOf<KeptBook?>(null) }
     // The folder whose reading is being asked about: set when one is granted, and again whenever
     // a row is pressed to correct it.
     var asking by remember { mutableStateOf<Uri?>(null) }
@@ -387,6 +412,49 @@ private fun Mimidoku() {
     }
     // Coming back after a pause, playback steps back a little first: the last few seconds before
     // a reader stops listening are the ones they did not take in.
+    /**
+     * Opening a book, from wherever it was tapped.
+     *
+     * One function rather than a copy per list, because the two lists that show books had a copy
+     * each and only one of them learnt that a book can now be somewhere else: a book still on the
+     * server opened the player from the search results and sat there at 0:00 of 49:02 with
+     * nothing to play. A list should not have to know that.
+     */
+    val openBook: (BookEntity) -> Unit = { book ->
+        if (!book.kept) {
+            // Nothing to play yet. Tapping it can only usefully mean "fetch this".
+            keeping = book
+        } else {
+            playing = book
+            screen = Screen.Player
+            scope.launch {
+                chapters = library.chaptersOf(book.uri)
+                marks = library.marksOf(book.uri)
+                controller?.play(context, chapters, book)
+            }
+        }
+    }
+
+    val keptBooks = remember(books, keptSizes) {
+        books.filter { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
+            .map {
+                KeptBook(
+                    id = it.uri,
+                    title = it.shownTitle(),
+                    author = it.shownAuthor(),
+                    size = keptSizes[it.uri]?.asSize(),
+                )
+            }
+    }
+
+    // Adding up files is disk work, so it happens once per change in what is kept rather than on
+    // every draw. The rows appear immediately and gain their sizes a moment later, which is the
+    // right way round: the list is the answer and the size is a detail of it.
+    LaunchedEffect(keptBooks.map { it.id }) {
+        val ids = keptBooks.map { it.id }
+        keptSizes = ids.associateWith { AbsDownloader.sizeOf(context, library.library, it) }
+    }
+
     val playPause: () -> Unit = {
         val c = controller
         val book = playing
@@ -418,6 +486,7 @@ private fun Mimidoku() {
         screen = when (screen) {
             Screen.Bookmarks -> Screen.Player
             Screen.Folders -> Screen.Settings
+            Screen.Server -> Screen.Settings
             else -> Screen.Library
         }
     }
@@ -457,13 +526,15 @@ private fun Mimidoku() {
         }
 
         is Screen.Shelf -> {
-            val shelved = remember(books, current.name, preferences.shelving) {
+            val shelved = remember(books, current.name, preferences.shelving, keepingNow) {
                 // Matched the same way the shelf was named, or a shelf collated from two
                 // spellings would open holding only the books that used one of them.
                 books.filter { book ->
                     val shelf = book.shelf(preferences.shelving)
                     if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
-                }.map { it.toRow() }
+                }.map { book ->
+                    book.toRow(keepingNow?.takeIf { it.first == book.uri }?.second)
+                }
             }
 
             BooksScreen(
@@ -472,14 +543,7 @@ private fun Mimidoku() {
                 nowPlaying = nowPlaying,
                 onClose = { screen = Screen.Library },
                 onBookClick = { row ->
-                    val book = books.firstOrNull { it.uri == row.id } ?: return@BooksScreen
-                    playing = book
-                    screen = Screen.Player
-                    scope.launch {
-                        chapters = library.chaptersOf(book.uri)
-                        marks = library.marksOf(book.uri)
-                        controller?.play(context, chapters, book)
-                    }
+                    books.firstOrNull { it.uri == row.id }?.let(openBook)
                 },
                 onNowPlayingClick = { screen = Screen.Player },
                 onPlayPauseClick = playPause,
@@ -604,14 +668,7 @@ private fun Mimidoku() {
                 onBack = { screen = Screen.Library },
                 onShelfClick = { screen = Screen.Shelf(it.title) },
                 onBookClick = { row ->
-                    val book = books.firstOrNull { it.uri == row.id } ?: return@SearchScreen
-                    playing = book
-                    screen = Screen.Player
-                    scope.launch {
-                        chapters = library.chaptersOf(book.uri)
-                        marks = library.marksOf(book.uri)
-                        controller?.play(context, chapters, book)
-                    }
+                    books.firstOrNull { it.uri == row.id }?.let(openBook)
                 },
                 onNowPlayingClick = { screen = Screen.Player },
                 onPlayPauseClick = playPause,
@@ -696,6 +753,71 @@ private fun Mimidoku() {
             )
         }
 
+        Screen.Server -> {
+            ServerScreen(
+                address = preferences.serverUrl,
+                key = preferences.serverToken,
+                bookCount = books.count { it.sourceType == AbsSync.SOURCE_ABS },
+                kept = keptBooks,
+                isBusy = serverBusy,
+                status = serverStatus,
+                onBack = { screen = Screen.Settings },
+                onConnect = { entered ->
+                    scope.launch {
+                        serverBusy = true
+                        serverStatus = "Asking the server what it has…"
+                        val server = AbsServer(entered.address.withScheme(), entered.key)
+                        val client = AbsClient(server)
+                        when (val found = client.libraries()) {
+                            is AbsResult.Failure -> serverStatus = found.message
+                            is AbsResult.Success -> {
+                                // A server can hold podcasts as well as books, and this app has
+                                // nothing to say about a podcast.
+                                val shelf = found.value.firstOrNull { it.mediaType == "book" }
+                                if (shelf == null) {
+                                    serverStatus = "That server has no book library."
+                                } else {
+                                    preferences.serverUrl = server.base
+                                    preferences.serverToken = entered.key
+                                    preferences.serverLibraryId = shelf.id
+                                    serverStatus = syncServer(client, shelf.id, library.library) {
+                                        serverStatus = it
+                                    }
+                                }
+                            }
+                        }
+                        serverBusy = false
+                    }
+                },
+                onGiveBack = { givingBack = it },
+                onSyncNow = {
+                    scope.launch {
+                        serverBusy = true
+                        val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken))
+                        serverStatus = syncServer(client, preferences.serverLibraryId, library.library) {
+                            serverStatus = it
+                        }
+                        serverBusy = false
+                    }
+                },
+                onForget = {
+                    scope.launch {
+                        serverBusy = true
+                        // The downloads go with it. Keeping hours of audio for a server the
+                        // reader has just disowned is keeping it for nothing.
+                        books.filter { it.sourceType == AbsSync.SOURCE_ABS }
+                            .forEach { AbsDownloader.remove(context, library.library, it.uri) }
+                        library.library.forgetSource(AbsSync.SOURCE_ABS)
+                        preferences.serverUrl = ""
+                        preferences.serverToken = ""
+                        preferences.serverLibraryId = ""
+                        serverStatus = "Forgotten."
+                        serverBusy = false
+                    }
+                },
+            )
+        }
+
         Screen.Settings -> {
             SettingsScreen(
                 rows = buildList {
@@ -709,6 +831,22 @@ private fun Mimidoku() {
                                 0 -> "None chosen yet"
                                 1 -> "1 folder"
                                 else -> "${grants.size} folders"
+                            },
+                        ),
+                    )
+                    // Under the folders, because it answers the same question: where the books
+                    // come from. A reader without a server sees a row that says so and nothing
+                    // more, which is cheaper than a screen they have to open to find out.
+                    add(
+                        SettingRow(
+                            key = "server",
+                            title = "Audiobook server",
+                            value = if (preferences.hasServer) {
+                                val onServer = books.count { it.sourceType == AbsSync.SOURCE_ABS }
+                                val here = books.count { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
+                                "$here of $onServer kept on this phone"
+                            } else {
+                                "None"
                             },
                         ),
                     )
@@ -756,6 +894,7 @@ private fun Mimidoku() {
                 onRowClick = { row ->
                     when (row.key) {
                         "folders" -> screen = Screen.Folders
+                        "server" -> screen = Screen.Server
                         "shelving" -> editing = Editing.Shelving
                         "skip" -> editing = Editing.Skip
                         "rewind" -> editing = Editing.AutoRewind
@@ -770,6 +909,58 @@ private fun Mimidoku() {
                 },
             )
         }
+    }
+
+    // A book on the server is a book you can have, not a book you have. Asking first is worth it
+    // for the size of the thing: this is hours of audio over a home network, and a reader who
+    // meant to press the book below it should not discover that in a hundred megabytes.
+    keeping?.let { book ->
+        ConfirmDialog(
+            title = "Keep \"${book.shownTitle()}\" on this phone?",
+            action = "Keep",
+            onDismiss = { keeping = null },
+            onConfirm = {
+                keeping = null
+                scope.launch {
+                    val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken))
+                    keepingNow = book.uri to "Keeping…"
+                    val kept = AbsDownloader.downloadBook(
+                        context = context,
+                        client = client,
+                        dao = library.library,
+                        bookUri = book.uri,
+                    ) { done, total, _ ->
+                        keepingNow = book.uri to "Keeping — $done of $total"
+                    }
+                    keepingNow = null
+                    // Said on the shelf rather than on a screen the reader has left: a download
+                    // that finishes while they are looking at the book is the whole point.
+                    announcement = when (kept) {
+                        is AbsResult.Failure -> kept.message
+                        is AbsResult.Success -> "\"${book.shownTitle()}\" is on this phone."
+                    }
+                }
+            },
+        )
+    }
+
+    // Asked, the same way removing a bookmark is. What it costs to undo is minutes of wifi, and
+    // the reader's place in the book is not at stake either way -- that stays whether the audio
+    // is here or not, which is worth saying on the dialog rather than leaving them to wonder.
+    givingBack?.let { book ->
+        ConfirmDialog(
+            title = "Give \"${book.title}\" back to the server? Your place in it is kept.",
+            action = "Give back",
+            onDismiss = { givingBack = null },
+            onConfirm = {
+                givingBack = null
+                scope.launch {
+                    AbsDownloader.remove(context, library.library, book.id)
+                    // The row it was on goes; what it was taking up goes with it.
+                    keptSizes = keptSizes - book.id
+                }
+            },
+        )
     }
 
     // What a folder holds cannot be worked out from the folder: a shelf of books that each arrived
@@ -965,11 +1156,23 @@ private data class Part(val title: String, val chapterUri: String, val startMs: 
  */
 private const val RESTART_MS = 3_000L
 
+/**
+ * A size the way a phone's own storage screen writes one: powers of a thousand, and no more
+ * precision than the decision needs.
+ */
+private fun Long.asSize(): String = when {
+    this >= 1_000_000_000L -> String.format("%.1f GB", this / 1_000_000_000.0)
+    this >= 1_000_000L -> "${this / 1_000_000} MB"
+    this > 0L -> "${this / 1_000} kB"
+    // A book whose files have gone from under it. The row still has a name and a way out.
+    else -> "nothing on disk"
+}
+
 /** A chapter is named by its file, and the extension is not part of the name to a reader. */
 private fun String.withoutExtension(): String = substringBeforeLast('.')
 
 
-private fun BookEntity.toRow() = BookRow(
+private fun BookEntity.toRow(keepingNow: String? = null) = BookRow(
     id = uri,
     title = shownTitle(),
     author = shownAuthor(),
@@ -981,7 +1184,46 @@ private fun BookEntity.toRow() = BookRow(
     } else {
         null
     },
+    state = when {
+        kept -> null
+        keepingNow != null -> keepingNow
+        else -> "Not on this phone"
+    },
 )
+
+/**
+ * An address a reader typed, made into one a request can be made to.
+ *
+ * Nobody types "http://". Assuming it is what the reader meant is right nearly always and wrong
+ * only for a server on the open internet, which is the case where they will have typed the scheme
+ * themselves because they had to get a certificate for it.
+ */
+private fun String.withScheme(): String =
+    if (startsWith("http://") || startsWith("https://")) trim() else "http://" + trim()
+
+/**
+ * Reads a whole catalogue, saying where it has got to.
+ *
+ * One request per book is the api's shape, so this is a minute rather than a moment on a library
+ * of any size, and a screen that said nothing for a minute would read as a screen that had hung.
+ */
+private suspend fun syncServer(
+    client: AbsClient,
+    libraryId: String,
+    dao: com.wanderwildwood.mimidoku.data.LibraryDao,
+    onProgress: (String) -> Unit,
+): String = when (
+    val synced = AbsSync.sync(client, libraryId, dao) { done, total ->
+        onProgress("Reading the catalogue — $done of $total")
+    }
+) {
+    is AbsResult.Failure -> synced.message
+    is AbsResult.Success -> when (synced.value) {
+        0 -> "That library has nothing in it."
+        1 -> "1 book."
+        else -> "${synced.value} books."
+    }
+}
 
 private suspend fun MediaController.play(
     context: android.content.Context,
@@ -1008,12 +1250,15 @@ private suspend fun MediaController.load(
 ) {
     // Only the artwork is set here. Everything else the notification shows - the title, the
     // author - is read out of the file itself, and a field set on the item would override it.
-    val cover = CoverArt.forBook(context, chapters.firstOrNull()?.uri)
+    val cover = CoverArt.forBook(context, chapters.firstOrNull()?.audioUri)
     setMediaItems(
         chapters.map {
             MediaItem.Builder()
+                // The id is what the chapter is and the uri is where its audio sits, and they
+                // are only the same thing for a file on the card. Everything that remembers a
+                // place -- the position writer, the sleep timer, a bookmark -- reads the id.
                 .setMediaId(it.uri)
-                .setUri(it.uri)
+                .setUri(it.audioUri)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setArtworkData(cover, MediaMetadata.PICTURE_TYPE_FRONT_COVER)

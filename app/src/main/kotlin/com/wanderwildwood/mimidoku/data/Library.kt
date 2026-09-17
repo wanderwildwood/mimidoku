@@ -1,6 +1,7 @@
 package com.wanderwildwood.mimidoku.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -10,8 +11,13 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+
+/** A book that is on the card, which until there was anywhere else to be was every book. */
+const val SOURCE_LOCAL = "LOCAL"
 
 /**
  * A book as the app remembers it.
@@ -49,6 +55,25 @@ data class BookEntity(
     /** Null until the book has been played, which is what "not started" means. */
     val lastPlayedAt: Long?,
     /**
+     * Where this book comes from: [SOURCE_LOCAL] for the card, or a server's own marker.
+     *
+     * The library screens do not read this. A book from a server is a book, and it sorts and
+     * opens beside the rest; this is here so that a rescan of the card does not delete books the
+     * card was never going to have, which is the one place the difference is real.
+     */
+    @ColumnInfo(defaultValue = SOURCE_LOCAL)
+    val sourceType: String = SOURCE_LOCAL,
+    /**
+     * Whether the audio is actually on this phone.
+     *
+     * Always true for a book on the card, which is what makes the default right for every row
+     * that existed before there was anywhere else for a book to be. A book on a server is false
+     * until it has been fetched, and a shelf says so rather than letting a reader tap a book and
+     * find out by being refused.
+     */
+    @ColumnInfo(defaultValue = "1")
+    val kept: Boolean = true,
+    /**
      * Which scan last saw this book on the card. A scan stamps everything it found and then
      * deletes whatever is still carrying an older stamp, which is how books that have gone away
      * are noticed. Done this way rather than by listing what to keep, because that list is one
@@ -57,6 +82,16 @@ data class BookEntity(
     val seenAt: Long,
 )
 
+/**
+ * One chapter.
+ *
+ * [uri] is what this chapter *is* and [audioUri] is where its audio actually sits, and they are
+ * two different things even though a file on the card makes them look like one. A reading
+ * position, a bookmark and the book's own [BookEntity.currentChapterUri] all point at [uri], so
+ * it has to be a thing that never changes; where the audio is does change -- a book kept from a
+ * server stops being a url and becomes a file, and a url carrying a token is not the same url a
+ * week later. Keying on the location would strand every bookmark the first time either happened.
+ */
 @Entity(tableName = "chapters")
 data class ChapterEntity(
     @PrimaryKey val uri: String,
@@ -65,6 +100,12 @@ data class ChapterEntity(
     val sortIndex: Int,
     /** 0 until the file has been opened and asked. Reading it costs a seek, so it is done later. */
     val durationMs: Long,
+    /**
+     * Where the audio is, for whatever wants to play or read it. The same as [uri] for a file on
+     * the card, which is why this could be defaulted into every row that already existed.
+     */
+    @ColumnInfo(defaultValue = "")
+    val audioUri: String = "",
 )
 
 /**
@@ -138,7 +179,18 @@ interface LibraryDao {
     @Query("UPDATE books SET name = :name, author = :author, chapterCount = :chapterCount WHERE uri = :uri")
     suspend fun refreshDetails(uri: String, name: String, author: String?, chapterCount: Int)
 
-    @Query("SELECT * FROM chapters WHERE durationMs = 0 ORDER BY bookUri, sortIndex LIMIT :limit")
+    /**
+     * Only ever books on the card. A length is learnt by opening the file, and the only files
+     * that can be opened are the ones that are here: a server's book is a url until it is kept,
+     * and a ContentResolver asked to open one would fail once per chapter for ever. The server
+     * gives its own lengths anyway -- though not always, and those thirteen files stay at zero
+     * rather than dragging every sync back through this.
+     */
+    @Query(
+        "SELECT * FROM chapters WHERE durationMs = 0 " +
+            "AND bookUri IN (SELECT uri FROM books WHERE sourceType = '" + SOURCE_LOCAL + "') " +
+            "ORDER BY bookUri, sortIndex LIMIT :limit",
+    )
     suspend fun chaptersWithoutDuration(limit: Int): List<ChapterEntity>
 
     /**
@@ -150,6 +202,29 @@ interface LibraryDao {
 
     @Query("UPDATE chapters SET durationMs = :durationMs WHERE uri = :uri")
     suspend fun setChapterDuration(uri: String, durationMs: Long)
+
+    /**
+     * Moves a chapter's audio without touching the chapter. This is what keeping a book from a
+     * server comes down to: the row stays, its bookmarks stay, and what it points at is a file
+     * on the phone instead of a url.
+     */
+    @Query("UPDATE chapters SET audioUri = :audioUri WHERE uri = :uri")
+    suspend fun setChapterAudio(uri: String, audioUri: String)
+
+    @Query("UPDATE books SET kept = :kept WHERE uri = :uri")
+    suspend fun setKept(uri: String, kept: Boolean)
+
+    /** Everything from one source, for a reader who has given a server back. */
+    @Query("DELETE FROM books WHERE sourceType = :sourceType")
+    suspend fun deleteBooksOfSource(sourceType: String)
+
+    @Transaction
+    suspend fun forgetSource(sourceType: String) {
+        deleteBooksOfSource(sourceType)
+        deleteOrphanedChapters()
+        deleteOrphanedBookmarks()
+        deleteOrphanedMarks()
+    }
 
     /**
      * A book's length is its chapters', and is stored rather than summed on every read: the
@@ -202,8 +277,14 @@ interface LibraryDao {
     @Query("UPDATE books SET seenAt = :at WHERE uri = :uri")
     suspend fun markSeen(uri: String, at: Long)
 
-    @Query("DELETE FROM books WHERE seenAt < :at")
-    suspend fun deleteBooksUnseenSince(at: Long)
+    /**
+     * Scoped to one source, and that scope is the whole reason [BookEntity.sourceType] exists.
+     * A scan of the card knows nothing about a server's books, so without this the first rescan
+     * after a sync would decide every book from the server had gone away and delete the lot --
+     * and a sync would do the same to the card in return.
+     */
+    @Query("DELETE FROM books WHERE seenAt < :at AND sourceType = :sourceType")
+    suspend fun deleteBooksUnseenSince(at: Long, sourceType: String)
 
     @Query("DELETE FROM chapters WHERE bookUri NOT IN (SELECT uri FROM books)")
     suspend fun deleteOrphanedChapters()
@@ -229,7 +310,7 @@ interface LibraryDao {
      */
     @Query(
         "SELECT * FROM chapters WHERE bookUri IN " +
-            "(SELECT uri FROM books WHERE chapterCount = 1) " +
+            "(SELECT uri FROM books WHERE chapterCount = 1 AND sourceType = '" + SOURCE_LOCAL + "') " +
             "AND bookUri NOT IN (SELECT bookUri FROM marks)",
     )
     suspend fun singleChaptersWithoutMarks(): List<ChapterEntity>
@@ -258,9 +339,16 @@ interface LibraryDao {
      * New books are inserted, known ones have their details refreshed, and books that are no
      * longer on the card are dropped. A book that is still there keeps where the reader was in it,
      * which is the whole point of remembering.
+     *
+     * [sourceType] says which shelf is being folded in, and nothing outside it is touched.
      */
     @Transaction
-    suspend fun merge(books: List<BookEntity>, chapters: List<ChapterEntity>, at: Long) {
+    suspend fun merge(
+        books: List<BookEntity>,
+        chapters: List<ChapterEntity>,
+        at: Long,
+        sourceType: String,
+    ) {
         insertBooks(books)
         books.forEach {
             refreshDetails(it.uri, it.name, it.author, it.chapterCount)
@@ -270,7 +358,7 @@ interface LibraryDao {
         chapters.forEach { refreshChapter(it.uri, it.bookUri, it.name, it.sortIndex) }
         // Everything this scan did not stamp is no longer on the card, and everything that
         // belonged to it goes with it.
-        deleteBooksUnseenSince(at)
+        deleteBooksUnseenSince(at, sourceType)
         deleteOrphanedChapters()
         deleteOrphanedBookmarks()
         deleteOrphanedMarks()
@@ -280,7 +368,7 @@ interface LibraryDao {
 
 @Database(
     entities = [BookEntity::class, ChapterEntity::class, BookmarkEntity::class, MarkEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class LibraryDatabase : RoomDatabase() {
@@ -289,13 +377,38 @@ abstract class LibraryDatabase : RoomDatabase() {
     companion object {
         @Volatile private var instance: LibraryDatabase? = null
 
+        /**
+         * Splits where a chapter's audio is from what the chapter is, and says where a book came
+         * from.
+         *
+         * Written out rather than left to the destructive fallback below, which is the whole
+         * point of it: this app has been published since v1.0 and the fallback would take every
+         * reader's place in every book with it. Both columns are filled in for what is already
+         * there -- every existing row is a file on the card, so its audio is exactly its uri.
+         */
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE books ADD COLUMN sourceType TEXT NOT NULL DEFAULT '$SOURCE_LOCAL'")
+                db.execSQL("ALTER TABLE books ADD COLUMN kept INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE chapters ADD COLUMN audioUri TEXT NOT NULL DEFAULT ''")
+                db.execSQL("UPDATE chapters SET audioUri = uri")
+            }
+        }
+
         fun get(context: Context): LibraryDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     LibraryDatabase::class.java,
                     "library.db",
-                ).fallbackToDestructiveMigration(dropAllTables = true).build().also { instance = it }
+                )
+                    .addMigrations(MIGRATION_8_9)
+                    // Still here, and only reachable from a version older than 8. A reader
+                    // upgrading from the version before this one takes the migration above and
+                    // keeps everything; nobody is left without a path.
+                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    .build()
+                    .also { instance = it }
             }
     }
 }

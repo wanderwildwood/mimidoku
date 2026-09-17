@@ -47,10 +47,13 @@ class LibraryRepository(private val context: Context) {
                     name = chapter.name,
                     sortIndex = index,
                     durationMs = 0L,
+                    // A file on the card is its own location, which is why every row that
+                    // existed before this column did could simply be given its own uri.
+                    audioUri = chapter.uri.toString(),
                 )
             }
         }
-        dao.merge(books, chapters, at = System.currentTimeMillis())
+        dao.merge(books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_LOCAL)
         return results.mapValues { it.value.shape }
     }
 
@@ -106,6 +109,11 @@ class LibraryRepository(private val context: Context) {
         positionMs = 0L,
         progressMs = 0L,
         lastPlayedAt = null,
+        sourceType = SOURCE_LOCAL,
+        kept = true,
         seenAt = 0L,
     )
+
+    /** The database, for the server code, which writes the same rows through the same dao. */
+    val library: LibraryDao get() = dao
 }

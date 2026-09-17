@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    An Audiobookshelf server on a home network is served over plain http, because that is what it
+    does out of the box and there is no certificate to be had for 192.168.1.70. Android has
+    refused cleartext by default since API 28, so a request to such a server fails before it
+    leaves the phone.
+
+    This permits it, and the cost is worth stating plainly: what this app fetches over http,
+    including the api key it sends with every request, is readable by anyone else on the
+    network. That is a fair trade on a home wifi and a bad one anywhere else, which is why the
+    server screen says so and why a server reachable over https should be given over https.
+    Permitting cleartext does not weaken https; it only stops refusing http.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
