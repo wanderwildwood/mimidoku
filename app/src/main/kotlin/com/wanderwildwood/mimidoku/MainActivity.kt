@@ -512,7 +512,7 @@ private fun Mimidoku() {
                 val named = shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }
                     .collateIgnoringCase()
                     .sortedWith(String.CASE_INSENSITIVE_ORDER)
-                    .map { LibraryRow(title = it, id = it) }
+                    .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
                 if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
                     named + LibraryRow(title = preferences.shelving.unnamed(context.resources), id = UNNAMED)
                 } else {
@@ -527,7 +527,7 @@ private fun Mimidoku() {
                     else -> null
                 },
                 nowPlaying = nowPlaying,
-                onRowClick = { screen = Screen.Shelf(it.title.takeIf { _ -> it.id != UNNAMED }) },
+                onRowClick = { screen = Screen.Shelf(it.id.takeIf { id -> id != UNNAMED }) },
                 onSearchClick = { query = ""; screen = Screen.Search },
                 onSettingsClick = { screen = Screen.Settings },
                 onNowPlayingClick = { screen = Screen.Player },
@@ -548,7 +548,8 @@ private fun Mimidoku() {
             }
 
             BooksScreen(
-                shelf = current.name ?: preferences.shelving.unnamed(context.resources),
+                shelf = current.name?.let { preferences.shelving.shown(it, context.resources) }
+                    ?: preferences.shelving.unnamed(context.resources),
                 books = shelved,
                 nowPlaying = nowPlaying,
                 onClose = { screen = Screen.Library },
@@ -667,7 +668,7 @@ private fun Mimidoku() {
             val searchShelves = remember(shelvedBooks, preferences.shelving) {
                 shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }.distinct()
                     .sortedWith(String.CASE_INSENSITIVE_ORDER)
-                    .map { LibraryRow(title = it, id = it) }
+                    .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
             }
             SearchScreen(
                 query = query,
@@ -676,7 +677,7 @@ private fun Mimidoku() {
                 nowPlaying = nowPlaying,
                 onQueryChange = { query = it },
                 onBack = { screen = Screen.Library },
-                onShelfClick = { screen = Screen.Shelf(it.title) },
+                onShelfClick = { screen = Screen.Shelf(it.id) },
                 onBookClick = { row ->
                     books.firstOrNull { it.uri == row.id }?.let(openBook)
                 },
@@ -780,7 +781,7 @@ private fun Mimidoku() {
                         serverBusy = true
                         serverStatus = context.getString(R.string.server_asking)
                         val server = AbsServer(entered.address.withScheme(), entered.key)
-                        val client = AbsClient(server)
+                        val client = AbsClient(server, context.resources)
                         when (val found = client.libraries()) {
                             is AbsResult.Failure -> serverStatus = found.message
                             is AbsResult.Success -> {
@@ -806,7 +807,7 @@ private fun Mimidoku() {
                 onSyncNow = {
                     scope.launch {
                         serverBusy = true
-                        val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken))
+                        val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
                         serverStatus = syncServer(context.resources, client, preferences.serverLibraryId, library.library) {
                             serverStatus = it
                         }
@@ -934,7 +935,7 @@ private fun Mimidoku() {
             onConfirm = {
                 keeping = null
                 scope.launch {
-                    val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken))
+                    val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
                     keepingNow = book.uri to context.getString(R.string.library_keeping)
                     val kept = AbsDownloader.downloadBook(
                         context = context,
@@ -1107,7 +1108,6 @@ private fun BookEntity.shownTitle(): String = tagTitle ?: name
  */
 private fun BookEntity.shownAuthor(): String? = author ?: tagAuthor
 
-/** Which shelf a book belongs on, which depends on what the reader asked to see. */
 /**
  * One shelf per name, however the folders spell it. A card that has both "alan Watts" and
  * "Alan Watts" on it is one author with two folders, not two authors, and distinct() alone
@@ -1151,13 +1151,33 @@ private fun Shelving.unnamed(resources: Resources): String = when (this) {
  */
 private const val UNNAMED = "\u0000unnamed"
 
+/**
+ * Which shelf a book belongs on, which depends on what the reader asked to see.
+ *
+ * This is the shelf's key, not what the reader sees: [shown] words it. For an author or a genre
+ * the two are the same thing, a name out of the files.
+ */
 private fun BookEntity.shelf(shelving: Shelving): String? = when (shelving) {
     Shelving.Author -> shownAuthor()
     Shelving.Genre -> genre
     Shelving.Status -> when {
-        lastPlayedAt == null -> "Not started"
-        else -> "Started"
+        lastPlayedAt == null -> NOT_STARTED
+        else -> STARTED
     }
+}
+
+/**
+ * The keys of the two status shelves. English only because they always were; they are compared,
+ * never shown, and [shown] gives the heading in the reader's language.
+ */
+private const val NOT_STARTED = "Not started"
+private const val STARTED = "Started"
+
+/** The heading for a shelf whose key is [key]. A name out of the files is shown as it is. */
+private fun Shelving.shown(key: String, resources: Resources): String = when {
+    this == Shelving.Status && key == NOT_STARTED -> resources.getString(R.string.library_not_started)
+    this == Shelving.Status && key == STARTED -> resources.getString(R.string.library_started)
+    else -> key
 }
 
 /** One part of a book: a file of its own, or a marked place inside a longer one. */
