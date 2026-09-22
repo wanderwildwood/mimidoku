@@ -1,5 +1,7 @@
 package com.wanderwildwood.mimidoku.server
 
+import android.content.res.Resources
+import com.wanderwildwood.mimidoku.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -54,8 +56,10 @@ data class AbsBook(
  * a `?token=` query parameter. The header is used everywhere here. The query parameter is what
  * would be needed to hand a url straight to a player, and is deliberately not used, because a
  * token in a url is a token in a log.
+ *
+ * [resources] words a failure, which the reader sees as the server's status.
  */
-class AbsClient(private val server: AbsServer) {
+class AbsClient(private val server: AbsServer, private val resources: Resources) {
 
     /** Whether the server is there and the key is good. Answers with its version. */
     suspend fun ping(): AbsResult<String> = get("/api/libraries").map { "reachable" }
@@ -156,17 +160,17 @@ class AbsClient(private val server: AbsServer) {
                 in 200..299 ->
                     AbsResult.Success(JSONObject(connection.inputStream.bufferedReader().readText()))
                 HttpURLConnection.HTTP_UNAUTHORIZED, HttpURLConnection.HTTP_FORBIDDEN ->
-                    AbsResult.Failure("The server did not accept that key.")
+                    AbsResult.Failure(resources.getString(R.string.server_key_refused))
                 HttpURLConnection.HTTP_NOT_FOUND ->
-                    AbsResult.Failure("The server has no such thing.")
-                else -> AbsResult.Failure("The server answered $code.")
+                    AbsResult.Failure(resources.getString(R.string.server_no_such_thing))
+                else -> AbsResult.Failure(resources.getString(R.string.server_answered, code))
             }
         } catch (e: IOException) {
-            AbsResult.Failure("The server could not be reached.")
+            AbsResult.Failure(resources.getString(R.string.server_unreachable))
         } catch (e: org.json.JSONException) {
             // A wrong address usually reaches *something* -- a router, a different app -- and
             // what comes back is a web page rather than an error.
-            AbsResult.Failure("That address answered with something that is not Audiobookshelf.")
+            AbsResult.Failure(resources.getString(R.string.server_not_audiobookshelf))
         } finally {
             connection?.disconnect()
         }

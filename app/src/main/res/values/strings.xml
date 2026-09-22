@@ -23,6 +23,9 @@
     <string name="library_no_author">No author</string>
     <string name="library_no_genre">No genre</string>
     <string name="library_no_status">No status</string>
+    <!-- Shelf headings when the library is grouped by status: books never played, and books played at least once -->
+    <string name="library_not_started">Not started</string>
+    <string name="library_started">Started</string>
     <!-- On a book row: the book is on the server and has not been downloaded -->
     <string name="library_not_on_phone">Not on this phone</string>
     <!-- On a book row: how far into the book the reader is. %1$d is a whole number from 0 to 100 -->
@@ -211,6 +214,14 @@
     <!-- While the server's list of books is read. %1$d books read out of %2$d -->
     <string name="server_reading_catalogue">Reading the catalogue — %1$d of %2$d</string>
     <string name="server_library_empty">That library has nothing in it.</string>
+    <!-- Shown as the server's status when asking it something fails -->
+    <string name="server_key_refused">The server did not accept that key.</string>
+    <string name="server_no_such_thing">The server has no such thing.</string>
+    <!-- %1$d is an HTTP status code -->
+    <string name="server_answered">The server answered %1$d.</string>
+    <string name="server_unreachable">The server could not be reached.</string>
+    <!-- The address reached a web page of some other kind. Audiobookshelf is the name of the server software; leave it as it is -->
+    <string name="server_not_audiobookshelf">That address answered with something that is not Audiobookshelf.</string>
     <!-- The result of reading the server's list of books -->
     <plurals name="server_synced_books">
         <item quantity="one">%1$d book.</item>
