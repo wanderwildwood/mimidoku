@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.Player
+import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
 import java.util.Calendar
@@ -66,7 +67,7 @@ class SleepTimer(
 
     /** The reader pressing the tool, and the only way it is turned off. */
     fun arm(on: Boolean) {
-        set(on, if (on) "Sleep timer on" else "Sleep timer off")
+        set(on, appContext.getString(if (on) R.string.sleep_timer_on else R.string.sleep_timer_off))
     }
 
     /**
@@ -82,7 +83,7 @@ class SleepTimer(
         if (isPlaying && !armed && preferences.autoSleep &&
             withinWindow(preferences.autoSleepStart, preferences.autoSleepEnd)
         ) {
-            set(true, "Sleep timer on")
+            set(true, appContext.getString(R.string.sleep_timer_on))
             return
         }
         listenForShakes()
@@ -144,7 +145,7 @@ class SleepTimer(
         remainingMs = fullMs()
         followedChapter = null
         if (chapter != null) onEnded(chapter, at)
-        say("Sleep timer ended")
+        say(appContext.getString(R.string.sleep_timer_ended))
         listenForShakes()
         schedule()
         onChanged()
@@ -159,7 +160,7 @@ class SleepTimer(
         remainingMs = fullMs()
         followedChapter = null
         restoreVolume()
-        say("Sleep timer restarted")
+        say(appContext.getString(R.string.sleep_timer_restarted))
         onChanged()
     }
 

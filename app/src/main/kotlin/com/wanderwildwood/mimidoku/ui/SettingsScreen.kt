@@ -23,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,9 +72,9 @@ fun SettingsScreen(
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
-            title = "Settings",
+            title = stringResource(R.string.settings_title),
             onClose = onClose,
-            trailing = { BarButton(Icons.Info, "About", onAbout) },
+            trailing = { BarButton(Icons.Info, stringResource(R.string.settings_cd_about), onAbout) },
         )
         LazyColumnMMD(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
             items(rows, key = { it.key }) { row ->

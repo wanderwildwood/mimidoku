@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -71,7 +73,7 @@ fun NowPlayingBar(
         ) {
             Icon(
                 imageVector = if (nowPlaying.isPlaying) Icons.Pause else Icons.Play,
-                contentDescription = if (nowPlaying.isPlaying) "Pause" else "Play",
+                contentDescription = stringResource(if (nowPlaying.isPlaying) R.string.cd_pause else R.string.cd_play),
                 tint = Color.White,
                 // A triangle looks off-centre in a circle when it is centred, because its weight
                 // sits to the left of its bounding box. Nudged right until it stops looking wrong.

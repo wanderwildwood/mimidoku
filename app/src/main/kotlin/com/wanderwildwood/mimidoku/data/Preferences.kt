@@ -1,6 +1,8 @@
 package com.wanderwildwood.mimidoku.data
 
 import android.content.Context
+import androidx.annotation.StringRes
+import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.library.Reading
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,10 +11,10 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 /** How the library is grouped on the first screen. */
-enum class Shelving(val label: String) {
-    Author("Author"),
-    Genre("Genre"),
-    Status("Status"),
+enum class Shelving(@StringRes val labelRes: Int) {
+    Author(R.string.shelving_author),
+    Genre(R.string.shelving_genre),
+    Status(R.string.shelving_status),
 }
 
 /**
@@ -22,11 +24,11 @@ enum class Shelving(val label: String) {
  * at or under that would fire while the device sat on a table. "High" here means high
  * sensitivity — the least shaking needed — which is the way a reader reads the word.
  */
-enum class Shake(val label: String, val threshold: Float) {
-    Off("Off", Float.MAX_VALUE),
-    Low("Low", 2.7f),
-    Medium("Medium", 2.2f),
-    High("High", 1.7f),
+enum class Shake(@StringRes val labelRes: Int, val threshold: Float) {
+    Off(R.string.shake_off, Float.MAX_VALUE),
+    Low(R.string.shake_low, 2.7f),
+    Medium(R.string.shake_medium, 2.2f),
+    High(R.string.shake_high, 1.7f),
 }
 
 /**

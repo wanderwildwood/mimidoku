@@ -3,6 +3,8 @@ package com.wanderwildwood.mimidoku.library
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.annotation.StringRes
+import com.wanderwildwood.mimidoku.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -37,15 +39,15 @@ data class Book(
  * chapters of one recording in one library and twenty whole books in another, and nothing in the
  * folder says which. Where it cannot be known, the reader is asked instead of guessed at.
  */
-enum class Reading(val label: String) {
+enum class Reading(@StringRes val labelRes: Int) {
     /** What is in here is authors, and their books are inside those. */
-    Authors("Authors"),
+    Authors(R.string.reading_authors),
 
     /** What is in here is books - a folder each, or a file each. */
-    Books("Books"),
+    Books(R.string.reading_books),
 
     /** This folder is one book and everything under it is a chapter of it. */
-    OneBook("One book"),
+    OneBook(R.string.reading_one_book),
 }
 
 /** What the chosen folder turned out to be. */

@@ -1,4 +1,237 @@
 <resources>
     <!-- The launcher label. Internally the project is mimidoku, 耳読 - reading by ear. -->
     <string name="app_name">Audio Reading</string>
+
+    <!-- ============================================================ -->
+    <!-- Shared: icon descriptions read aloud by a screen reader, used on several screens -->
+    <string name="cd_back">Back</string>
+    <!-- The cross that closes a screen (verb) -->
+    <string name="cd_close">Close</string>
+    <!-- The play button (verb) -->
+    <string name="cd_play">Play</string>
+    <!-- The pause button (verb) -->
+    <string name="cd_pause">Pause</string>
+
+    <!-- ============================================================ -->
+    <!-- Library: the first screen, a shelf of books, and fetching a book from a server -->
+    <string name="library_title">Library</string>
+    <string name="library_cd_search">What are you looking for?</string>
+    <string name="library_cd_settings">Settings</string>
+    <string name="library_scanning">Scanning library…</string>
+    <string name="library_no_books">No books yet</string>
+    <!-- Shelf headings for books whose files do not say who wrote them, their genre or their status -->
+    <string name="library_no_author">No author</string>
+    <string name="library_no_genre">No genre</string>
+    <string name="library_no_status">No status</string>
+    <!-- On a book row: the book is on the server and has not been downloaded -->
+    <string name="library_not_on_phone">Not on this phone</string>
+    <!-- On a book row: how far into the book the reader is. %1$d is a whole number from 0 to 100 -->
+    <string name="library_percent">%1$d%%</string>
+    <!-- On a book row while it downloads -->
+    <string name="library_keeping">Keeping…</string>
+    <!-- On a book row while it downloads. %1$d files done out of %2$d -->
+    <string name="library_keeping_progress">Keeping — %1$d of %2$d</string>
+    <!-- Dialog asking to download a book. %1$s is the book's title -->
+    <string name="library_keep_title">Keep \"%1$s\" on this phone?</string>
+    <!-- The button that confirms the download (verb) -->
+    <string name="library_keep_action">Keep</string>
+    <!-- Said once a download has finished. %1$s is the book's title -->
+    <string name="library_kept">\"%1$s\" is on this phone.</string>
+
+    <!-- Library view: what the shelves are grouped by -->
+    <string name="shelving_author">Author</string>
+    <string name="shelving_genre">Genre</string>
+    <!-- Whether a book has been started or not (noun) -->
+    <string name="shelving_status">Status</string>
+
+    <!-- ============================================================ -->
+    <!-- Playback screen -->
+    <string name="player_cd_sleep_timer">Sleep timer</string>
+    <string name="player_cd_volume_boost">Volume boost</string>
+    <string name="player_cd_speed">Playback speed</string>
+    <string name="player_cd_skip_silence">Skip silence</string>
+    <string name="player_cd_bookmarks">Bookmarks</string>
+    <string name="player_cd_unlock">Unlock the controls</string>
+    <string name="player_cd_lock">Lock the controls</string>
+    <!-- The mark beside the chapter name that opens the list of chapters -->
+    <string name="player_cd_chapters">Chapters</string>
+    <string name="player_cd_previous_chapter">Previous chapter</string>
+    <string name="player_cd_next_chapter">Next chapter</string>
+    <!-- The skip-back button. The English says "seconds" even for one, as the app always has -->
+    <plurals name="player_cd_back_seconds">
+        <item quantity="one">Back %1$d seconds</item>
+        <item quantity="other">Back %1$d seconds</item>
+    </plurals>
+    <!-- The skip-forward button ("on" as in onwards). The English says "seconds" even for one -->
+    <plurals name="player_cd_on_seconds">
+        <item quantity="one">On %1$d seconds</item>
+        <item quantity="other">On %1$d seconds</item>
+    </plurals>
+    <!-- The small label under the two skip buttons: a number of seconds, abbreviated -->
+    <string name="player_skip_label">%1$ds</string>
+
+    <!-- Playback screen: the short line that says what a press just did -->
+    <string name="player_volume_boost_on">Volume boost on</string>
+    <string name="player_volume_boost_off">Volume boost off</string>
+    <string name="player_skip_silence_on">Skip silence on</string>
+    <string name="player_skip_silence_off">Skip silence off</string>
+    <string name="player_controls_locked">Controls locked</string>
+    <string name="player_controls_unlocked">Controls unlocked</string>
+    <string name="sleep_timer_on">Sleep timer on</string>
+    <string name="sleep_timer_off">Sleep timer off</string>
+    <string name="sleep_timer_ended">Sleep timer ended</string>
+    <!-- A shake put the timer back to full -->
+    <string name="sleep_timer_restarted">Sleep timer restarted</string>
+
+    <!-- ============================================================ -->
+    <!-- Bookmarks -->
+    <!-- Screen title (noun) -->
+    <string name="bookmarks_title">Bookmark</string>
+    <string name="bookmarks_cd_add">Mark this place</string>
+    <!-- When a bookmark was made. %1$s is a relative time ("3 minutes ago"), %2$s a clock time -->
+    <string name="bookmarks_when">%1$s, %2$s</string>
+    <!-- The row after one press on its menu: a second press removes it -->
+    <string name="bookmarks_remove_confirm">Remove this mark — tap again</string>
+    <string name="bookmarks_cd_remove">Remove this mark</string>
+    <!-- A bookmark the sleep timer made, not the reader -->
+    <string name="bookmarks_cd_automatic">Marked automatically</string>
+
+    <!-- ============================================================ -->
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_cd_about">About</string>
+    <string name="settings_folders">Audiobook folders</string>
+    <string name="settings_folders_none">None chosen yet</string>
+    <plurals name="settings_folders_count">
+        <item quantity="one">%1$d folder</item>
+        <item quantity="other">%1$d folders</item>
+    </plurals>
+    <string name="settings_server">Audiobook server</string>
+    <!-- %1$d books downloaded out of %2$d on the server -->
+    <string name="settings_server_kept">%1$d of %2$d kept on this phone</string>
+    <!-- No server has been set up -->
+    <string name="settings_server_none">None</string>
+    <string name="settings_library_view">Library view</string>
+    <!-- How far the skip buttons move (noun) -->
+    <string name="settings_skip_amount">Skip amount</string>
+    <!-- How far playback steps back when it resumes after a pause -->
+    <string name="settings_auto_rewind">Auto rewind</string>
+    <string name="settings_sleep_duration">Sleep timer duration</string>
+    <!-- How hard the phone has to be shaken to restart the sleep timer -->
+    <string name="settings_shake">Shake sensitivity</string>
+    <string name="settings_auto_sleep">Automatic sleep timer</string>
+    <!-- The start and end of the nightly hours the sleep timer turns itself on in -->
+    <string name="settings_starts_at">Starts at</string>
+    <string name="settings_ends_at">Ends at</string>
+    <string name="settings_playback_speed">Playback speed</string>
+    <!-- A speed such as 1.5x: %1$d is the whole part, %2$d the tenths -->
+    <string name="settings_speed_value">%1$d.%2$dx</string>
+    <!-- The English says "seconds" and "minutes" even for one, as the app always has -->
+    <plurals name="settings_seconds">
+        <item quantity="one">%1$d seconds</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <plurals name="settings_minutes">
+        <item quantity="one">%1$d minutes</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+
+    <!-- Shake sensitivity levels. "High" means the least shaking is needed -->
+    <string name="shake_off">Off</string>
+    <string name="shake_low">Low</string>
+    <string name="shake_medium">Medium</string>
+    <string name="shake_high">High</string>
+
+    <!-- ============================================================ -->
+    <!-- Dialogs -->
+    <!-- The minus and plus beside a number being set -->
+    <string name="dialog_cd_less">Less</string>
+    <string name="dialog_cd_more">More</string>
+    <string name="dialog_cancel">Cancel</string>
+    <!-- Confirms a number (verb) -->
+    <string name="dialog_set">Set</string>
+    <string name="dialog_ok">OK</string>
+
+    <!-- About dialog. Keep the names of the app, typeface, icon set and licences as they are -->
+    <string name="about_title">About</string>
+    <!-- %1$s is the version number -->
+    <string name="about_version">Audio Reading %1$s</string>
+    <string name="about_licence">GNU General Public License v3</string>
+    <string name="about_font">Lato — SIL Open Font License 1.1</string>
+    <string name="about_icons">Material Symbols — Apache License 2.0</string>
+    <!-- The donation link label, beside a drawing of a llama. A fixed phrase: a verb and an object -->
+    <string name="about_feed_the_llamas">Feed the llamas</string>
+    <string name="about_no_browser">There is no browser on this phone to open that with.</string>
+    <!-- Button that closes the About dialog -->
+    <string name="about_close">Close</string>
+
+    <!-- ============================================================ -->
+    <!-- Audiobook folders -->
+    <string name="folders_title">Audiobook folders</string>
+    <!-- Reads the folders again now (verb) -->
+    <string name="folders_scan_now">Scan now</string>
+    <!-- Adds a folder (verb) -->
+    <string name="folders_add">Add</string>
+    <string name="folders_cd_stop_reading">Stop reading this folder</string>
+    <!-- What a scan found a folder to be -->
+    <string name="folders_shape_authors_then_books">Authors, then books</string>
+    <string name="folders_shape_books">Books</string>
+    <string name="folders_shape_one_book">One book</string>
+    <string name="folders_shape_none">No books found</string>
+    <!-- Dialog asking what a folder holds; the answers follow it -->
+    <string name="folders_holds_title">This folder holds</string>
+    <string name="reading_authors">Authors</string>
+    <string name="reading_books">Books</string>
+    <string name="reading_one_book">One book</string>
+
+    <!-- ============================================================ -->
+    <!-- Audiobook server (Audiobookshelf) -->
+    <string name="server_title">Audiobook server</string>
+    <string name="server_sync_now">Sync now</string>
+    <!-- Field label: the server's address -->
+    <string name="server_address">Address</string>
+    <string name="server_api_key">API key</string>
+    <string name="server_connect">Connect</string>
+    <string name="server_connect_again">Connect again</string>
+    <plurals name="server_books_on_server">
+        <item quantity="one">%1$d book on the server</item>
+        <item quantity="other">%1$d books on the server</item>
+    </plurals>
+    <!-- Heading over the books that have been downloaded -->
+    <string name="server_on_this_phone">On this phone</string>
+    <string name="server_key_note">A key is made on the server, under Users, and can be taken back there at any time. It is kept on this phone and it is not your password. A server at home is plain http, which this app allows and which means anyone else on your network can read the key and the audio; a server reachable from outside the house wants an https address instead.</string>
+    <string name="server_privacy_note">Where you are in a book stays on this phone. The server is never told, and never tells this app.</string>
+    <string name="server_cd_give_back">Give this book back to the server</string>
+    <!-- The row after one press: a second press forgets the server -->
+    <string name="server_forget_confirm">Forget this server — its books and downloads go; tap again</string>
+    <string name="server_forget">Forget this server</string>
+    <string name="server_asking">Asking the server what it has…</string>
+    <string name="server_no_book_library">That server has no book library.</string>
+    <string name="server_forgotten">Forgotten.</string>
+    <!-- While the server's list of books is read. %1$d books read out of %2$d -->
+    <string name="server_reading_catalogue">Reading the catalogue — %1$d of %2$d</string>
+    <string name="server_library_empty">That library has nothing in it.</string>
+    <!-- The result of reading the server's list of books -->
+    <plurals name="server_synced_books">
+        <item quantity="one">%1$d book.</item>
+        <item quantity="other">%1$d books.</item>
+    </plurals>
+    <!-- Dialog asking to delete a downloaded book. %1$s is the book's title -->
+    <string name="server_give_back_title">Give \"%1$s\" back to the server? Your place in it is kept.</string>
+    <string name="server_give_back_action">Give back</string>
+    <!-- What a downloaded book takes up -->
+    <string name="server_size_gb">%1$.1f GB</string>
+    <string name="server_size_mb">%1$d MB</string>
+    <string name="server_size_kb">%1$d kB</string>
+    <string name="server_nothing_on_disk">nothing on disk</string>
+
+    <!-- Downloading a book: what is said when it fails -->
+    <string name="download_not_on_server">That book is not on a server.</string>
+    <string name="download_empty">That book has nothing in it.</string>
+    <string name="download_nowhere">There is nowhere on this phone to put it.</string>
+    <string name="download_file_gone">The server no longer has that file.</string>
+    <!-- %1$d is an HTTP status code -->
+    <string name="download_server_answered">The server answered %1$d.</string>
+    <string name="download_unfinished">That chapter did not finish downloading.</string>
+    <string name="download_not_saved">The download could not be saved.</string>
 </resources>

@@ -26,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,6 +37,7 @@ import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
+import com.wanderwildwood.mimidoku.R
 import kotlinx.coroutines.delay
 
 /** What the reader typed, on its way to being a server. */
@@ -103,14 +106,14 @@ fun ServerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Back,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.cd_back),
                     tint = Color.Black,
                     modifier = Modifier.size(24.dp).clickable(onClick = onBack),
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 if (connected && !isBusy) {
                     TextMMD(
-                        text = "Sync now",
+                        text = stringResource(R.string.server_sync_now),
                         style = MaterialTheme.typography.bodyMedium,
                         lineHeight = 22.sp,
                         color = Color.Black,
@@ -120,7 +123,7 @@ fun ServerScreen(
             }
 
             TextMMD(
-                text = "Audiobook server",
+                text = stringResource(R.string.server_title),
                 style = MaterialTheme.typography.titleLarge,
                 lineHeight = 32.sp,
                 color = Color.Black,
@@ -134,7 +137,7 @@ fun ServerScreen(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedAddress,
                             onValueChange = { typedAddress = it },
-                            label = { TextMMD(text = "Address") },
+                            label = { TextMMD(text = stringResource(R.string.server_address)) },
                             placeholder = { TextMMD(text = "192.168.1.70:13378") },
                             singleLine = true,
                             enabled = !isBusy,
@@ -146,7 +149,7 @@ fun ServerScreen(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedKey,
                             onValueChange = { typedKey = it },
-                            label = { TextMMD(text = "API key") },
+                            label = { TextMMD(text = stringResource(R.string.server_api_key)) },
                             singleLine = true,
                             enabled = !isBusy,
                             visualTransformation = PasswordVisualTransformation(),
@@ -161,7 +164,7 @@ fun ServerScreen(
                             enabled = entered.isComplete && !isBusy,
                         ) {
                             TextMMD(
-                                text = if (connected) "Connect again" else "Connect",
+                                text = stringResource(if (connected) R.string.server_connect_again else R.string.server_connect),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                         }
@@ -182,11 +185,7 @@ fun ServerScreen(
                         if (status == null && connected && bookCount > 0) {
                             Spacer(modifier = Modifier.height(16.dp))
                             TextMMD(
-                                text = if (bookCount == 1) {
-                                    "1 book on the server"
-                                } else {
-                                    "$bookCount books on the server"
-                                },
+                                text = pluralStringResource(R.plurals.server_books_on_server, bookCount, bookCount),
                                 style = MaterialTheme.typography.bodyMedium,
                                 lineHeight = 22.sp,
                                 color = Color.Black,
@@ -200,7 +199,7 @@ fun ServerScreen(
                 if (kept.isNotEmpty()) {
                     item {
                         TextMMD(
-                            text = "On this phone",
+                            text = stringResource(R.string.server_on_this_phone),
                             style = MaterialTheme.typography.titleSmall,
                             color = Color.Black,
                             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -215,12 +214,7 @@ fun ServerScreen(
                 item {
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         TextMMD(
-                            text = "A key is made on the server, under Users, and can be taken " +
-                                "back there at any time. It is kept on this phone and it is not " +
-                                "your password. A server at home is plain http, which this app " +
-                                "allows and which means anyone else on your network can read " +
-                                "the key and the audio; a server reachable from outside the " +
-                                "house wants an https address instead.",
+                            text = stringResource(R.string.server_key_note),
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = 22.sp,
                             color = Color.Black,
@@ -229,8 +223,7 @@ fun ServerScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         TextMMD(
-                            text = "Where you are in a book stays on this phone. The server is " +
-                                "never told, and never tells this app.",
+                            text = stringResource(R.string.server_privacy_note),
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = 22.sp,
                             color = Color.Black,
@@ -283,7 +276,7 @@ private fun KeptLine(book: KeptBook, onGiveBack: () -> Unit) {
         Spacer(modifier = Modifier.width(16.dp))
         Icon(
             imageVector = Icons.Delete,
-            contentDescription = "Give this book back to the server",
+            contentDescription = stringResource(R.string.server_cd_give_back),
             tint = Color.Black,
             modifier = Modifier.size(24.dp).clickable(onClick = onGiveBack),
         )
@@ -313,9 +306,9 @@ private fun ForgetRow(onForget: () -> Unit) {
     ) {
         TextMMD(
             text = if (armed) {
-                "Forget this server — its books and downloads go; tap again"
+                stringResource(R.string.server_forget_confirm)
             } else {
-                "Forget this server"
+                stringResource(R.string.server_forget)
             },
             style = MaterialTheme.typography.bodyLarge,
             lineHeight = 24.sp,
