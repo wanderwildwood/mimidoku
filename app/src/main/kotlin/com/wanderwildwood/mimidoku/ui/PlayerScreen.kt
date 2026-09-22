@@ -25,6 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
@@ -114,31 +117,31 @@ fun PlayerScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Tool(Icons.Close, "Close", onClick = tools.onClose)
+            Tool(Icons.Close, stringResource(R.string.cd_close), onClick = tools.onClose)
             Tool(
                 icon = if (playback.sleepArmed) Icons.SleepTimerOn else Icons.SleepTimerOff,
-                description = "Sleep timer",
+                description = stringResource(R.string.player_cd_sleep_timer),
                 label = playback.sleepRemaining,
                 enabled = !locked,
                 onClick = tools.onSleepTimer,
             )
             Tool(
                 icon = if (playback.volumeBoosted) Icons.VolumeBoosted else Icons.Volume,
-                description = "Volume boost",
+                description = stringResource(R.string.player_cd_volume_boost),
                 enabled = !locked,
                 onClick = tools.onVolume,
             )
-            Tool(Icons.Speed, "Playback speed", enabled = !locked, onClick = tools.onSpeed)
+            Tool(Icons.Speed, stringResource(R.string.player_cd_speed), enabled = !locked, onClick = tools.onSpeed)
             Tool(
                 icon = if (playback.skipSilence) Icons.Compress else Icons.Expand,
-                description = "Skip silence",
+                description = stringResource(R.string.player_cd_skip_silence),
                 enabled = !locked,
                 onClick = tools.onSkipSilence,
             )
-            Tool(Icons.Bookmarks, "Bookmarks", enabled = !locked, onClick = tools.onBookmarks)
+            Tool(Icons.Bookmarks, stringResource(R.string.player_cd_bookmarks), enabled = !locked, onClick = tools.onBookmarks)
             Tool(
                 icon = if (locked) Icons.Locked else Icons.Unlocked,
-                description = if (locked) "Unlock the controls" else "Lock the controls",
+                description = stringResource(if (locked) R.string.player_cd_unlock else R.string.player_cd_lock),
                 onClick = tools.onLock,
             )
         }
@@ -210,7 +213,7 @@ fun PlayerScreen(
                     // invisible. It is the only mark on this screen saying there is more here.
                     Icon(
                         imageVector = Icons.ExpandMore,
-                        contentDescription = "Chapters",
+                        contentDescription = stringResource(R.string.player_cd_chapters),
                         tint = ink,
                         modifier = Modifier
                             .padding(start = 4.dp)
@@ -251,21 +254,22 @@ fun PlayerScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            TransportButton(Icons.PreviousChapter, "Previous chapter", 36.dp, locked, transport.onPreviousChapter)
-            TransportButton(Icons.Rewind, "Back ${playback.skipSeconds} seconds", 32.dp, locked, transport.onRewind) {
-                "${playback.skipSeconds}s"
+            val skipLabel = stringResource(R.string.player_skip_label, playback.skipSeconds)
+            TransportButton(Icons.PreviousChapter, stringResource(R.string.player_cd_previous_chapter), 36.dp, locked, transport.onPreviousChapter)
+            TransportButton(Icons.Rewind, pluralStringResource(R.plurals.player_cd_back_seconds, playback.skipSeconds, playback.skipSeconds), 32.dp, locked, transport.onRewind) {
+                skipLabel
             }
             TransportButton(
                 icon = if (playback.isPlaying) Icons.Pause else Icons.Play,
-                description = if (playback.isPlaying) "Pause" else "Play",
+                description = stringResource(if (playback.isPlaying) R.string.cd_pause else R.string.cd_play),
                 size = 48.dp,
                 locked = locked,
                 onClick = transport.onPlayPause,
             )
-            TransportButton(Icons.Forward, "On ${playback.skipSeconds} seconds", 32.dp, locked, transport.onForward) {
-                "${playback.skipSeconds}s"
+            TransportButton(Icons.Forward, pluralStringResource(R.plurals.player_cd_on_seconds, playback.skipSeconds, playback.skipSeconds), 32.dp, locked, transport.onForward) {
+                skipLabel
             }
-            TransportButton(Icons.NextChapter, "Next chapter", 36.dp, locked, transport.onNextChapter)
+            TransportButton(Icons.NextChapter, stringResource(R.string.player_cd_next_chapter), 36.dp, locked, transport.onNextChapter)
         }
 
         Spacer(modifier = Modifier.height(42.dp))

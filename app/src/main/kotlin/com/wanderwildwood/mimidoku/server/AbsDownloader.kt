@@ -3,6 +3,7 @@ package com.wanderwildwood.mimidoku.server
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.data.ChapterEntity
 import com.wanderwildwood.mimidoku.data.LibraryDao
 import kotlinx.coroutines.Dispatchers
@@ -63,9 +64,9 @@ object AbsDownloader {
         onProgress: suspend (done: Int, total: Int, fraction: Float) -> Unit = { _, _, _ -> },
     ): AbsResult<Int> {
         val itemId = AbsSync.itemIdOf(bookUri)
-            ?: return AbsResult.Failure("That book is not on a server.")
+            ?: return AbsResult.Failure(context.getString(R.string.download_not_on_server))
         val chapters = dao.chaptersOf(bookUri)
-        if (chapters.isEmpty()) return AbsResult.Failure("That book has nothing in it.")
+        if (chapters.isEmpty()) return AbsResult.Failure(context.getString(R.string.download_empty))
 
         var done = 0
         for (chapter in chapters) {
@@ -104,7 +105,7 @@ object AbsDownloader {
         onProgress: suspend (Float) -> Unit,
     ): AbsResult<File> = withContext(Dispatchers.IO) {
         val target = fileFor(context, chapterUri)
-            ?: return@withContext AbsResult.Failure("There is nowhere on this phone to put it.")
+            ?: return@withContext AbsResult.Failure(context.getString(R.string.download_nowhere))
         if (target.exists() && target.length() > 0) return@withContext AbsResult.Success(target)
 
         val partial = File(target.absolutePath + ".part")
@@ -127,9 +128,9 @@ object AbsDownloader {
                         // The server lists books whose files it can no longer find. It says so in
                         // the listing, and those are skipped, but a file can go missing between
                         // the sync and the download.
-                        "The server no longer has that file."
+                        context.getString(R.string.download_file_gone)
                     } else {
-                        "The server answered $code."
+                        context.getString(R.string.download_server_answered, code)
                     },
                 )
             }
@@ -160,16 +161,16 @@ object AbsDownloader {
                 // A truncated file is the failure this whole dance exists to catch: it opens, it
                 // plays, and it stops early, which is indistinguishable from a bad recording.
                 partial.delete()
-                return@withContext AbsResult.Failure("That chapter did not finish downloading.")
+                return@withContext AbsResult.Failure(context.getString(R.string.download_unfinished))
             }
             if (!partial.renameTo(target)) {
                 partial.delete()
-                return@withContext AbsResult.Failure("The download could not be saved.")
+                return@withContext AbsResult.Failure(context.getString(R.string.download_not_saved))
             }
             AbsResult.Success(target)
         } catch (e: IOException) {
             partial.delete()
-            AbsResult.Failure("That chapter did not finish downloading.")
+            AbsResult.Failure(context.getString(R.string.download_unfinished))
         } finally {
             connection?.disconnect()
         }

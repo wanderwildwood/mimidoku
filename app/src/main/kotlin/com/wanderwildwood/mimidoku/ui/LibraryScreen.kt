@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.lazy.LazyColumnMMD
@@ -53,12 +55,12 @@ fun LibraryScreen(
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
-            title = "Library",
+            title = stringResource(R.string.library_title),
             afterTitle = {
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     imageVector = Icons.Search,
-                    contentDescription = "What are you looking for?",
+                    contentDescription = stringResource(R.string.library_cd_search),
                     tint = Color.Black,
                     modifier = Modifier.size(25.dp).clickable(onClick = onSearchClick),
                 )
@@ -66,7 +68,7 @@ fun LibraryScreen(
             trailing = {
                 Icon(
                     imageVector = Icons.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.library_cd_settings),
                     tint = Color.Black,
                     modifier = Modifier.size(24.dp).clickable(onClick = onSettingsClick),
                 )

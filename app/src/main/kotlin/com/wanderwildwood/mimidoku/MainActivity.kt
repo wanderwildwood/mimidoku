@@ -1,6 +1,7 @@
 package com.wanderwildwood.mimidoku
 
 import android.content.ComponentName
+import android.content.res.Resources
 import android.content.Intent
 import android.net.Uri
 import androidx.core.net.toUri
@@ -22,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
@@ -449,7 +452,7 @@ private fun Mimidoku() {
                     id = it.uri,
                     title = it.shownTitle(),
                     author = it.shownAuthor(),
-                    size = keptSizes[it.uri]?.asSize(),
+                    size = keptSizes[it.uri]?.asSize(context.resources),
                 )
             }
     }
@@ -511,7 +514,7 @@ private fun Mimidoku() {
                     .sortedWith(String.CASE_INSENSITIVE_ORDER)
                     .map { LibraryRow(title = it, id = it) }
                 if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
-                    named + LibraryRow(title = preferences.shelving.unnamed(), id = UNNAMED)
+                    named + LibraryRow(title = preferences.shelving.unnamed(context.resources), id = UNNAMED)
                 } else {
                     named
                 }
@@ -519,8 +522,8 @@ private fun Mimidoku() {
             LibraryScreen(
                 rows = shelves,
                 status = when {
-                    scanning -> "Scanning library…"
-                    shelvedBooks.isEmpty() -> "No books yet"
+                    scanning -> stringResource(R.string.library_scanning)
+                    shelvedBooks.isEmpty() -> stringResource(R.string.library_no_books)
                     else -> null
                 },
                 nowPlaying = nowPlaying,
@@ -540,12 +543,12 @@ private fun Mimidoku() {
                     val shelf = book.shelf(preferences.shelving)
                     if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
                 }.map { book ->
-                    book.toRow(keepingNow?.takeIf { it.first == book.uri }?.second)
+                    book.toRow(context.resources, keepingNow?.takeIf { it.first == book.uri }?.second)
                 }
             }
 
             BooksScreen(
-                shelf = current.name ?: preferences.shelving.unnamed(),
+                shelf = current.name ?: preferences.shelving.unnamed(context.resources),
                 books = shelved,
                 nowPlaying = nowPlaying,
                 onClose = { screen = Screen.Library },
@@ -587,19 +590,19 @@ private fun Mimidoku() {
                             preferences.volumeBoosted = !preferences.volumeBoosted
                             controller?.ask(PlaybackService.VOLUME_BOOST, preferences.volumeBoosted)
                             announcement =
-                                if (preferences.volumeBoosted) "Volume boost on" else "Volume boost off"
+                                context.getString(if (preferences.volumeBoosted) R.string.player_volume_boost_on else R.string.player_volume_boost_off)
                         },
                         onSpeed = { editing = Editing.Speed },
                         onSkipSilence = {
                             preferences.skipSilence = !preferences.skipSilence
                             controller?.ask(PlaybackService.SKIP_SILENCE, preferences.skipSilence)
                             announcement =
-                                if (preferences.skipSilence) "Skip silence on" else "Skip silence off"
+                                context.getString(if (preferences.skipSilence) R.string.player_skip_silence_on else R.string.player_skip_silence_off)
                         },
                         onBookmarks = { screen = Screen.Bookmarks },
                         onLock = {
                             locked = !locked
-                            announcement = if (locked) "Controls locked" else "Controls unlocked"
+                            announcement = context.getString(if (locked) R.string.player_controls_locked else R.string.player_controls_unlocked)
                         },
                     ),
                     transport = Transport(
@@ -658,7 +661,7 @@ private fun Mimidoku() {
                     shelvedBooks.filter {
                         it.shownTitle().contains(query, true) ||
                             it.shownAuthor()?.contains(query, true) == true
-                    }.map { it.toRow() }
+                    }.map { it.toRow(context.resources) }
                 }
             }
             val searchShelves = remember(shelvedBooks, preferences.shelving) {
@@ -693,8 +696,11 @@ private fun Mimidoku() {
                     bookmarks = marks.map {
                         BookmarkRow(
                             id = it.id,
-                            when_ = "${DateUtils.getRelativeTimeSpanString(it.createdAt, now, DateUtils.MINUTE_IN_MILLIS)}, " +
+                            when_ = stringResource(
+                                R.string.bookmarks_when,
+                                DateUtils.getRelativeTimeSpanString(it.createdAt, now, DateUtils.MINUTE_IN_MILLIS),
                                 DateFormat.getTimeFormat(context).format(it.createdAt),
+                            ),
                             position = it.positionMs.asClock(),
                             automatic = it.automatic,
                         )
@@ -732,11 +738,11 @@ private fun Mimidoku() {
                         // What the scan made of it, which is the answer the reader needs when a
                         // book has not turned up. Until one has run, what they said it was.
                         how = when (shapes[uri.toString()]) {
-                            TreeShape.AuthorsThenBooks -> "Authors, then books"
-                            TreeShape.BooksInFolders -> "Books"
-                            TreeShape.SingleBook -> "One book"
-                            TreeShape.Empty -> "No books found"
-                            null -> preferences.reading(uri.toString())?.label.orEmpty()
+                            TreeShape.AuthorsThenBooks -> stringResource(R.string.folders_shape_authors_then_books)
+                            TreeShape.BooksInFolders -> stringResource(R.string.folders_shape_books)
+                            TreeShape.SingleBook -> stringResource(R.string.folders_shape_one_book)
+                            TreeShape.Empty -> stringResource(R.string.folders_shape_none)
+                            null -> preferences.reading(uri.toString())?.let { stringResource(it.labelRes) }.orEmpty()
                         },
                     )
                 },
@@ -772,7 +778,7 @@ private fun Mimidoku() {
                 onConnect = { entered ->
                     scope.launch {
                         serverBusy = true
-                        serverStatus = "Asking the server what it has…"
+                        serverStatus = context.getString(R.string.server_asking)
                         val server = AbsServer(entered.address.withScheme(), entered.key)
                         val client = AbsClient(server)
                         when (val found = client.libraries()) {
@@ -782,12 +788,12 @@ private fun Mimidoku() {
                                 // nothing to say about a podcast.
                                 val shelf = found.value.firstOrNull { it.mediaType == "book" }
                                 if (shelf == null) {
-                                    serverStatus = "That server has no book library."
+                                    serverStatus = context.getString(R.string.server_no_book_library)
                                 } else {
                                     preferences.serverUrl = server.base
                                     preferences.serverToken = entered.key
                                     preferences.serverLibraryId = shelf.id
-                                    serverStatus = syncServer(client, shelf.id, library.library) {
+                                    serverStatus = syncServer(context.resources, client, shelf.id, library.library) {
                                         serverStatus = it
                                     }
                                 }
@@ -801,7 +807,7 @@ private fun Mimidoku() {
                     scope.launch {
                         serverBusy = true
                         val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken))
-                        serverStatus = syncServer(client, preferences.serverLibraryId, library.library) {
+                        serverStatus = syncServer(context.resources, client, preferences.serverLibraryId, library.library) {
                             serverStatus = it
                         }
                         serverBusy = false
@@ -818,7 +824,7 @@ private fun Mimidoku() {
                         preferences.serverUrl = ""
                         preferences.serverToken = ""
                         preferences.serverLibraryId = ""
-                        serverStatus = "Forgotten."
+                        serverStatus = context.getString(R.string.server_forgotten)
                         serverBusy = false
                     }
                 },
@@ -833,11 +839,10 @@ private fun Mimidoku() {
                     add(
                         SettingRow(
                             key = "folders",
-                            title = "Audiobook folders",
+                            title = stringResource(R.string.settings_folders),
                             value = when (grants.size) {
-                                0 -> "None chosen yet"
-                                1 -> "1 folder"
-                                else -> "${grants.size} folders"
+                                0 -> stringResource(R.string.settings_folders_none)
+                                else -> pluralStringResource(R.plurals.settings_folders_count, grants.size, grants.size)
                             },
                         ),
                     )
@@ -847,31 +852,31 @@ private fun Mimidoku() {
                     add(
                         SettingRow(
                             key = "server",
-                            title = "Audiobook server",
+                            title = stringResource(R.string.settings_server),
                             value = if (preferences.hasServer) {
                                 val onServer = books.count { it.sourceType == AbsSync.SOURCE_ABS }
                                 val here = books.count { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
-                                "$here of $onServer kept on this phone"
+                                stringResource(R.string.settings_server_kept, here, onServer)
                             } else {
-                                "None"
+                                stringResource(R.string.settings_server_none)
                             },
                         ),
                     )
-                    add(SettingRow("shelving", "Library view", preferences.shelving.label))
-                    add(SettingRow("skip", "Skip amount", "${preferences.skipSeconds} seconds"))
-                    add(SettingRow("rewind", "Auto rewind", "${preferences.autoRewindSeconds} seconds"))
-                    add(SettingRow("sleep", "Sleep timer duration", "${preferences.sleepMinutes} minutes"))
+                    add(SettingRow("shelving", stringResource(R.string.settings_library_view), stringResource(preferences.shelving.labelRes)))
+                    add(SettingRow("skip", stringResource(R.string.settings_skip_amount), pluralStringResource(R.plurals.settings_seconds, preferences.skipSeconds, preferences.skipSeconds)))
+                    add(SettingRow("rewind", stringResource(R.string.settings_auto_rewind), pluralStringResource(R.plurals.settings_seconds, preferences.autoRewindSeconds, preferences.autoRewindSeconds)))
+                    add(SettingRow("sleep", stringResource(R.string.settings_sleep_duration), pluralStringResource(R.plurals.settings_minutes, preferences.sleepMinutes, preferences.sleepMinutes)))
                     // Under the duration, because it is the other half of the same thing:
                     // how long the timer runs, and how hard you have to shake to keep it
                     // running when it is about to stop on you and you are still awake.
-                    add(SettingRow("shake", "Shake sensitivity", preferences.shake.label))
+                    add(SettingRow("shake", stringResource(R.string.settings_shake), stringResource(preferences.shake.labelRes)))
                     // Last, with the two hours it governs. It is the one setting here that
                     // is a standing arrangement rather than a value, and it brings rows of
                     // its own, so it does not belong in the middle of a list of numbers.
                     add(
                         SettingRow(
                             key = "autosleep",
-                            title = "Automatic sleep timer",
+                            title = stringResource(R.string.settings_auto_sleep),
                             value = null,
                             toggle = preferences.autoSleep,
                         ),
@@ -884,11 +889,11 @@ private fun Mimidoku() {
                         add(
                             SettingRow(
                                 key = "autosleepstart",
-                                title = "Starts at",
+                                title = stringResource(R.string.settings_starts_at),
                                 value = clock(preferences.autoSleepStart),
                                 beside = SettingRow(
                                     key = "autosleepend",
-                                    title = "Ends at",
+                                    title = stringResource(R.string.settings_ends_at),
                                     value = clock(preferences.autoSleepEnd),
                                 ),
                                 beneath = true,
@@ -923,28 +928,28 @@ private fun Mimidoku() {
     // meant to press the book below it should not discover that in a hundred megabytes.
     keeping?.let { book ->
         ConfirmDialog(
-            title = "Keep \"${book.shownTitle()}\" on this phone?",
-            action = "Keep",
+            title = stringResource(R.string.library_keep_title, book.shownTitle()),
+            action = stringResource(R.string.library_keep_action),
             onDismiss = { keeping = null },
             onConfirm = {
                 keeping = null
                 scope.launch {
                     val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken))
-                    keepingNow = book.uri to "Keeping…"
+                    keepingNow = book.uri to context.getString(R.string.library_keeping)
                     val kept = AbsDownloader.downloadBook(
                         context = context,
                         client = client,
                         dao = library.library,
                         bookUri = book.uri,
                     ) { done, total, _ ->
-                        keepingNow = book.uri to "Keeping — $done of $total"
+                        keepingNow = book.uri to context.getString(R.string.library_keeping_progress, done, total)
                     }
                     keepingNow = null
                     // Said on the shelf rather than on a screen the reader has left: a download
                     // that finishes while they are looking at the book is the whole point.
                     announcement = when (kept) {
                         is AbsResult.Failure -> kept.message
-                        is AbsResult.Success -> "\"${book.shownTitle()}\" is on this phone."
+                        is AbsResult.Success -> context.getString(R.string.library_kept, book.shownTitle())
                     }
                 }
             },
@@ -956,8 +961,8 @@ private fun Mimidoku() {
     // is here or not, which is worth saying on the dialog rather than leaving them to wonder.
     givingBack?.let { book ->
         ConfirmDialog(
-            title = "Give \"${book.title}\" back to the server? Your place in it is kept.",
-            action = "Give back",
+            title = stringResource(R.string.server_give_back_title, book.title),
+            action = stringResource(R.string.server_give_back_action),
             onDismiss = { givingBack = null },
             onConfirm = {
                 givingBack = null
@@ -984,10 +989,10 @@ private fun Mimidoku() {
                 else -> Reading.Authors
             }
         ChoiceDialog(
-            title = "This folder holds",
+            title = stringResource(R.string.folders_holds_title),
             options = Reading.entries,
             chosen = shown,
-            label = { it.label },
+            label = { context.getString(it.labelRes) },
             onDismiss = {
                 // Closing the question answers it. The dialog opens with an option already
                 // filled in, and a reader who presses OK on it has said that is the answer --
@@ -1011,42 +1016,42 @@ private fun Mimidoku() {
     when (editing) {
         null -> Unit
         Editing.Shelving -> ChoiceDialog(
-            title = "Library view",
+            title = stringResource(R.string.settings_library_view),
             options = Shelving.entries,
             chosen = preferences.shelving,
-            label = { it.label },
+            label = { context.getString(it.labelRes) },
             onDismiss = close,
             onChoose = { preferences.shelving = it },
         )
         Editing.Shake -> ChoiceDialog(
-            title = "Shake sensitivity",
+            title = stringResource(R.string.settings_shake),
             options = Shake.entries,
             chosen = preferences.shake,
-            label = { it.label },
+            label = { context.getString(it.labelRes) },
             onDismiss = close,
             onChoose = { preferences.shake = it },
         )
         Editing.Skip -> StepperDialog(
-            title = "Skip amount",
+            title = stringResource(R.string.settings_skip_amount),
             initial = preferences.skipSeconds,
             range = 5..300 step 5,
-            label = { "$it seconds" },
+            label = { context.resources.getQuantityString(R.plurals.settings_seconds, it, it) },
             onDismiss = close,
             onSet = { preferences.skipSeconds = it },
         )
         Editing.AutoRewind -> StepperDialog(
-            title = "Auto rewind",
+            title = stringResource(R.string.settings_auto_rewind),
             initial = preferences.autoRewindSeconds,
             range = 0..30 step 1,
-            label = { "$it seconds" },
+            label = { context.resources.getQuantityString(R.plurals.settings_seconds, it, it) },
             onDismiss = close,
             onSet = { preferences.autoRewindSeconds = it },
         )
         Editing.Speed -> StepperDialog(
-            title = "Playback speed",
+            title = stringResource(R.string.settings_playback_speed),
             initial = preferences.speedTenths,
             range = 5..30 step 1,
-            label = { "${it / 10}.${it % 10}x" },
+            label = { context.getString(R.string.settings_speed_value, it / 10, it % 10) },
             live = true,
             onDismiss = close,
             onSet = {
@@ -1055,17 +1060,17 @@ private fun Mimidoku() {
             },
         )
         Editing.Sleep -> StepperDialog(
-            title = "Sleep timer duration",
+            title = stringResource(R.string.settings_sleep_duration),
             initial = preferences.sleepMinutes,
             range = 5..120 step 5,
-            label = { "$it minutes" },
+            label = { context.resources.getQuantityString(R.plurals.settings_minutes, it, it) },
             onDismiss = close,
             onSet = { preferences.sleepMinutes = it },
         )
         // Half hours, because that is how bedtimes are said. Every minute of the day would be
         // forty-eight times the presses to say the same thing.
         Editing.AutoSleepStart -> StepperDialog(
-            title = "Starts at",
+            title = stringResource(R.string.settings_starts_at),
             initial = preferences.autoSleepStart,
             range = 0..(23 * 60 + 30) step 30,
             label = { clock(it) },
@@ -1073,7 +1078,7 @@ private fun Mimidoku() {
             onSet = { preferences.autoSleepStart = it },
         )
         Editing.AutoSleepEnd -> StepperDialog(
-            title = "Ends at",
+            title = stringResource(R.string.settings_ends_at),
             initial = preferences.autoSleepEnd,
             range = 0..(23 * 60 + 30) step 30,
             label = { clock(it) },
@@ -1133,10 +1138,10 @@ private fun List<String>.collateIgnoringCase(): List<String> =
  * Status always answers -- a book has either been started or it has not -- so its heading is
  * there for the compiler and nothing else.
  */
-private fun Shelving.unnamed(): String = when (this) {
-    Shelving.Author -> "No author"
-    Shelving.Genre -> "No genre"
-    Shelving.Status -> "No status"
+private fun Shelving.unnamed(resources: Resources): String = when (this) {
+    Shelving.Author -> resources.getString(R.string.library_no_author)
+    Shelving.Genre -> resources.getString(R.string.library_no_genre)
+    Shelving.Status -> resources.getString(R.string.library_no_status)
 }
 
 /**
@@ -1167,12 +1172,12 @@ private const val RESTART_MS = 3_000L
  * A size the way a phone's own storage screen writes one: powers of a thousand, and no more
  * precision than the decision needs.
  */
-private fun Long.asSize(): String = when {
-    this >= 1_000_000_000L -> String.format("%.1f GB", this / 1_000_000_000.0)
-    this >= 1_000_000L -> "${this / 1_000_000} MB"
-    this > 0L -> "${this / 1_000} kB"
+private fun Long.asSize(resources: Resources): String = when {
+    this >= 1_000_000_000L -> resources.getString(R.string.server_size_gb, this / 1_000_000_000.0)
+    this >= 1_000_000L -> resources.getString(R.string.server_size_mb, this / 1_000_000)
+    this > 0L -> resources.getString(R.string.server_size_kb, this / 1_000)
     // A book whose files have gone from under it. The row still has a name and a way out.
-    else -> "nothing on disk"
+    else -> resources.getString(R.string.server_nothing_on_disk)
 }
 
 /**
@@ -1219,7 +1224,7 @@ private fun List<BookEntity>.withoutServerCopiesOfWhatIsHere(): List<BookEntity>
 private fun String.withoutExtension(): String = substringBeforeLast('.')
 
 
-private fun BookEntity.toRow(keepingNow: String? = null) = BookRow(
+private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null) = BookRow(
     id = uri,
     title = shownTitle(),
     author = shownAuthor(),
@@ -1227,14 +1232,14 @@ private fun BookEntity.toRow(keepingNow: String? = null) = BookRow(
     // Only once the reader has actually started it. A row of zeroes against every book they have
     // not opened yet says nothing and reads as clutter.
     percent = if (lastPlayedAt != null && durationMs > 0) {
-        "${(progressMs * 100 / durationMs).coerceIn(0, 100)}%"
+        resources.getString(R.string.library_percent, (progressMs * 100 / durationMs).coerceIn(0, 100))
     } else {
         null
     },
     state = when {
         kept -> null
         keepingNow != null -> keepingNow
-        else -> "Not on this phone"
+        else -> resources.getString(R.string.library_not_on_phone)
     },
 )
 
@@ -1255,20 +1260,20 @@ private fun String.withScheme(): String =
  * of any size, and a screen that said nothing for a minute would read as a screen that had hung.
  */
 private suspend fun syncServer(
+    resources: Resources,
     client: AbsClient,
     libraryId: String,
     dao: com.wanderwildwood.mimidoku.data.LibraryDao,
     onProgress: (String) -> Unit,
 ): String = when (
     val synced = AbsSync.sync(client, libraryId, dao) { done, total ->
-        onProgress("Reading the catalogue — $done of $total")
+        onProgress(resources.getString(R.string.server_reading_catalogue, done, total))
     }
 ) {
     is AbsResult.Failure -> synced.message
     is AbsResult.Success -> when (synced.value) {
-        0 -> "That library has nothing in it."
-        1 -> "1 book."
-        else -> "${synced.value} books."
+        0 -> resources.getString(R.string.server_library_empty)
+        else -> resources.getQuantityString(R.plurals.server_synced_books, synced.value, synced.value)
     }
 }
 

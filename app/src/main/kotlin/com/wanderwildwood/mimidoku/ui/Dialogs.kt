@@ -36,6 +36,7 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
 
 @Composable
@@ -78,7 +79,7 @@ fun StepperDialog(
         ) {
             Icon(
                 imageVector = Icons.Minus,
-                contentDescription = "Less",
+                contentDescription = stringResource(R.string.dialog_cd_less),
                 tint = Color.Black,
                 modifier = Modifier
                     .size(24.dp)
@@ -87,7 +88,7 @@ fun StepperDialog(
             TextMMD(text = label(value), style = MaterialTheme.typography.headlineLarge, lineHeight = 36.sp, color = Color.Black)
             Icon(
                 imageVector = Icons.Plus,
-                contentDescription = "More",
+                contentDescription = stringResource(R.string.dialog_cd_more),
                 tint = Color.Black,
                 modifier = Modifier
                     .size(24.dp)
@@ -104,9 +105,9 @@ fun StepperDialog(
                 modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
                 horizontalArrangement = Arrangement.End,
             ) {
-                DialogAction("Cancel", onDismiss)
+                DialogAction(stringResource(R.string.dialog_cancel), onDismiss)
                 Spacer(modifier = Modifier.width(31.dp))
-                DialogAction("Set") { onSet(value); onDismiss() }
+                DialogAction(stringResource(R.string.dialog_set)) { onSet(value); onDismiss() }
             }
         }
     }
@@ -132,7 +133,7 @@ fun ConfirmDialog(
             modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            DialogAction("Cancel", onDismiss)
+            DialogAction(stringResource(R.string.dialog_cancel), onDismiss)
             Spacer(modifier = Modifier.width(31.dp))
             DialogAction(action) { onConfirm(); onDismiss() }
         }
@@ -149,15 +150,15 @@ fun ConfirmDialog(
 @Composable
 fun AboutDialog(version: String, onDismiss: () -> Unit) {
     EInkDialog(onDismiss = onDismiss) {
-        DialogTitle("About")
+        DialogTitle(stringResource(R.string.about_title))
         Spacer(modifier = Modifier.height(20.dp))
 
-        AboutText("Audio Reading $version")
+        AboutText(stringResource(R.string.about_version, version))
 
         Spacer(modifier = Modifier.height(12.dp))
-        AboutText("GNU General Public License v3")
-        AboutText("Lato \u2014 SIL Open Font License 1.1")
-        AboutText("Material Symbols \u2014 Apache License 2.0")
+        AboutText(stringResource(R.string.about_licence))
+        AboutText(stringResource(R.string.about_font))
+        AboutText(stringResource(R.string.about_icons))
 
         Spacer(modifier = Modifier.height(12.dp))
         AboutText("github.com/wanderwildwood/mimidoku")
@@ -170,7 +171,7 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            DialogAction("Close", onDismiss)
+            DialogAction(stringResource(R.string.about_close), onDismiss)
         }
     }
 }
@@ -217,7 +218,7 @@ fun <T> ChoiceDialog(
             modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            DialogAction("OK", onDismiss)
+            DialogAction(stringResource(R.string.dialog_ok), onDismiss)
         }
     }
 }
@@ -277,7 +278,7 @@ private fun Llama() {
                         Intent(Intent.ACTION_VIEW, Uri.parse("https://square.link/u/AGu8oT10")),
                     )
                 }.onFailure {
-                    Toast.makeText(context, "There is no browser on this phone to open that with.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
                 }
             }
             .padding(vertical = 4.dp),
@@ -288,6 +289,6 @@ private fun Llama() {
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.width(6.dp))
-        AboutText("Feed the llamas")
+        AboutText(stringResource(R.string.about_feed_the_llamas))
     }
 }

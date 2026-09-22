@@ -27,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,7 +61,7 @@ fun BookmarksScreen(
 ) {
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenTopBar(title = "Bookmark", onClose = onClose)
+            ScreenTopBar(title = stringResource(R.string.bookmarks_title), onClose = onClose)
             LazyColumnMMD(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
                 items(bookmarks, key = { it.id }) { bookmark ->
                     BookmarkLine(
@@ -83,7 +85,7 @@ fun BookmarksScreen(
         ) {
             Icon(
                 imageVector = Icons.Plus,
-                contentDescription = "Mark this place",
+                contentDescription = stringResource(R.string.bookmarks_cd_add),
                 tint = Color.White,
                 modifier = Modifier.size(24.dp),
             )
@@ -114,7 +116,7 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextMMD(
-                    text = if (armed) "Remove this mark — tap again" else bookmark.when_,
+                    text = if (armed) stringResource(R.string.bookmarks_remove_confirm) else bookmark.when_,
                     style = MaterialTheme.typography.bodyLarge,
                     lineHeight = 24.sp,
                     color = Color.Black,
@@ -127,7 +129,7 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                         imageVector = Icons.Timelapse,
-                        contentDescription = "Marked automatically",
+                        contentDescription = stringResource(R.string.bookmarks_cd_automatic),
                         tint = Color.Black,
                         modifier = Modifier.size(15.dp),
                     )
@@ -137,7 +139,7 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
         }
         Icon(
             imageVector = Icons.More,
-            contentDescription = if (armed) "Remove this mark — tap again" else "Remove this mark",
+            contentDescription = stringResource(if (armed) R.string.bookmarks_remove_confirm else R.string.bookmarks_cd_remove),
             tint = Color.Black,
             modifier = Modifier
                 .size(24.dp)

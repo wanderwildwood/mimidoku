@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.text.TextMMD
@@ -51,7 +53,7 @@ fun ScreenTopBar(
             }
         },
         navigationIcon = {
-            if (onClose != null) BarButton(Icons.Close, "Close", onClose)
+            if (onClose != null) BarButton(Icons.Close, stringResource(R.string.cd_close), onClose)
         },
         actions = trailing,
     )

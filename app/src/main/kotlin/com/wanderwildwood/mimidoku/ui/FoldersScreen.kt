@@ -23,10 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudita.mmd.components.lazy.LazyColumnMMD
+import com.wanderwildwood.mimidoku.R
 
 /** One folder the reader has granted, and what the app made of it. */
 data class FolderRow(
@@ -68,13 +70,13 @@ fun FoldersScreen(
             ) {
                 Icon(
                     imageVector = Icons.Back,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.cd_back),
                     tint = Color.Black,
                     modifier = Modifier.size(24.dp).clickable(onClick = onBack),
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 TextMMD(
-                    text = "Scan now",
+                    text = stringResource(R.string.folders_scan_now),
                     style = MaterialTheme.typography.bodyMedium,
                     lineHeight = 22.sp,
                     color = Color.Black,
@@ -83,7 +85,7 @@ fun FoldersScreen(
             }
 
             TextMMD(
-                text = "Audiobook folders",
+                text = stringResource(R.string.folders_title),
                 style = MaterialTheme.typography.titleLarge,
                 lineHeight = 32.sp,
                 color = Color.Black,
@@ -119,7 +121,7 @@ fun FoldersScreen(
                 modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(12.dp))
-            TextMMD(text = "Add", style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp, color = Color.White)
+            TextMMD(text = stringResource(R.string.folders_add), style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp, color = Color.White)
         }
     }
 }
@@ -138,7 +140,7 @@ private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> 
     ) {
         Icon(
             imageVector = if (folder.byAuthor) Icons.Person else Icons.Folder,
-            contentDescription = if (folder.byAuthor) "Authors, then books" else "Books",
+            contentDescription = stringResource(if (folder.byAuthor) R.string.folders_shape_authors_then_books else R.string.folders_shape_books),
             tint = Color.Black,
             modifier = Modifier.size(24.dp),
         )
@@ -163,7 +165,7 @@ private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> 
         Spacer(modifier = Modifier.width(16.dp))
         Icon(
             imageVector = Icons.Delete,
-            contentDescription = "Stop reading this folder",
+            contentDescription = stringResource(R.string.folders_cd_stop_reading),
             tint = Color.Black,
             modifier = Modifier.size(24.dp).clickable(onClick = onRemove),
         )
