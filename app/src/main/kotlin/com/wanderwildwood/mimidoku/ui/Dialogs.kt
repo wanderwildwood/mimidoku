@@ -161,7 +161,7 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
         AboutText(stringResource(R.string.about_icons))
 
         Spacer(modifier = Modifier.height(12.dp))
-        AboutText("github.com/wanderwildwood/mimidoku")
+        AboutText("wanderthe.dev")
 
         Spacer(modifier = Modifier.height(14.dp))
         Llama()
