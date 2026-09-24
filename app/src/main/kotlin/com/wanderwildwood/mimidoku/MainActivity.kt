@@ -100,8 +100,13 @@ class MainActivity : ComponentActivity() {
 /** Where the reader is. Shallow on purpose: everything here is one step from the library. */
 private sealed interface Screen {
     data object Library : Screen
-    /** One shelf, or - where [name] is null - the books whose files never said. */
-    data class Shelf(val name: String?) : Screen
+    /**
+     * One shelf, or - where [name] is null - the books whose files never said.
+     *
+     * Shelved the reader's way unless [by] says otherwise: the player's author link opens an
+     * author's shelf whatever the library is sorted by, and back from there is the player.
+     */
+    data class Shelf(val name: String?, val by: Shelving? = null, val back: Screen = Library) : Screen
     data object Player : Screen
     data object Settings : Screen
     data object Search : Screen
@@ -493,8 +498,9 @@ private fun Mimidoku() {
     BackHandler(enabled = chaptersOpen) { chaptersOpen = false }
 
     BackHandler(enabled = screen != Screen.Library && !chaptersOpen) {
-        screen = when (screen) {
+        screen = when (val leaving = screen) {
             Screen.Bookmarks -> Screen.Player
+            is Screen.Shelf -> leaving.back
             Screen.Folders -> Screen.Settings
             Screen.Server -> Screen.Settings
             else -> Screen.Library
@@ -536,11 +542,12 @@ private fun Mimidoku() {
         }
 
         is Screen.Shelf -> {
-            val shelved = remember(shelvedBooks, current.name, preferences.shelving, keepingNow) {
+            val shelving = current.by ?: preferences.shelving
+            val shelved = remember(shelvedBooks, current.name, shelving, keepingNow) {
                 // Matched the same way the shelf was named, or a shelf collated from two
                 // spellings would open holding only the books that used one of them.
                 shelvedBooks.filter { book ->
-                    val shelf = book.shelf(preferences.shelving)
+                    val shelf = book.shelf(shelving)
                     if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
                 }.map { book ->
                     book.toRow(context.resources, keepingNow?.takeIf { it.first == book.uri }?.second)
@@ -548,11 +555,11 @@ private fun Mimidoku() {
             }
 
             BooksScreen(
-                shelf = current.name?.let { preferences.shelving.shown(it, context.resources) }
-                    ?: preferences.shelving.unnamed(context.resources),
+                shelf = current.name?.let { shelving.shown(it, context.resources) }
+                    ?: shelving.unnamed(context.resources),
                 books = shelved,
                 nowPlaying = nowPlaying,
-                onClose = { screen = Screen.Library },
+                onClose = { screen = current.back },
                 onBookClick = { row ->
                     books.firstOrNull { it.uri == row.id }?.let(openBook)
                 },
@@ -601,6 +608,9 @@ private fun Mimidoku() {
                                 context.getString(if (preferences.skipSilence) R.string.player_skip_silence_on else R.string.player_skip_silence_off)
                         },
                         onBookmarks = { screen = Screen.Bookmarks },
+                        onAuthor = book.shownAuthor()?.let { author ->
+                            { screen = Screen.Shelf(author, by = Shelving.Author, back = Screen.Player) }
+                        },
                         onLock = {
                             locked = !locked
                             announcement = context.getString(if (locked) R.string.player_controls_locked else R.string.player_controls_unlocked)

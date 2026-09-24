@@ -72,6 +72,8 @@ data class PlaybackTools(
     val onSkipSilence: () -> Unit,
     val onBookmarks: () -> Unit,
     val onLock: () -> Unit,
+    /** The author's shelf; null for a book whose files never named one. */
+    val onAuthor: (() -> Unit)? = null,
 )
 
 /** The chapters of what is playing, and the two things that can be done with the list. */
@@ -172,8 +174,11 @@ fun PlayerScreen(
                 // block reads as a name over a work rather than three lines of one weight.
                 // Measured against that player on the phone: 24sp lands on its ascender, 23
                 // falls a pixel short.
+                // The author leads to the rest of their books; the title leads nowhere,
+                // because the book it names is the one already open.
                 TextMMD(
                     text = playback.author,
+                    modifier = tools.onAuthor?.let { Modifier.clickable(enabled = !locked, onClick = it) } ?: Modifier,
                     style = MaterialTheme.typography.titleLarge,
                     lineHeight = 29.5.sp,
                     fontWeight = FontWeight.Bold,
