@@ -286,6 +286,9 @@ interface LibraryDao {
     @Query("DELETE FROM books WHERE seenAt < :at AND sourceType = :sourceType")
     suspend fun deleteBooksUnseenSince(at: Long, sourceType: String)
 
+    @Query("SELECT uri FROM books WHERE sourceType = :sourceType")
+    suspend fun bookUrisFrom(sourceType: String): List<String>
+
     @Query("DELETE FROM chapters WHERE bookUri NOT IN (SELECT uri FROM books)")
     suspend fun deleteOrphanedChapters()
 
@@ -348,12 +351,19 @@ interface LibraryDao {
         chapters: List<ChapterEntity>,
         at: Long,
         sourceType: String,
+        /**
+         * Books known to still exist although this pass could not read them -- a server book
+         * whose details did not come back this time. Stamped as seen, so they are kept exactly
+         * as they are rather than deleted with everything that belonged to them.
+         */
+        stillThere: Collection<String> = emptyList(),
     ) {
         insertBooks(books)
         books.forEach {
             refreshDetails(it.uri, it.name, it.author, it.chapterCount)
             markSeen(it.uri, at)
         }
+        stillThere.forEach { markSeen(it, at) }
         insertChapters(chapters)
         chapters.forEach { refreshChapter(it.uri, it.bookUri, it.name, it.sortIndex) }
         // Everything this scan did not stamp is no longer on the card, and everything that

@@ -44,6 +44,8 @@ object AbsSync {
         client: AbsClient,
         libraryId: String,
         dao: LibraryDao,
+        /** For removing the audio of books the server no longer has. */
+        context: android.content.Context? = null,
         onProgress: suspend (done: Int, total: Int) -> Unit = { _, _ -> },
     ): AbsResult<Int> {
         val ids = when (val r = client.bookIds(libraryId)) {
@@ -68,8 +70,25 @@ object AbsSync {
             onProgress(index + 1, ids.size)
         }
 
+        // ⚠ The listing, not the details, says what is on the server. A book whose details did
+        // not come back -- a timeout, a server having a moment -- was left out of this sync, and
+        // the merge deleted whatever it did not see: the book's row and with it the reader's
+        // place and every bookmark, while its downloaded audio stayed on disk with nothing
+        // pointing at it. One slow request cost somebody their place in a book. Listed books are
+        // kept as they are; only a book the server no longer lists is gone.
+        val listed = ids.map { bookUri(it) }.toSet()
+
         withContext(Dispatchers.IO) {
-            dao.merge(books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_ABS)
+            // Its audio first, while the rows still say which files are its.
+            if (context != null) {
+                dao.bookUrisFrom(SOURCE_ABS).filter { it !in listed }.forEach { gone ->
+                    AbsDownloader.remove(context, dao, gone)
+                }
+            }
+            dao.merge(
+                books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_ABS,
+                stillThere = listed - books.map { it.uri }.toSet()
+            )
             // Written after the merge, which is what clears the old ones: marks hang off books,
             // and a book that survived the merge keeps the marks it had.
             for (book in books) {
