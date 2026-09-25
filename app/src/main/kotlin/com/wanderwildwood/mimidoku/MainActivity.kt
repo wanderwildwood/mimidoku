@@ -804,7 +804,7 @@ private fun Mimidoku() {
                                     preferences.serverUrl = server.base
                                     preferences.serverToken = entered.key
                                     preferences.serverLibraryId = shelf.id
-                                    serverStatus = syncServer(context.resources, client, shelf.id, library.library) {
+                                    serverStatus = syncServer(context, client, shelf.id, library.library) {
                                         serverStatus = it
                                     }
                                 }
@@ -818,7 +818,7 @@ private fun Mimidoku() {
                     scope.launch {
                         serverBusy = true
                         val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
-                        serverStatus = syncServer(context.resources, client, preferences.serverLibraryId, library.library) {
+                        serverStatus = syncServer(context, client, preferences.serverLibraryId, library.library) {
                             serverStatus = it
                         }
                         serverBusy = false
@@ -1290,20 +1290,20 @@ private fun String.withScheme(): String =
  * of any size, and a screen that said nothing for a minute would read as a screen that had hung.
  */
 private suspend fun syncServer(
-    resources: Resources,
+    context: android.content.Context,
     client: AbsClient,
     libraryId: String,
     dao: com.wanderwildwood.mimidoku.data.LibraryDao,
     onProgress: (String) -> Unit,
 ): String = when (
-    val synced = AbsSync.sync(client, libraryId, dao) { done, total ->
-        onProgress(resources.getString(R.string.server_reading_catalogue, done, total))
+    val synced = AbsSync.sync(client, libraryId, dao, context) { done, total ->
+        onProgress(context.resources.getString(R.string.server_reading_catalogue, done, total))
     }
 ) {
     is AbsResult.Failure -> synced.message
     is AbsResult.Success -> when (synced.value) {
-        0 -> resources.getString(R.string.server_library_empty)
-        else -> resources.getQuantityString(R.plurals.server_synced_books, synced.value, synced.value)
+        0 -> context.resources.getString(R.string.server_library_empty)
+        else -> context.resources.getQuantityString(R.plurals.server_synced_books, synced.value, synced.value)
     }
 }
 
