@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What may leave the phone in a backup, on Android 11 and older.
+  Everything except the settings file, which holds the Audiobookshelf server's address and API key
+  as typed. The key is a credential for someone's own server; it stays on this phone.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="."/>
+    <include domain="database" path="."/>
+    <include domain="file" path="."/>
+    <exclude domain="sharedpref" path="mimidoku.xml"/>
+</full-backup-content>
