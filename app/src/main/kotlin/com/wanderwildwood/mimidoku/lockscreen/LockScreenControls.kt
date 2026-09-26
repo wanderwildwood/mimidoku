@@ -19,6 +19,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -195,6 +196,7 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
             !putAway &&
             !katapultShowsIt() &&
             !inCall() &&
+            !appOverLockScreen() &&
             !pinShowing()
         if (show) add() else remove()
         handler.removeCallbacks(recheck)
@@ -287,6 +289,19 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
         @Suppress("DEPRECATION")
         focus?.recycle()
         showing
+    } catch (_: Exception) {
+        false
+    }
+
+    /**
+     * An app has put something up over the lock screen: the call screen, an alarm. [inCall] is
+     * not enough on its own. A phone set to vibrate never puts its audio into ringing mode -- a
+     * Kompakt's log goes straight from normal to in-call when the call is answered -- so while it
+     * rang the controls sat over Accept and Decline. Whatever an app shows over the lock screen is
+     * what the person is there to look at, so the controls give way to all of it.
+     */
+    private fun appOverLockScreen(): Boolean = try {
+        windows.any { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
     } catch (_: Exception) {
         false
     }
