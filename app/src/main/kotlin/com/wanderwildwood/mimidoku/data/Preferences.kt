@@ -97,12 +97,11 @@ class Preferences private constructor(context: Context) {
      * An Audiobookshelf server, if the reader has one.
      *
      * The key is an api key made on the server rather than a password, because that is the thing
-     * a reader can take back without changing anything else. It is kept here in the app's own
-     * preferences, which other apps cannot read -- but it is kept in the clear, and a key is a
-     * way in to a library, so the server screen says so in as many words.
+     * a reader can take back without changing anything else. It is kept in the app's own
+     * preferences, sealed with a key that never leaves the phone; see [Secrets].
      */
     var serverUrl: String by text("serverUrl", "")
-    var serverToken: String by text("serverToken", "")
+    var serverToken: String by secret("serverToken")
     var serverLibraryId: String by text("serverLibraryId", "")
 
     /** Whether there is a server to talk to at all. */
@@ -154,6 +153,31 @@ class Preferences private constructor(context: Context) {
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
             held = value
             prefs.edit().putString(key, value).apply()
+        }
+    }
+
+    /**
+     * A setting kept sealed. A key written in the clear by an older version is sealed the first
+     * time it is read, rather than waiting for the reader to save it again -- which they may
+     * never do. If sealing fails nothing is written at all: an empty key asks again, where a
+     * key left in the clear would break the promise the server screen makes.
+     */
+    private fun secret(key: String) = object : ReadWriteProperty<Any?, String> {
+        private var held by mutableStateOf(
+            prefs.getString(key, null).let { stored ->
+                val plain = Secrets.open(stored).orEmpty()
+                if (!stored.isNullOrEmpty() && !Secrets.isSealed(stored)) store(plain)
+                plain
+            }
+        )
+        override fun getValue(thisRef: Any?, property: KProperty<*>) = held
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+            held = value
+            store(value)
+        }
+        private fun store(value: String) {
+            val sealed = Secrets.seal(value)
+            if (sealed == null) prefs.edit().remove(key).apply() else prefs.edit().putString(key, sealed).apply()
         }
     }
 
