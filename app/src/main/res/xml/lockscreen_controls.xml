@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Events from the system UI only, which is the lock screen. Window content is readable only
+     so the controls can stand aside for the PIN field (lockscreen/LockScreenControls.kt). -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewFocused"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:packageNames="com.android.systemui"
+    android:description="@string/lockscreen_service_description"
+    android:notificationTimeout="100" />
