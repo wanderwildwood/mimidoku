@@ -202,7 +202,7 @@
     </plurals>
     <!-- Heading over the books that have been downloaded -->
     <string name="server_on_this_phone">On this phone</string>
-    <string name="server_key_note">A key is made on the server, under Users, and can be taken back there at any time. It is kept on this phone and it is not your password. A server at home is plain http, which this app allows and which means anyone else on your network can read the key and the audio; a server reachable from outside the house wants an https address instead.</string>
+    <string name="server_key_note">A key is made on the server, under Users, and can be taken back there at any time. It is kept on this phone, sealed with a key that never leaves it, and it is not your password. A server at home is plain http, which this app allows and which means anyone else on your network can read the key and the audio; a server reachable from outside the house wants an https address instead.</string>
     <string name="server_privacy_note">Where you are in a book stays on this phone. The server is never told, and never tells this app.</string>
     <string name="server_cd_give_back">Give this book back to the server</string>
     <!-- The row after one press: a second press forgets the server -->
