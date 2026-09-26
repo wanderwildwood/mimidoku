@@ -270,7 +270,7 @@ private fun Llama() {
             .padding(horizontal = 14.dp),
     ) {
         AboutText("wanderthe.dev", Modifier)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(6.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
