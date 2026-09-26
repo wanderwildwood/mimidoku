@@ -245,4 +245,19 @@
     <string name="download_server_answered">The server answered %1$d.</string>
     <string name="download_unfinished">That chapter did not finish downloading.</string>
     <string name="download_not_saved">The download could not be saved.</string>
+
+    <!-- Settings row for the optional lock-screen controls, which are turned on in Android's Accessibility settings -->
+    <string name="settings_lockscreen_controls">Lock-screen controls</string>
+    <string name="settings_lockscreen_controls_on">On</string>
+    <string name="settings_lockscreen_controls_off">Off — turn on in Accessibility</string>
+    <!-- The controls drawn on the lock screen -->
+    <string name="lockscreen_nothing_named">Audio Reading</string>
+    <string name="lockscreen_open_app">Open Audio Reading</string>
+    <string name="lockscreen_previous">Previous chapter</string>
+    <string name="lockscreen_play_pause">Play or pause</string>
+    <string name="lockscreen_next">Next chapter</string>
+    <string name="lockscreen_stop">Stop</string>
+    <!-- Shown in Android's Accessibility settings under this service -->
+    <string name="lockscreen_service_label">Audio Reading lock-screen controls</string>
+    <string name="lockscreen_service_description">Shows Audio Reading\'s controls on the lock screen while a book plays. Only an accessibility service may draw above the lock screen, which is why this is one. It listens only to the system lock screen, and reads one thing there: whether the PIN field is showing, so the controls can make way for it. It reads no other app, and nothing leaves the phone.</string>
 </resources>

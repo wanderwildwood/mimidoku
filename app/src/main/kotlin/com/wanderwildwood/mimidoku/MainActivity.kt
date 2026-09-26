@@ -1,5 +1,9 @@
 package com.wanderwildwood.mimidoku
 
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.wanderwildwood.mimidoku.lockscreen.LockScreenControls
 import android.content.ComponentName
 import android.content.res.Resources
 import android.content.Intent
@@ -843,6 +847,19 @@ private fun Mimidoku() {
         }
 
         Screen.Settings -> {
+            // Read again whenever the app comes back, which is how the reader returns from
+            // turning the service on in Android's settings.
+            var lockScreenControlsOn by remember { mutableStateOf(LockScreenControls.isEnabled(context)) }
+            val settingsLifecycle = LocalLifecycleOwner.current
+            DisposableEffect(settingsLifecycle) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        lockScreenControlsOn = LockScreenControls.isEnabled(context)
+                    }
+                }
+                settingsLifecycle.lifecycle.addObserver(observer)
+                onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
+            }
             SettingsScreen(
                 rows = buildList {
                     // How many folders, not a sentence about what the row is for: a row
@@ -881,6 +898,18 @@ private fun Mimidoku() {
                     // how long the timer runs, and how hard you have to shake to keep it
                     // running when it is about to stop on you and you are still awake.
                     add(SettingRow("shake", stringResource(R.string.settings_shake), stringResource(preferences.shake.labelRes)))
+                    // Off until turned on in Android's own settings, the only place it can be;
+                    // the row says which it is and goes there.
+                    add(
+                        SettingRow(
+                            key = "lockscreen",
+                            title = stringResource(R.string.settings_lockscreen_controls),
+                            value = stringResource(
+                                if (lockScreenControlsOn) R.string.settings_lockscreen_controls_on
+                                else R.string.settings_lockscreen_controls_off,
+                            ),
+                        ),
+                    )
                     // Last, with the two hours it governs. It is the one setting here that
                     // is a standing arrangement rather than a value, and it brings rows of
                     // its own, so it does not belong in the middle of a list of numbers.
@@ -928,6 +957,11 @@ private fun Mimidoku() {
                         "autosleepstart" -> editing = Editing.AutoSleepStart
                         "autosleepend" -> editing = Editing.AutoSleepEnd
                         "shake" -> editing = Editing.Shake
+                        "lockscreen" -> runCatching {
+                            context.startActivity(
+                                Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
                     }
                 },
             )

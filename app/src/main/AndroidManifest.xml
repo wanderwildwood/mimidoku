@@ -41,6 +41,20 @@
             </intent-filter>
         </service>
 
+        <!-- Optional: off until turned on in Android's Accessibility settings. -->
+        <service
+            android:name=".lockscreen.LockScreenControls"
+            android:exported="true"
+            android:label="@string/lockscreen_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/lockscreen_controls" />
+        </service>
+
     </application>
 
 </manifest>

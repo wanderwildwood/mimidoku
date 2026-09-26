@@ -1,5 +1,7 @@
 package com.wanderwildwood.mimidoku.playback
 
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Bundle
 import android.util.Log
@@ -91,6 +93,7 @@ class PlaybackService : MediaSessionService() {
 
         player = exoPlayer
         session = MediaSession.Builder(this, exoPlayer).setCallback(Commands()).build()
+        _activeSession.value = session
 
         val library = LibraryRepository(this)
         val timer = SleepTimer(
@@ -228,6 +231,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        _activeSession.value = null
         sleep?.release()
         sleep = null
         scope.cancel()
@@ -243,6 +247,13 @@ class PlaybackService : MediaSessionService() {
 
     companion object {
         private const val TAG = "PlaybackService"
+
+        /**
+         * The session while the service is alive, for the lock-screen controls, which run in
+         * this same process and follow the player directly rather than binding to it.
+         */
+        private val _activeSession = MutableStateFlow<MediaSession?>(null)
+        val activeSession: StateFlow<MediaSession?> = _activeSession
 
         /** Named commands the screen may send. The Bundle carries a single boolean, [ON]. */
         const val SKIP_SILENCE = "com.wanderwildwood.mimidoku.SKIP_SILENCE"
