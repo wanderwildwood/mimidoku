@@ -306,11 +306,12 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
     companion object {
         private const val KATAPULT = "com.gezimos.katapult"
 
-        // Where inkOS keeps its music strip on the home screen, so the lock screen and the
-        // home screen show the same thing in the same place: the width of the screen less
-        // 32dp a side, 32dp up from the bottom.
+        // As wide as the strip inkOS keeps at the foot of its home screen - the screen less
+        // 32dp a side. Not as low: the Kompakt's lock screen has its padlock and "Swipe Up"
+        // in the bottom 85dp, and a strip over them would take the swipe that unlocks the
+        // phone. 96dp up puts it just above them, in the empty band under the clock.
         private const val SIDE_MARGIN_DP = 32f
-        private const val BOTTOM_MARGIN_DP = 32f
+        private const val BOTTOM_MARGIN_DP = 96f
         private const val RECHECK_MS = 120L
 
         /** Whether the reader has turned this on in Android's Accessibility settings. */
