@@ -249,7 +249,7 @@ private fun DialogAction(text: String, onClick: () -> Unit) {
 
 /**
  * A llama at the foot of the About, which opens the page a donation goes to.
- * The site's address sits at the start of the same line, and only the llama and its words open it.
+ * The site's address sits at the start of the same line and opens the site; the llama and its words open the page.
  *
  * Three words rather than an address: a verb and an object, so what happens when you press
  * them is not a surprise even though the page is not named. The drawing is his own, and it is
@@ -269,7 +269,22 @@ private fun Llama() {
             .fillMaxWidth()
             .padding(horizontal = 14.dp),
     ) {
-        AboutText("wanderthe.dev", Modifier)
+        Row(
+            // The site's address opens the site, the way the llama beside it opens its page.
+            modifier = Modifier
+                .clickable {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://wanderthe.dev")),
+                        )
+                    }.onFailure {
+                        Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .padding(vertical = 4.dp),
+        ) {
+            AboutText("wanderthe.dev", Modifier)
+        }
         Spacer(Modifier.width(6.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
