@@ -1,3 +1,11 @@
 <resources>
     <style name="Theme.Mimidoku" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- The lock-screen strip's window: no animation in or out. The system otherwise animated it
+         away, holding it on screen for 300-500 ms after an unlock, which on e-ink is the strip
+         seen lingering over the home screen. -->
+    <style name="LockStripWindow">
+        <item name="android:windowEnterAnimation">@null</item>
+        <item name="android:windowExitAnimation">@null</item>
+    </style>
 </resources>
