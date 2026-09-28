@@ -14,8 +14,11 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -118,12 +121,19 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
     /** Set by Stop, which pauses and puts the controls away until something plays again. */
     private var putAway = false
 
+    /** Until when the controls stay down after a touch elsewhere on the lock screen. See [touchedAway]. */
+    private var heldUntil = 0L
+
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
     }
 
     private val screenReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = evaluate()
+        override fun onReceive(context: Context, intent: Intent) {
+            // A new look at the lock screen starts with the controls up, not held from the last.
+            if (intent.action == Intent.ACTION_SCREEN_OFF) heldUntil = 0L
+            evaluate()
+        }
     }
 
     // Events come only from the system UI, so the last one on unlocking is the lock screen
@@ -190,17 +200,35 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
     private fun evaluate() {
         val keyguard = getSystemService(KeyguardManager::class.java)
         val power = getSystemService(PowerManager::class.java)
+        val held = SystemClock.uptimeMillis() < heldUntil
         val show = keyguard.isKeyguardLocked &&
             power.isInteractive &&
             now.value != null &&
             !putAway &&
+            !held &&
             !katapultShowsIt() &&
             !inCall() &&
             !appOverLockScreen() &&
             !pinShowing()
         if (show) add() else remove()
         handler.removeCallbacks(recheck)
-        if (overlay != null) handler.postDelayed(recheck, RECHECK_MS)
+        // Looked at again while up, and while held down, so that they come back if the touch
+        // that took them down was not an unlock.
+        if (overlay != null || held) handler.postDelayed(recheck, RECHECK_MS)
+    }
+
+    /**
+     * A finger went down somewhere else on the lock screen: most likely the start of the swipe
+     * that unlocks it. The controls go now, before the unlock, because the Kompakt's lock screen
+     * vanishes the moment that swipe ends -- up to 0.6 s before Android says it has unlocked --
+     * and controls that waited for the announcement were seen over the home screen. If it was
+     * not an unlock, they come back once the hold has run out. Glance does the same.
+     */
+    private fun touchedAway() {
+        if (overlay == null) return
+        heldUntil = SystemClock.uptimeMillis() + TOUCH_HOLD_MS
+        remove()
+        evaluate()
     }
 
     private fun add() {
@@ -238,11 +266,19 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
         val params = WindowManager.LayoutParams().apply {
             type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
             format = PixelFormat.TRANSLUCENT
-            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            // Told of any touch outside the strip, so that it can go the moment a swipe to
+            // unlock begins. See [touchedAway].
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            windowAnimations = R.style.LockStripWindow
             width = resources.displayMetrics.widthPixels - (2 * SIDE_MARGIN_DP * density).toInt()
             height = WindowManager.LayoutParams.WRAP_CONTENT
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             y = (BOTTOM_MARGIN_DP * density).toInt()
+        }
+        view.setOnTouchListener { _, event ->
+            if (event.actionMasked == MotionEvent.ACTION_OUTSIDE) touchedAway()
+            false
         }
         try {
             getSystemService(WindowManager::class.java).addView(view, params)
@@ -252,9 +288,19 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
         }
     }
 
+    /**
+     * Takes the controls down at once. `removeView` alone was not at once: the system animated
+     * the window out and it stayed on screen for a further 300-500 ms, which on e-ink is the
+     * strip seen lingering over the home screen. So the window has no animations
+     * (`R.style.LockStripWindow`), what is drawn is hidden first, and the window goes on the
+     * frame after that.
+     */
     private fun remove() {
-        overlay?.let {
-            try { getSystemService(WindowManager::class.java).removeView(it) } catch (_: Exception) {}
+        overlay?.let { view ->
+            view.visibility = View.INVISIBLE
+            view.postOnAnimation {
+                try { getSystemService(WindowManager::class.java).removeViewImmediate(view) } catch (_: Exception) {}
+            }
         }
         overlay = null
     }
@@ -328,6 +374,10 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
         private const val SIDE_MARGIN_DP = 32f
         private const val BOTTOM_MARGIN_DP = 96f
         private const val RECHECK_MS = 120L
+        // How long the controls stay down after a touch elsewhere. Long enough to outlast a
+        // swipe to unlock: only the finger going down is reported, not it lifting, and a second
+        // was measured to run out mid-swipe on a Kompakt.
+        private const val TOUCH_HOLD_MS = 3_000L
 
         /** Whether the reader has turned this on in Android's Accessibility settings. */
         fun isEnabled(context: Context): Boolean {
