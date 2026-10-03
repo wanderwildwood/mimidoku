@@ -47,8 +47,9 @@ in, and what it does is narrow on purpose:
   readable by anyone else on that network. On a home wifi that is a fair trade. If your server
   is reachable from outside your house, give it an https address and use that one.
 
-Books you download are kept in the app's own folder, which means uninstalling the app takes
-them with it, and no other app can read them.
+Books you download are kept in the app's own folder — on the phone, or on a memory card if
+you choose that in Settings — which means uninstalling the app takes them with it. No other
+app on the phone can read them, but a memory card can be taken out and read in a computer.
 
 ## What is stored
 
@@ -56,20 +57,21 @@ them with it, and no other app can read them.
 |---|---|
 | App database | Your books, chapters, bookmarks, and your place in each. App-private. |
 | Shared preferences | Your settings, the folder you granted, and your server's address and key. App-private. |
-| App files folder | Books you downloaded from your server. Goes away when the app does. |
+| App files folder | Books you downloaded from your server, on the phone or the memory card. Goes away when the app does. |
 
 App-private means other apps cannot read it and it goes away when you uninstall.
 
 ## The permissions it does declare
 
-Five, and none of them reach your data:
+Six, and none of them reach your data:
 
 | Permission | Why |
 |---|---|
-| `FOREGROUND_SERVICE` | Playback continues with the screen off. |
-| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The kind of foreground service it is, which Android requires it to name. |
-| `POST_NOTIFICATIONS` | The player notification — the thing with the pause button in it. You may refuse it and the app still plays. |
-| `WAKE_LOCK` | The processor stays awake while audio is playing, and not otherwise. |
+| `FOREGROUND_SERVICE` | Playback, and a download from your server, continue with the screen off. |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The kind of foreground service the player is, which Android requires it to name. |
+| `FOREGROUND_SERVICE_DATA_SYNC` | The kind the downloader is. It runs only while a book you asked for is arriving, and stops when it is done. |
+| `POST_NOTIFICATIONS` | The player notification — the thing with the pause button in it — and the one that shows a download and its Stop button. You may refuse it and the app still plays and downloads. |
+| `WAKE_LOCK` | The processor stays awake while audio is playing or a book is downloading, and not otherwise. |
 | `INTERNET` | Talking to your own audiobook server, if you have given it one. Nothing else in this app uses the network. |
 
 No microphone, no location, no contacts, and no storage-wide read.

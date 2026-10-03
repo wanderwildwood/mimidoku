@@ -6,6 +6,7 @@ import android.os.Environment
 import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.data.ChapterEntity
 import com.wanderwildwood.mimidoku.data.LibraryDao
+import com.wanderwildwood.mimidoku.data.Preferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -30,17 +31,46 @@ import kotlin.coroutines.coroutineContext
  */
 object AbsDownloader {
 
-    /** Kept in the app's own folder, so uninstalling takes the audio with it. */
-    private fun folder(context: Context): File? =
-        context.getExternalFilesDir(Environment.DIRECTORY_MUSIC)
+    /**
+     * Where a book goes: the app's own folder on the phone, or its own folder on a memory card.
+     *
+     * Either way it is the app's folder, so uninstalling takes the audio with it and neither needs
+     * a permission. A card the reader chose and has since taken out is not somewhere to put a
+     * book, so the phone is used instead rather than failing a download over it.
+     */
+    private fun folder(context: Context): File? {
+        val onCard = if (Preferences.of(context).keepOnCard) card(context) else null
+        return (onCard ?: context.getExternalFilesDir(Environment.DIRECTORY_MUSIC))
             ?.resolve("server")
             ?.apply { mkdirs() }
-
-    fun fileFor(context: Context, chapterUri: String): File? {
-        // A chapter's uri is namespaced and carries colons, which not every filesystem will take.
-        val safe = chapterUri.replace(Regex("[^A-Za-z0-9_.-]"), "_")
-        return folder(context)?.resolve("$safe.audio")
     }
+
+    /**
+     * The app's folder on a memory card, if there is a card in the phone.
+     *
+     * The first of [Context.getExternalFilesDirs] is always the phone's own storage; anything
+     * after it is removable. An entry is null, or unmounted, while its card is out.
+     */
+    fun card(context: Context): File? =
+        context.getExternalFilesDirs(Environment.DIRECTORY_MUSIC)
+            .drop(1)
+            .firstOrNull { it != null && Environment.getExternalStorageState(it) == Environment.MEDIA_MOUNTED }
+
+    private fun safeName(chapterUri: String): String =
+        // A chapter's uri is namespaced and carries colons, which not every filesystem will take.
+        chapterUri.replace(Regex("[^A-Za-z0-9_.-]"), "_") + ".audio"
+
+    /** Where a new download of this chapter would go, given where books are kept now. */
+    private fun fileFor(context: Context, chapterUri: String): File? =
+        folder(context)?.resolve(safeName(chapterUri))
+
+    /**
+     * Where this chapter's audio actually is, which is not necessarily where a new download would
+     * go: a book kept before the reader moved downloads to the card stays on the phone, and the
+     * row says which. The file named in the row is the one to measure or delete.
+     */
+    private fun fileOf(chapter: ChapterEntity): File? =
+        chapter.audioUri.takeIf { it.startsWith("file:") }?.let { Uri.parse(it).path }?.let(::File)
 
     /** Whether every chapter of a book is on the phone. Anything less is not a kept book. */
     suspend fun isKept(dao: LibraryDao, bookUri: String): Boolean {
@@ -172,6 +202,9 @@ object AbsDownloader {
             partial.delete()
             AbsResult.Failure(context.getString(R.string.download_unfinished))
         } finally {
+            // A download stopped part-way -- by the reader, or by the phone -- leaves its partial
+            // file behind otherwise, and the next try may not even be writing to the same place.
+            if (partial.exists()) partial.delete()
             connection?.disconnect()
         }
     }
@@ -180,7 +213,7 @@ object AbsDownloader {
     suspend fun sizeOf(context: Context, dao: LibraryDao, bookUri: String): Long =
         withContext(Dispatchers.IO) {
             dao.chaptersOf(bookUri).sumOf { chapter ->
-                fileFor(context, chapter.uri)?.takeIf { it.exists() }?.length() ?: 0L
+                fileOf(chapter)?.takeIf { it.exists() }?.length() ?: 0L
             }
         }
 
@@ -191,7 +224,7 @@ object AbsDownloader {
     suspend fun remove(context: Context, dao: LibraryDao, bookUri: String): Int {
         var removed = 0
         for (chapter in dao.chaptersOf(bookUri)) {
-            fileFor(context, chapter.uri)?.takeIf { it.exists() }?.let {
+            fileOf(chapter)?.takeIf { it.exists() }?.let {
                 if (it.delete()) removed++
             }
             dao.setChapterAudio(chapter.uri, "")
