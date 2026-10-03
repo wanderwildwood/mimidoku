@@ -246,6 +246,15 @@
     <string name="download_unfinished">That chapter did not finish downloading.</string>
     <string name="download_not_saved">The download could not be saved.</string>
 
+    <!-- Downloading in the background: the notification's button, what is said when it is pressed (%1$s is the book's title), and the name of the notification category in Android's settings -->
+    <string name="keep_stop">Stop</string>
+    <string name="keep_stopped">Stopped keeping \"%1$s\". What arrived is kept.</string>
+    <string name="keep_channel">Downloads</string>
+    <!-- Settings row, shown only when the phone has a memory card: where books downloaded from the server are put. Books already downloaded stay where they are -->
+    <string name="settings_keep_on">Keep server books on</string>
+    <string name="settings_keep_on_phone">This phone</string>
+    <string name="settings_keep_on_card">Memory card</string>
+
     <!-- Settings row for the optional lock-screen controls, which are turned on in Android's Accessibility settings -->
     <string name="settings_lockscreen_controls">Lock-screen controls</string>
     <string name="settings_lockscreen_controls_on">On</string>

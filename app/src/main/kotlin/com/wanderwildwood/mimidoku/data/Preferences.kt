@@ -104,6 +104,14 @@ class Preferences private constructor(context: Context) {
     var serverToken: String by secret("serverToken")
     var serverLibraryId: String by text("serverLibraryId", "")
 
+    /**
+     * Whether books fetched from the server go on the memory card rather than the phone.
+     *
+     * Only asked where there is a card. A book is hundreds of megabytes and a shelf of them is
+     * more than most phones want to carry; books already kept stay where they were put.
+     */
+    var keepOnCard: Boolean by flag("keepOnCard", false)
+
     /** Whether there is a server to talk to at all. */
     val hasServer: Boolean get() = serverUrl.isNotBlank() && serverToken.isNotBlank()
 

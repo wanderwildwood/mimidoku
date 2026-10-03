@@ -3,6 +3,7 @@ package com.wanderwildwood.mimidoku
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.wanderwildwood.mimidoku.lockscreen.LockScreenControls
 import android.content.ComponentName
 import android.content.res.Resources
@@ -77,6 +78,7 @@ import com.wanderwildwood.mimidoku.ui.ServerEntry
 import com.wanderwildwood.mimidoku.ui.KeptBook
 import com.wanderwildwood.mimidoku.server.AbsClient
 import com.wanderwildwood.mimidoku.server.AbsDownloader
+import com.wanderwildwood.mimidoku.server.KeepService
 import com.wanderwildwood.mimidoku.server.AbsResult
 import com.wanderwildwood.mimidoku.server.AbsServer
 import com.wanderwildwood.mimidoku.server.AbsSync
@@ -85,6 +87,8 @@ import com.wanderwildwood.mimidoku.ui.Transport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.Date
@@ -181,7 +185,23 @@ private fun Mimidoku() {
     var keeping by remember { mutableStateOf<BookEntity?>(null) }
     // Which book is being fetched and how far along, so the row it belongs to can say so. A
     // download is minutes of waiting and the shelf is where the reader will be waiting.
-    var keepingNow by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val keepingState by KeepService.now.collectAsState()
+    val keepingNow = keepingState?.let {
+        it.bookUri to if (it.total > 0) {
+            stringResource(R.string.library_keeping_progress, it.done, it.total)
+        } else {
+            stringResource(R.string.library_keeping)
+        }
+    }
+    // Said on the shelf while the shelf is on screen, and only then: listening from a screen the
+    // reader has left would swallow the news, where not listening lets the service put it in a
+    // notification instead.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            KeepService.said.collect { announcement = it }
+        }
+    }
     // What each kept book takes up. Read off the files rather than trusted from the server,
     // because the question is what this phone is carrying.
     var keptSizes by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
@@ -831,6 +851,12 @@ private fun Mimidoku() {
                 onForget = {
                     scope.launch {
                         serverBusy = true
+                        // A book still arriving would land after its row had gone, as a file
+                        // nothing knows about. Stopped first, and waited for.
+                        if (KeepService.now.value != null) {
+                            KeepService.stop(context)
+                            withTimeoutOrNull(10_000) { KeepService.now.first { it == null } }
+                        }
                         // The downloads go with it. Keeping hours of audio for a server the
                         // reader has just disowned is keeping it for nothing.
                         books.filter { it.sourceType == AbsSync.SOURCE_ABS }
@@ -890,6 +916,21 @@ private fun Mimidoku() {
                             },
                         ),
                     )
+                    // Only where there is a card to choose, and only with a server to fetch
+                    // from: it is a question about where fetched books go and nothing else.
+                    if (preferences.hasServer && AbsDownloader.card(context) != null) {
+                        add(
+                            SettingRow(
+                                key = "keepon",
+                                title = stringResource(R.string.settings_keep_on),
+                                value = stringResource(
+                                    if (preferences.keepOnCard) R.string.settings_keep_on_card
+                                    else R.string.settings_keep_on_phone,
+                                ),
+                                beneath = true,
+                            ),
+                        )
+                    }
                     add(SettingRow("shelving", stringResource(R.string.settings_library_view), stringResource(preferences.shelving.labelRes)))
                     add(SettingRow("skip", stringResource(R.string.settings_skip_amount), pluralStringResource(R.plurals.settings_seconds, preferences.skipSeconds, preferences.skipSeconds)))
                     add(SettingRow("rewind", stringResource(R.string.settings_auto_rewind), pluralStringResource(R.plurals.settings_seconds, preferences.autoRewindSeconds, preferences.autoRewindSeconds)))
@@ -954,6 +995,7 @@ private fun Mimidoku() {
                         // A switch is its own dialog: there is one other value and no question
                         // worth asking about it.
                         "autosleep" -> preferences.autoSleep = !preferences.autoSleep
+                        "keepon" -> preferences.keepOnCard = !preferences.keepOnCard
                         "autosleepstart" -> editing = Editing.AutoSleepStart
                         "autosleepend" -> editing = Editing.AutoSleepEnd
                         "shake" -> editing = Editing.Shake
@@ -978,25 +1020,9 @@ private fun Mimidoku() {
             onDismiss = { keeping = null },
             onConfirm = {
                 keeping = null
-                scope.launch {
-                    val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
-                    keepingNow = book.uri to context.getString(R.string.library_keeping)
-                    val kept = AbsDownloader.downloadBook(
-                        context = context,
-                        client = client,
-                        dao = library.library,
-                        bookUri = book.uri,
-                    ) { done, total, _ ->
-                        keepingNow = book.uri to context.getString(R.string.library_keeping_progress, done, total)
-                    }
-                    keepingNow = null
-                    // Said on the shelf rather than on a screen the reader has left: a download
-                    // that finishes while they are looking at the book is the whole point.
-                    announcement = when (kept) {
-                        is AbsResult.Failure -> kept.message
-                        is AbsResult.Success -> context.getString(R.string.library_kept, book.shownTitle())
-                    }
-                }
+                // Handed to a service rather than done here, so it carries on with the screen
+                // off or the app closed. The shelf hears back through [KeepService].
+                KeepService.keep(context, book.uri, book.shownTitle())
             },
         )
     }
