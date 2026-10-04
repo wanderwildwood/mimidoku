@@ -1273,11 +1273,12 @@ private fun Long.asSize(resources: Resources): String = when {
 /**
  * How far apart two measurements of the same recording may sit and still be the same recording.
  *
- * The server reads a file's length with one tool and this phone reads it with another, so the
- * same book can come back a few tenths of a second apart. Two seconds is wider than that gap and
- * far narrower than the gap between two different books.
+ * The server reads a file's length with one tool and this phone reads it with another, so each
+ * file can come back a few hundredths of a second apart -- and a book is often a hundred files or
+ * more, so the gap adds up to seconds. Thirty seconds covers several hundred files, and is still
+ * far narrower than the minutes between two readings of one book.
  */
-private const val SAME_BOOK_MS = 2_000L
+private const val SAME_BOOK_MS = 30_000L
 
 /**
  * Everything on the card, and from a server only what is not already here.
