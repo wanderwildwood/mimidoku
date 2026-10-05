@@ -20,6 +20,7 @@ import com.wanderwildwood.mimidoku.data.Preferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Fetches books with the app closed.
@@ -131,8 +133,11 @@ class KeepService : Service() {
                 is AbsResult.Success -> getString(R.string.library_kept, title)
             }
         } finally {
-            // Stopped from the notification. Whatever whole chapters arrived are kept, so asking
-            // again carries on from there.
+            // A book is on the phone or it is not. One that failed or was stopped part-way takes
+            // its chapters with it, rather than sitting on the card as a book that cannot play.
+            if (said == null || !AbsDownloader.isKept(dao, uri)) {
+                withContext(NonCancellable) { AbsDownloader.remove(this@KeepService, dao, uri) }
+            }
             if (said == null) tell(getString(R.string.keep_stopped, title))
         }
         return said

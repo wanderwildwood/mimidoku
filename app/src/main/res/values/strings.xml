@@ -248,7 +248,7 @@
 
     <!-- Downloading in the background: the notification's button, what is said when it is pressed (%1$s is the book's title), and the name of the notification category in Android's settings -->
     <string name="keep_stop">Stop</string>
-    <string name="keep_stopped">Stopped keeping \"%1$s\". What arrived is kept.</string>
+    <string name="keep_stopped">Stopped keeping \"%1$s\".</string>
     <string name="keep_channel">Downloads</string>
     <!-- Settings row, shown only when the phone has a memory card: where books downloaded from the server are put. Books already downloaded stay where they are -->
     <string name="settings_keep_on">Keep server books on</string>
