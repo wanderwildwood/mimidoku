@@ -713,14 +713,22 @@ private fun Mimidoku() {
                 Screen.Search -> {
                     // Matched on both the book and whoever wrote it, because a reader looking for a book
                     // by author does not think of that as a different kind of search.
-                    val found = remember(shelvedBooks, query) {
+                    // Said the same way the shelf says it: a book found here is as likely to be
+                    // the one downloading, or the one that failed to.
+                    val found = remember(shelvedBooks, query, keepingNow, preferences.failedDownloads) {
                         if (query.isBlank()) {
                             emptyList()
                         } else {
                             shelvedBooks.filter {
                                 it.shownTitle().contains(query, true) ||
                                     it.shownAuthor()?.contains(query, true) == true
-                            }.map { it.toRow(context.resources) }
+                            }.map { book ->
+                                book.toRow(
+                                    context.resources,
+                                    keepingNow?.takeIf { it.first == book.uri }?.second,
+                                    failed = book.uri in preferences.failedDownloads,
+                                )
+                            }
                         }
                     }
                     val searchShelves = remember(shelvedBooks, preferences.shelving) {
