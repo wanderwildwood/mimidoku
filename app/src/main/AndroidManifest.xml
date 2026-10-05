@@ -12,6 +12,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!--
+        Asked for only when another app hands over an audiobook by its path (file://) rather than
+        sharing it, which is the one case the file cannot be read without it. The library's own
+        folders, and files another app shares, need neither. PRIVACY.md says the same.
+    -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application
         android:allowBackup="true"
@@ -31,7 +38,54 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!--
+                "Open with" for an audiobook file: an m4b, by its type where the sender names it.
+                Other audio is songs and is left to a music player, so a plain mp3 or m4a does not
+                offer this app at all.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/x-m4b" />
+                <data android:mimeType="audio/m4b" />
+            </intent-filter>
+            <!--
+                And by its name, where the sender calls it something vaguer - audio/mp4, which is
+                what Android itself calls an m4b, or no type at all. pathPattern needs a host, and
+                one pattern per dot a name may hold before its extension.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.m4b" />
+                <data android:pathPattern=".*\\..*\\.m4b" />
+                <data android:pathPattern=".*\\.M4B" />
+                <data android:pathPattern=".*\\..*\\.M4B" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.m4b" />
+                <data android:pathPattern=".*\\..*\\.m4b" />
+                <data android:pathPattern=".*\\.M4B" />
+                <data android:pathPattern=".*\\..*\\.M4B" />
+            </intent-filter>
         </activity>
+
+        <!-- The book being read, for Glance's lock-screen panel; it answers Glance alone. -->
+        <provider
+            android:name=".glance.ReadingOnLockScreen"
+            android:authorities="com.wanderwildwood.mimidoku.glance"
+            android:exported="true" />
 
         <service
             android:name=".playback.PlaybackService"

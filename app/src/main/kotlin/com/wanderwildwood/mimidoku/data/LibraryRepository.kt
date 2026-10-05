@@ -2,10 +2,14 @@ package com.wanderwildwood.mimidoku.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import com.wanderwildwood.mimidoku.library.Book
+import com.wanderwildwood.mimidoku.library.OpenedBook
 import com.wanderwildwood.mimidoku.library.BookScanner
 import com.wanderwildwood.mimidoku.library.TreeShape
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 /**
  * What the app knows about the reader's books.
@@ -83,7 +87,17 @@ class LibraryRepository(private val context: Context) {
 
     suspend fun bookOfChapter(chapterUri: String): BookEntity? = dao.bookOfChapter(chapterUri)
 
-    suspend fun lastRead(): BookEntity? = dao.lastRead()
+    /**
+     * An opened file is offered back only while it can still be opened: one another app shared
+     * is usually readable only until this app closes, and a book offered back that will not play
+     * is worse than the one before it.
+     */
+    suspend fun lastRead(): BookEntity? {
+        val last = dao.lastRead() ?: return null
+        if (last.sourceType != SOURCE_OPENED) return last
+        if (withContext(Dispatchers.IO) { OpenedBook.readable(context, last.uri.toUri()) }) return last
+        return dao.lastReadNotFrom(SOURCE_OPENED)
+    }
 
     suspend fun marksOf(bookUri: String): List<MarkEntity> = dao.marksOf(bookUri)
 

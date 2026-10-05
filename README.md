@@ -45,6 +45,15 @@ than as one bar to drag.
 Sleep timer -- by hand, or on its own between two hours you set -- playback speed, chapter
 list, bookmarks, and a shake to keep the timer going.
 
+An m4b opened from another app -- "Open with" in a file manager -- is read as a book of its own,
+with the chapters inside it, and opening it again picks up where you stopped. It stays off the
+shelves, which are the folders you granted. Other audio is left to a music player.
+
+With [Glance](https://github.com/wanderwildwood/hitome) installed, the book being read or paused
+shows on its lock-screen panel -- "The Willow Road · Chapter 2", or the time left in a book with
+no chapters -- and nothing once playback stops. Settings → **Show the book being read in
+Glance** turns it off.
+
 Released.
 
 ## Getting it, and keeping it

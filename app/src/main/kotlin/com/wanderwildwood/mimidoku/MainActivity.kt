@@ -9,6 +9,8 @@ import android.content.ComponentName
 import android.content.res.Resources
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import android.os.Bundle
 import android.text.format.DateFormat
@@ -43,6 +45,9 @@ import com.wanderwildwood.mimidoku.data.MarkEntity
 import com.wanderwildwood.mimidoku.data.DurationReader
 import com.wanderwildwood.mimidoku.data.LibraryRepository
 import com.wanderwildwood.mimidoku.data.SOURCE_LOCAL
+import com.wanderwildwood.mimidoku.data.SOURCE_OPENED
+import com.wanderwildwood.mimidoku.glance.GlanceProvider
+import com.wanderwildwood.mimidoku.library.OpenedBook
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
 import com.wanderwildwood.mimidoku.data.Shelving
@@ -100,13 +105,30 @@ import java.util.Date
 
 class MainActivity : ComponentActivity() {
 
+    /** An audiobook file another app has asked this one to open, until it has been. */
+    private val opened = mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Only a fresh start: a screen rebuilt after Android reclaimed it is handed the same
+        // intent again, and the book was opened the first time.
+        if (savedInstanceState == null) takeOpenedFile(intent)
         setContent {
             MimidokuTheme {
-                Mimidoku()
+                Mimidoku(openedFile = opened.value, onOpenedFileTaken = { opened.value = null })
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        takeOpenedFile(intent)
+    }
+
+    private fun takeOpenedFile(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        intent.data?.let { opened.value = it }
     }
 }
 
@@ -141,7 +163,7 @@ private sealed interface Editing {
 }
 
 @Composable
-private fun Mimidoku() {
+private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val library = remember { LibraryRepository(context) }
@@ -157,7 +179,10 @@ private fun Mimidoku() {
     // What the shelves show. Everything on the card, and from a server only what is not already
     // here -- see [withoutServerCopiesOfWhatIsHere]. The unfiltered list stays for the places
     // that are counting what the *server* holds rather than showing what there is to read.
-    val shelvedBooks = remember(books) { books.withoutServerCopiesOfWhatIsHere() }
+    // A file opened from another app is a book too, but not one on a shelf: see [OpenedBook].
+    val shelvedBooks = remember(books) {
+        books.filter { it.sourceType != SOURCE_OPENED }.withoutServerCopiesOfWhatIsHere()
+    }
 
     var screen by remember { mutableStateOf<Screen>(Screen.Library) }
     var controller by remember { mutableStateOf<MediaController?>(null) }
@@ -487,6 +512,57 @@ private fun Mimidoku() {
                 chapters = library.chaptersOf(book.uri)
                 marks = library.marksOf(book.uri)
                 controller?.play(context, chapters, book)
+            }
+        }
+    }
+
+    // An audiobook file another app handed over, opened as a book of its own once there is a
+    // player to hand it to, and from where the reader stopped if it has been opened before.
+    var fileToOpen by remember { mutableStateOf<Uri?>(null) }
+    LaunchedEffect(openedFile) {
+        if (openedFile != null) {
+            fileToOpen = openedFile
+            onOpenedFileTaken()
+        }
+    }
+    var fileWaitingForAccess by remember { mutableStateOf<Uri?>(null) }
+    val askForAudioAccess = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val uri = fileWaitingForAccess
+        fileWaitingForAccess = null
+        if (granted) {
+            fileToOpen = uri
+        } else {
+            Toast.makeText(context, context.getString(R.string.opened_file_needs_access), Toast.LENGTH_LONG).show()
+        }
+    }
+    LaunchedEffect(fileToOpen, controller) {
+        val uri = fileToOpen ?: return@LaunchedEffect
+        if (controller == null) return@LaunchedEffect
+        // Taken off before the work is started elsewhere: clearing it changes this effect's
+        // key, which cancels the effect, and would cancel the opening with it.
+        fileToOpen = null
+        scope.launch {
+            val book = OpenedBook.open(context, uri)
+            if (book != null) {
+                openBook(book)
+                return@launch
+            }
+            // A file named by its path can only be read with access to the phone's audio files,
+            // which is asked for here, when it is needed, and nowhere else.
+            val permission = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                android.Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            val allowed = ContextCompat.checkSelfPermission(context, permission) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (OpenedBook.needsMediaAccess(uri) && !allowed) {
+                fileWaitingForAccess = uri
+                askForAudioAccess.launch(permission)
+            } else {
+                Toast.makeText(context, context.getString(R.string.opened_file_unreadable), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -983,6 +1059,16 @@ private fun Mimidoku() {
                                     ),
                                 ),
                             )
+                            // Beside the controls, because it is the other thing this app puts on
+                            // the lock screen - and unlike them it is this app's to switch.
+                            add(
+                                SettingRow(
+                                    key = "glance",
+                                    title = stringResource(R.string.settings_reading_on_lock_screen),
+                                    value = null,
+                                    toggle = preferences.readingOnLockScreen,
+                                ),
+                            )
                             // Last, with the two hours it governs. It is the one setting here that
                             // is a standing arrangement rather than a value, and it brings rows of
                             // its own, so it does not belong in the middle of a list of numbers.
@@ -1028,6 +1114,10 @@ private fun Mimidoku() {
                                 // worth asking about it.
                                 "autosleep" -> preferences.autoSleep = !preferences.autoSleep
                                 "keepon" -> preferences.keepOnCard = !preferences.keepOnCard
+                                "glance" -> {
+                                    preferences.readingOnLockScreen = !preferences.readingOnLockScreen
+                                    GlanceProvider.changed(context)
+                                }
                                 "autosleepstart" -> editing = Editing.AutoSleepStart
                                 "autosleepend" -> editing = Editing.AutoSleepEnd
                                 "shake" -> editing = Editing.Shake

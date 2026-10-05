@@ -20,6 +20,18 @@ app-private, which means other apps cannot read it and uninstalling takes it awa
 
 Nothing is copied. The audio stays where you put it.
 
+A book opened from another app ("Open with" in a file manager) comes with that app's permission
+to read that one file. Only a file handed over by its path rather than shared needs more: then
+the app asks for access to audio files, at that moment and for that reason, and you can say no.
+The book is remembered by that address, with your place in it, like any other.
+
+## The lock screen
+
+With Glance installed, the title of the book playing or paused, its chapter or time left, and
+whether it is paused, are handed to Glance - and only to Glance - to draw on the lock screen,
+where anyone holding the phone can read them. Settings → **Show the book being read in Glance**
+stops it.
+
 ## What leaves the phone
 
 Nothing, until you add a server. Then: requests to that server, and nowhere else. Not for
