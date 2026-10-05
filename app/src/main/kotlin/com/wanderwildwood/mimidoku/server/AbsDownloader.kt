@@ -8,6 +8,7 @@ import com.wanderwildwood.mimidoku.data.ChapterEntity
 import com.wanderwildwood.mimidoku.data.LibraryDao
 import com.wanderwildwood.mimidoku.data.Preferences
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -30,6 +31,9 @@ import kotlin.coroutines.coroutineContext
  * because none of them ever pointed at the audio.
  */
 object AbsDownloader {
+
+    private const val CHAPTER_TRIES = 4
+    private const val RETRY_WAIT_MS = 3_000L
 
     /**
      * Where a book goes: the app's own folder on the phone, or its own folder on a memory card.
@@ -82,9 +86,9 @@ object AbsDownloader {
      * Fetches a whole book, chapter by chapter.
      *
      * Each chapter is written to a temporary name and moved into place only once it is whole, so
-     * an interrupted download cannot leave a file that looks playable and is not. A chapter that
-     * is already here is skipped, which is what makes a cancelled download worth resuming rather
-     * than starting again.
+     * an interrupted download cannot leave a file that looks playable and is not. A chapter cut
+     * off part-way is tried again a few times before the book is given up on: one wifi blip
+     * should not cost a whole book, and the reader is not there to press Keep again.
      */
     suspend fun downloadBook(
         context: Context,
@@ -107,9 +111,19 @@ object AbsDownloader {
                 continue
             }
             val ino = chapter.uri.substringAfterLast(':')
-            when (val r = download(context, client, itemId, ino, chapter.uri) { fraction ->
-                onProgress(done, chapters.size, fraction)
-            }) {
+            var tries = 0
+            var r: AbsResult<File>
+            while (true) {
+                r = download(context, client, itemId, ino, chapter.uri) { fraction ->
+                    onProgress(done, chapters.size, fraction)
+                }
+                // Only a transfer that broke is worth repeating. A server that says no, or a
+                // phone with nowhere to put the file, will say the same thing the next time.
+                val broke = r is AbsResult.Failure && r.message == context.getString(R.string.download_unfinished)
+                if (!broke || ++tries >= CHAPTER_TRIES) break
+                delay(RETRY_WAIT_MS * tries)
+            }
+            when (r) {
                 is AbsResult.Failure -> return r
                 is AbsResult.Success -> {
                     // Written only once the file is whole and in place. A row that says a file is
