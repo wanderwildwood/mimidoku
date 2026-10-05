@@ -1103,6 +1103,15 @@ private fun Mimidoku() {
             onConfirm = {
                 givingBack = null
                 scope.launch {
+                    // A book taken off the phone stops being the one in the player, rather than
+                    // staying on the strip with nothing behind it to play.
+                    if (playing?.uri == book.id) {
+                        controller?.stop()
+                        controller?.clearMediaItems()
+                        playing = null
+                        chapters = emptyList()
+                        marks = emptyList()
+                    }
                     AbsDownloader.remove(context, library.library, book.id)
                     // The row it was on goes; what it was taking up goes with it.
                     keptSizes = keptSizes - book.id
