@@ -161,8 +161,11 @@ interface LibraryDao {
     @Query("SELECT * FROM books WHERE uri = (SELECT bookUri FROM chapters WHERE uri = :chapterUri)")
     suspend fun bookOfChapter(chapterUri: String): BookEntity?
 
-    /** The book to offer when the app is opened cold: whatever was being read last. */
-    @Query("SELECT * FROM books WHERE lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT 1")
+    /**
+     * The book to offer when the app is opened cold: whatever was being read last, of the books
+     * that are on the phone. One removed since has nothing to play.
+     */
+    @Query("SELECT * FROM books WHERE lastPlayedAt IS NOT NULL AND kept = 1 ORDER BY lastPlayedAt DESC LIMIT 1")
     suspend fun lastRead(): BookEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
