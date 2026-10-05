@@ -112,6 +112,12 @@ class Preferences private constructor(context: Context) {
      */
     var keepOnCard: Boolean by flag("keepOnCard", false)
 
+    /**
+     * Books whose last download failed. The message saying so is gone in seconds and the reader may
+     * not have been looking; the shelf goes on saying it until the book is asked for again.
+     */
+    var failedDownloads: Set<String> by stringSet("failedDownloads")
+
     /** Whether there is a server to talk to at all. */
     val hasServer: Boolean get() = serverUrl.isNotBlank() && serverToken.isNotBlank()
 
@@ -186,6 +192,16 @@ class Preferences private constructor(context: Context) {
         private fun store(value: String) {
             val sealed = Secrets.seal(value)
             if (sealed == null) prefs.edit().remove(key).apply() else prefs.edit().putString(key, sealed).apply()
+        }
+    }
+
+    private fun stringSet(key: String) = object : ReadWriteProperty<Any?, Set<String>> {
+        // Copied out: the set SharedPreferences hands back must not be changed in place.
+        private var held by mutableStateOf(prefs.getStringSet(key, null)?.toSet() ?: emptySet())
+        override fun getValue(thisRef: Any?, property: KProperty<*>) = held
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: Set<String>) {
+            held = value
+            prefs.edit().putStringSet(key, value).apply()
         }
     }
 

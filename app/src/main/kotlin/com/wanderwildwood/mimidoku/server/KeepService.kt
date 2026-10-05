@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -53,6 +54,8 @@ class KeepService : Service() {
     private var wake: PowerManager.WakeLock? = null
     private var wifi: WifiManager.WifiLock? = null
     private var lastStart = 0
+    // Why the last download failed, for the notification that says it did.
+    private var reason: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -123,13 +126,21 @@ class KeepService : Service() {
         val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), resources)
         val dao = LibraryDatabase.get(this).dao()
         var said: String? = null
+        preferences.failedDownloads -= uri
         try {
             val kept = AbsDownloader.downloadBook(this, client, dao, uri) { done, total, _ ->
                 _now.value = Keeping(uri, title, done, total)
                 show(notification(_now.value))
             }
             said = when (kept) {
-                is AbsResult.Failure -> kept.message
+                is AbsResult.Failure -> {
+                    // The reason goes in the notification and the log; the shelf only needs to
+                    // know that it failed, and keeps saying so until the book is asked for again.
+                    reason = kept.message
+                    Log.w(TAG, "download failed: ${kept.message}")
+                    preferences.failedDownloads += uri
+                    getString(R.string.download_failed, title)
+                }
                 is AbsResult.Success -> getString(R.string.library_kept, title)
             }
         } finally {
@@ -148,6 +159,8 @@ class KeepService : Service() {
      * download that finished while the reader was elsewhere is still news when they come back.
      */
     private fun tell(said: String) {
+        val why = reason
+        reason = null
         if (_said.subscriptionCount.value > 0) {
             _said.tryEmit(said)
         } else {
@@ -157,6 +170,7 @@ class KeepService : Service() {
                     NotificationCompat.Builder(this, CHANNEL)
                         .setSmallIcon(R.drawable.ic_notification)
                         .setContentTitle(said)
+                        .setContentText(why)
                         .setContentIntent(openApp())
                         .setAutoCancel(true)
                         .build(),
@@ -264,6 +278,7 @@ class KeepService : Service() {
         private const val CHANNEL = "keeping"
         private const val ONGOING_ID = 2
         private const val DONE_ID = 3
+        private const val TAG = "mimidoku"
 
         /** Long enough for any one book over a slow home network; a backstop, not a schedule. */
         private const val WAKE_LIMIT_MS = 6 * 60 * 60 * 1000L

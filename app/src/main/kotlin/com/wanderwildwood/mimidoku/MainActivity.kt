@@ -51,6 +51,11 @@ import com.wanderwildwood.mimidoku.library.Reading
 import com.wanderwildwood.mimidoku.library.TreeShape
 import com.wanderwildwood.mimidoku.playback.CoverArt
 import com.wanderwildwood.mimidoku.playback.PlaybackService
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import com.wanderwildwood.mimidoku.ui.DownloadBar
 import com.wanderwildwood.mimidoku.ui.BookRow
 import com.wanderwildwood.mimidoku.ui.BooksScreen
 import com.wanderwildwood.mimidoku.ui.LibraryRow
@@ -183,6 +188,10 @@ private fun Mimidoku() {
     var serverStatus by remember { mutableStateOf<String?>(null) }
     // The book a reader has asked about keeping, waiting on the question being answered.
     var keeping by remember { mutableStateOf<BookEntity?>(null) }
+    // Asked from the download line or the row of the book being fetched.
+    var stoppingDownload by remember { mutableStateOf(false) }
+    // How the last download ended, said along the bottom for a few seconds.
+    var downloadSaid by remember { mutableStateOf<String?>(null) }
     // Which book is being fetched and how far along, so the row it belongs to can say so. A
     // download is minutes of waiting and the shelf is where the reader will be waiting.
     val keepingState by KeepService.now.collectAsState()
@@ -199,7 +208,7 @@ private fun Mimidoku() {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            KeepService.said.collect { announcement = it }
+            KeepService.said.collect { downloadSaid = it }
         }
     }
     // What each kept book takes up. Read off the files rather than trusted from the server,
@@ -301,6 +310,13 @@ private fun Mimidoku() {
         // offered back with no chapters at all, and the way into its chapter list - the line
         // naming what is playing - is not drawn.
         marks = library.marksOf(book.uri)
+    }
+
+    // Longer than an announcement: the reader may have looked away for the minutes it took.
+    LaunchedEffect(downloadSaid) {
+        if (downloadSaid == null) return@LaunchedEffect
+        delay(DOWNLOAD_SAID_MS)
+        downloadSaid = null
     }
 
     // An announcement is a thing the app said, not a thing it is saying. It goes away on its own.
@@ -461,8 +477,9 @@ private fun Mimidoku() {
      */
     val openBook: (BookEntity) -> Unit = { book ->
         if (!book.kept) {
-            // Nothing to play yet. Tapping it can only usefully mean "fetch this".
-            keeping = book
+            // Nothing to play yet. Tapping it can only usefully mean "fetch this", or, while it is
+            // being fetched, "stop".
+            if (keepingState?.bookUri == book.uri) stoppingDownload = true else keeping = book
         } else {
             playing = book
             screen = Screen.Player
@@ -531,482 +548,504 @@ private fun Mimidoku() {
         }
     }
 
-    when (val current = screen) {
-        Screen.Library -> {
-            // A shelf is whatever the reader chose to group by. Books that cannot answer -- no
-            // author, no genre -- get one shelf of their own at the end, because a book the app
-            // can see and the reader cannot is worse than a plain heading saying so. It is not a
-            // made-up author: it says the files do not name one. The row is only there when
-            // something is on it, so a tidy library never sees it.
-            val shelves = remember(shelvedBooks, preferences.shelving) {
-                val named = shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }
-                    .collateIgnoringCase()
-                    .sortedWith(String.CASE_INSENSITIVE_ORDER)
-                    .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
-                if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
-                    named + LibraryRow(title = preferences.shelving.unnamed(context.resources), id = UNNAMED)
-                } else {
-                    named
+    // Every screen sits above the download line, so a book being fetched is never out of sight.
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f)) {
+            when (val current = screen) {
+                Screen.Library -> {
+                    // A shelf is whatever the reader chose to group by. Books that cannot answer -- no
+                    // author, no genre -- get one shelf of their own at the end, because a book the app
+                    // can see and the reader cannot is worse than a plain heading saying so. It is not a
+                    // made-up author: it says the files do not name one. The row is only there when
+                    // something is on it, so a tidy library never sees it.
+                    val shelves = remember(shelvedBooks, preferences.shelving) {
+                        val named = shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }
+                            .collateIgnoringCase()
+                            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+                            .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
+                        if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
+                            named + LibraryRow(title = preferences.shelving.unnamed(context.resources), id = UNNAMED)
+                        } else {
+                            named
+                        }
+                    }
+                    LibraryScreen(
+                        rows = shelves,
+                        status = when {
+                            scanning -> stringResource(R.string.library_scanning)
+                            shelvedBooks.isEmpty() -> stringResource(R.string.library_no_books)
+                            else -> null
+                        },
+                        nowPlaying = nowPlaying,
+                        onRowClick = { screen = Screen.Shelf(it.id.takeIf { id -> id != UNNAMED }) },
+                        onSearchClick = { query = ""; screen = Screen.Search },
+                        onSettingsClick = { screen = Screen.Settings },
+                        onNowPlayingClick = { screen = Screen.Player },
+                        onPlayPauseClick = playPause,
+                    )
                 }
-            }
-            LibraryScreen(
-                rows = shelves,
-                status = when {
-                    scanning -> stringResource(R.string.library_scanning)
-                    shelvedBooks.isEmpty() -> stringResource(R.string.library_no_books)
-                    else -> null
-                },
-                nowPlaying = nowPlaying,
-                onRowClick = { screen = Screen.Shelf(it.id.takeIf { id -> id != UNNAMED }) },
-                onSearchClick = { query = ""; screen = Screen.Search },
-                onSettingsClick = { screen = Screen.Settings },
-                onNowPlayingClick = { screen = Screen.Player },
-                onPlayPauseClick = playPause,
-            )
-        }
 
-        is Screen.Shelf -> {
-            val shelving = current.by ?: preferences.shelving
-            val shelved = remember(shelvedBooks, current.name, shelving, keepingNow) {
-                // Matched the same way the shelf was named, or a shelf collated from two
-                // spellings would open holding only the books that used one of them.
-                shelvedBooks.filter { book ->
-                    val shelf = book.shelf(shelving)
-                    if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
-                }.map { book ->
-                    book.toRow(context.resources, keepingNow?.takeIf { it.first == book.uri }?.second)
+                is Screen.Shelf -> {
+                    val shelving = current.by ?: preferences.shelving
+                    val shelved = remember(shelvedBooks, current.name, shelving, keepingNow, preferences.failedDownloads) {
+                        // Matched the same way the shelf was named, or a shelf collated from two
+                        // spellings would open holding only the books that used one of them.
+                        shelvedBooks.filter { book ->
+                            val shelf = book.shelf(shelving)
+                            if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
+                        }.map { book ->
+                            book.toRow(
+                                context.resources,
+                                keepingNow?.takeIf { it.first == book.uri }?.second,
+                                failed = book.uri in preferences.failedDownloads,
+                            )
+                        }
+                    }
+
+                    BooksScreen(
+                        shelf = current.name?.let { shelving.shown(it, context.resources) }
+                            ?: shelving.unnamed(context.resources),
+                        books = shelved,
+                        nowPlaying = nowPlaying,
+                        onClose = { screen = current.back },
+                        onBookClick = { row ->
+                            books.firstOrNull { it.uri == row.id }?.let(openBook)
+                        },
+                        onNowPlayingClick = { screen = Screen.Player },
+                        onPlayPauseClick = playPause,
+                    )
                 }
-            }
 
-            BooksScreen(
-                shelf = current.name?.let { shelving.shown(it, context.resources) }
-                    ?: shelving.unnamed(context.resources),
-                books = shelved,
-                nowPlaying = nowPlaying,
-                onClose = { screen = current.back },
-                onBookClick = { row ->
-                    books.firstOrNull { it.uri == row.id }?.let(openBook)
-                },
-                onNowPlayingClick = { screen = Screen.Player },
-                onPlayPauseClick = playPause,
-            )
-        }
+                Screen.Player -> {
+                    val book = playing
+                    if (book == null) {
+                        screen = Screen.Library
+                    } else {
+                        PlayerScreen(
+                            playback = Playback(
+                                author = book.shownAuthor(),
+                                title = book.shownTitle(),
+                                chapter = if (parts.size > 1) parts.getOrNull(atPart)?.title.orEmpty() else "",
+                                positionMs = shownPosition,
+                                durationMs = shownDuration,
+                                isPlaying = isPlaying,
+                                announcement = announcement,
+                                skipSeconds = preferences.skipSeconds,
+                                sleepArmed = sleepArmed,
+                                sleepRemaining = sleepRemainingMs.takeIf { sleepArmed }?.asMinutes(),
+                                volumeBoosted = preferences.volumeBoosted,
+                                skipSilence = preferences.skipSilence,
+                                locked = locked,
+                            ),
+                            tools = PlaybackTools(
+                                onClose = { screen = Screen.Library },
+                                onSleepTimer = {
+                                    controller?.ask(PlaybackService.SLEEP_TIMER, !sleepArmed)
+                                },
+                                onVolume = {
+                                    preferences.volumeBoosted = !preferences.volumeBoosted
+                                    controller?.ask(PlaybackService.VOLUME_BOOST, preferences.volumeBoosted)
+                                    announcement =
+                                        context.getString(if (preferences.volumeBoosted) R.string.player_volume_boost_on else R.string.player_volume_boost_off)
+                                },
+                                onSpeed = { editing = Editing.Speed },
+                                onSkipSilence = {
+                                    preferences.skipSilence = !preferences.skipSilence
+                                    controller?.ask(PlaybackService.SKIP_SILENCE, preferences.skipSilence)
+                                    announcement =
+                                        context.getString(if (preferences.skipSilence) R.string.player_skip_silence_on else R.string.player_skip_silence_off)
+                                },
+                                onBookmarks = { screen = Screen.Bookmarks },
+                                onAuthor = book.shownAuthor()?.let { author ->
+                                    { screen = Screen.Shelf(author, by = Shelving.Author, back = Screen.Player) }
+                                },
+                                onLock = {
+                                    locked = !locked
+                                    announcement = context.getString(if (locked) R.string.player_controls_locked else R.string.player_controls_unlocked)
+                                },
+                            ),
+                            transport = Transport(
+                                // Back to the start of this part, or to the one before it when the
+                                // reader is already at the start - which is how every other player
+                                // behaves and what the button is reached for in the dark.
+                                onPreviousChapter = {
+                                    val into = shownPosition - (parts.getOrNull(atPart)?.startMs ?: 0L)
+                                    goToPart(if (into > RESTART_MS || atPart <= 0) atPart else atPart - 1)
+                                },
+                                onRewind = {
+                                    val skip = preferences.skipSeconds * 1_000L
+                                    withPlayer { it.seekTo((it.currentPosition - skip).coerceAtLeast(0)) }
+                                },
+                                onPlayPause = playPause,
+                                onForward = {
+                                    val skip = preferences.skipSeconds * 1_000L
+                                    withPlayer { it.seekTo(it.currentPosition + skip) }
+                                },
+                                onNextChapter = { goToPart((atPart + 1).coerceAtMost(parts.size - 1)) },
+                                onSeekTo = { to -> withPlayer { it.seekTo(to) } },
+                            ),
+                            chapters = Chapters(
+                                // Where a chapter begins is where everything before it ended, which is
+                                // what a reader means by "how far in is chapter nine".
+                                rows = remember(parts, startsAt) {
+                                    parts.mapIndexed { index, part ->
+                                        ChapterRow(
+                                            id = index,
+                                            number = index + 1,
+                                            name = part.title,
+                                            startsAt = (startsAt.getOrNull(index) ?: 0L).asClock(),
+                                        )
+                                    }
+                                },
+                                playingIndex = atPart,
+                                open = chaptersOpen,
+                                onOpen = { chaptersOpen = true },
+                                onPick = { row ->
+                                    goToPart(row.id)
+                                    chaptersOpen = false
+                                },
+                                onDismiss = { chaptersOpen = false },
+                            ),
+                        )
+                    }
+                }
 
-        Screen.Player -> {
-            val book = playing
-            if (book == null) {
-                screen = Screen.Library
-            } else {
-                PlayerScreen(
-                    playback = Playback(
-                        author = book.shownAuthor(),
-                        title = book.shownTitle(),
-                        chapter = if (parts.size > 1) parts.getOrNull(atPart)?.title.orEmpty() else "",
-                        positionMs = shownPosition,
-                        durationMs = shownDuration,
-                        isPlaying = isPlaying,
-                        announcement = announcement,
-                        skipSeconds = preferences.skipSeconds,
-                        sleepArmed = sleepArmed,
-                        sleepRemaining = sleepRemainingMs.takeIf { sleepArmed }?.asMinutes(),
-                        volumeBoosted = preferences.volumeBoosted,
-                        skipSilence = preferences.skipSilence,
-                        locked = locked,
-                    ),
-                    tools = PlaybackTools(
-                        onClose = { screen = Screen.Library },
-                        onSleepTimer = {
-                            controller?.ask(PlaybackService.SLEEP_TIMER, !sleepArmed)
+                Screen.Search -> {
+                    // Matched on both the book and whoever wrote it, because a reader looking for a book
+                    // by author does not think of that as a different kind of search.
+                    val found = remember(shelvedBooks, query) {
+                        if (query.isBlank()) {
+                            emptyList()
+                        } else {
+                            shelvedBooks.filter {
+                                it.shownTitle().contains(query, true) ||
+                                    it.shownAuthor()?.contains(query, true) == true
+                            }.map { it.toRow(context.resources) }
+                        }
+                    }
+                    val searchShelves = remember(shelvedBooks, preferences.shelving) {
+                        shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }.distinct()
+                            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+                            .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
+                    }
+                    SearchScreen(
+                        query = query,
+                        shelves = searchShelves,
+                        found = found,
+                        nowPlaying = nowPlaying,
+                        onQueryChange = { query = it },
+                        onBack = { screen = Screen.Library },
+                        onShelfClick = { screen = Screen.Shelf(it.id) },
+                        onBookClick = { row ->
+                            books.firstOrNull { it.uri == row.id }?.let(openBook)
                         },
-                        onVolume = {
-                            preferences.volumeBoosted = !preferences.volumeBoosted
-                            controller?.ask(PlaybackService.VOLUME_BOOST, preferences.volumeBoosted)
-                            announcement =
-                                context.getString(if (preferences.volumeBoosted) R.string.player_volume_boost_on else R.string.player_volume_boost_off)
+                        onNowPlayingClick = { screen = Screen.Player },
+                        onPlayPauseClick = playPause,
+                    )
+                }
+
+                Screen.Bookmarks -> {
+                    val book = playing
+                    if (book == null) {
+                        screen = Screen.Library
+                    } else {
+                        val marks by library.bookmarks(book.uri).collectAsState(initial = emptyList())
+                        val now = System.currentTimeMillis()
+                        BookmarksScreen(
+                            bookmarks = marks.map {
+                                BookmarkRow(
+                                    id = it.id,
+                                    when_ = stringResource(
+                                        R.string.bookmarks_when,
+                                        DateUtils.getRelativeTimeSpanString(it.createdAt, now, DateUtils.MINUTE_IN_MILLIS),
+                                        DateFormat.getTimeFormat(context).format(it.createdAt),
+                                    ),
+                                    position = it.positionMs.asClock(),
+                                    automatic = it.automatic,
+                                )
+                            },
+                            onClose = { screen = Screen.Player },
+                            onGoTo = { row ->
+                                val mark = marks.firstOrNull { it.id == row.id } ?: return@BookmarksScreen
+                                val at = chapters.indexOfFirst { it.uri == mark.chapterUri }
+                                if (at >= 0) withPlayer { it.seekTo(at, mark.positionMs) }
+                                screen = Screen.Player
+                            },
+                            onDelete = { row -> scope.launch { library.deleteBookmark(row.id) } },
+                            onAdd = {
+                                val chapter = chapterUri
+                                if (chapter != null) {
+                                    scope.launch {
+                                        library.addBookmark(book.uri, chapter, position, automatic = false)
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+
+                Screen.Folders -> {
+                    FoldersScreen(
+                        folders = grants.map { uri ->
+                            FolderRow(
+                                id = uri.toString(),
+                                // The tail of the document id is what the reader called the folder; the
+                                // rest is the provider's business.
+                                name = uri.lastPathSegment.orEmpty().substringAfterLast('/')
+                                    .substringAfterLast(':').ifBlank { uri.toString() },
+                                byAuthor = shapes[uri.toString()] == TreeShape.AuthorsThenBooks,
+                                // What the scan made of it, which is the answer the reader needs when a
+                                // book has not turned up. Until one has run, what they said it was.
+                                how = when (shapes[uri.toString()]) {
+                                    TreeShape.AuthorsThenBooks -> stringResource(R.string.folders_shape_authors_then_books)
+                                    TreeShape.BooksInFolders -> stringResource(R.string.folders_shape_books)
+                                    TreeShape.SingleBook -> stringResource(R.string.folders_shape_one_book)
+                                    TreeShape.Empty -> stringResource(R.string.folders_shape_none)
+                                    null -> preferences.reading(uri.toString())?.let { stringResource(it.labelRes) }.orEmpty()
+                                },
+                            )
                         },
-                        onSpeed = { editing = Editing.Speed },
-                        onSkipSilence = {
-                            preferences.skipSilence = !preferences.skipSilence
-                            controller?.ask(PlaybackService.SKIP_SILENCE, preferences.skipSilence)
-                            announcement =
-                                context.getString(if (preferences.skipSilence) R.string.player_skip_silence_on else R.string.player_skip_silence_off)
+                        onBack = { screen = Screen.Settings },
+                        onScanNow = { scanning = true },
+                        onAdd = { pickFolder.launch(null) },
+                        onChange = { row -> asking = row.id.toUri() },
+                        onRemove = { row ->
+                            // Giving the grant back is the removal: there is nowhere else the folder is
+                            // written down, so it cannot come back out of step with what is permitted.
+                            runCatching {
+                                context.contentResolver.releasePersistableUriPermission(
+                                    row.id.toUri(),
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                )
+                            }
+                            preferences.forgetReading(row.id)
+                            grants = context.contentResolver.persistedUriPermissions.map { it.uri }
+                            scanning = true
                         },
-                        onBookmarks = { screen = Screen.Bookmarks },
-                        onAuthor = book.shownAuthor()?.let { author ->
-                            { screen = Screen.Shelf(author, by = Shelving.Author, back = Screen.Player) }
+                    )
+                }
+
+                Screen.Server -> {
+                    ServerScreen(
+                        address = preferences.serverUrl,
+                        key = preferences.serverToken,
+                        bookCount = books.count { it.sourceType == AbsSync.SOURCE_ABS },
+                        kept = keptBooks,
+                        isBusy = serverBusy,
+                        status = serverStatus,
+                        onBack = { screen = Screen.Settings },
+                        onConnect = { entered ->
+                            scope.launch {
+                                serverBusy = true
+                                serverStatus = context.getString(R.string.server_asking)
+                                val server = AbsServer(entered.address.withScheme(), entered.key)
+                                val client = AbsClient(server, context.resources)
+                                when (val found = client.libraries()) {
+                                    is AbsResult.Failure -> serverStatus = found.message
+                                    is AbsResult.Success -> {
+                                        // A server can hold podcasts as well as books, and this app has
+                                        // nothing to say about a podcast.
+                                        val shelf = found.value.firstOrNull { it.mediaType == "book" }
+                                        if (shelf == null) {
+                                            serverStatus = context.getString(R.string.server_no_book_library)
+                                        } else {
+                                            preferences.serverUrl = server.base
+                                            preferences.serverToken = entered.key
+                                            preferences.serverLibraryId = shelf.id
+                                            serverStatus = syncServer(context, client, shelf.id, library.library) {
+                                                serverStatus = it
+                                            }
+                                        }
+                                    }
+                                }
+                                serverBusy = false
+                            }
                         },
-                        onLock = {
-                            locked = !locked
-                            announcement = context.getString(if (locked) R.string.player_controls_locked else R.string.player_controls_unlocked)
+                        onGiveBack = { givingBack = it },
+                        onSyncNow = {
+                            scope.launch {
+                                serverBusy = true
+                                val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
+                                serverStatus = syncServer(context, client, preferences.serverLibraryId, library.library) {
+                                    serverStatus = it
+                                }
+                                serverBusy = false
+                            }
                         },
-                    ),
-                    transport = Transport(
-                        // Back to the start of this part, or to the one before it when the
-                        // reader is already at the start - which is how every other player
-                        // behaves and what the button is reached for in the dark.
-                        onPreviousChapter = {
-                            val into = shownPosition - (parts.getOrNull(atPart)?.startMs ?: 0L)
-                            goToPart(if (into > RESTART_MS || atPart <= 0) atPart else atPart - 1)
+                        onForget = {
+                            scope.launch {
+                                serverBusy = true
+                                // A book still arriving would land after its row had gone, as a file
+                                // nothing knows about. Stopped first, and waited for.
+                                if (KeepService.now.value != null) {
+                                    KeepService.stop(context)
+                                    withTimeoutOrNull(10_000) { KeepService.now.first { it == null } }
+                                }
+                                // The downloads go with it. Keeping hours of audio for a server the
+                                // reader has just disowned is keeping it for nothing.
+                                books.filter { it.sourceType == AbsSync.SOURCE_ABS }
+                                    .forEach { AbsDownloader.remove(context, library.library, it.uri) }
+                                library.library.forgetSource(AbsSync.SOURCE_ABS)
+                                preferences.serverUrl = ""
+                                preferences.serverToken = ""
+                                preferences.serverLibraryId = ""
+                                serverStatus = context.getString(R.string.server_forgotten)
+                                serverBusy = false
+                            }
                         },
-                        onRewind = {
-                            val skip = preferences.skipSeconds * 1_000L
-                            withPlayer { it.seekTo((it.currentPosition - skip).coerceAtLeast(0)) }
-                        },
-                        onPlayPause = playPause,
-                        onForward = {
-                            val skip = preferences.skipSeconds * 1_000L
-                            withPlayer { it.seekTo(it.currentPosition + skip) }
-                        },
-                        onNextChapter = { goToPart((atPart + 1).coerceAtMost(parts.size - 1)) },
-                        onSeekTo = { to -> withPlayer { it.seekTo(to) } },
-                    ),
-                    chapters = Chapters(
-                        // Where a chapter begins is where everything before it ended, which is
-                        // what a reader means by "how far in is chapter nine".
-                        rows = remember(parts, startsAt) {
-                            parts.mapIndexed { index, part ->
-                                ChapterRow(
-                                    id = index,
-                                    number = index + 1,
-                                    name = part.title,
-                                    startsAt = (startsAt.getOrNull(index) ?: 0L).asClock(),
+                    )
+                }
+
+                Screen.Settings -> {
+                    // Read again whenever the app comes back, which is how the reader returns from
+                    // turning the service on in Android's settings.
+                    var lockScreenControlsOn by remember { mutableStateOf(LockScreenControls.isEnabled(context)) }
+                    val settingsLifecycle = LocalLifecycleOwner.current
+                    DisposableEffect(settingsLifecycle) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                lockScreenControlsOn = LockScreenControls.isEnabled(context)
+                            }
+                        }
+                        settingsLifecycle.lifecycle.addObserver(observer)
+                        onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
+                    }
+                    SettingsScreen(
+                        rows = buildList {
+                            // How many folders, not a sentence about what the row is for: a row
+                            // earns its second line by saying something that changes.
+                            add(
+                                SettingRow(
+                                    key = "folders",
+                                    title = stringResource(R.string.settings_folders),
+                                    value = when (grants.size) {
+                                        0 -> stringResource(R.string.settings_folders_none)
+                                        else -> pluralStringResource(R.plurals.settings_folders_count, grants.size, grants.size)
+                                    },
+                                ),
+                            )
+                            // Under the folders, because it answers the same question: where the books
+                            // come from. A reader without a server sees a row that says so and nothing
+                            // more, which is cheaper than a screen they have to open to find out.
+                            add(
+                                SettingRow(
+                                    key = "server",
+                                    title = stringResource(R.string.settings_server),
+                                    value = if (preferences.hasServer) {
+                                        val onServer = books.count { it.sourceType == AbsSync.SOURCE_ABS }
+                                        val here = books.count { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
+                                        stringResource(R.string.settings_server_kept, here, onServer)
+                                    } else {
+                                        stringResource(R.string.settings_server_none)
+                                    },
+                                ),
+                            )
+                            // Only where there is a card to choose, and only with a server to fetch
+                            // from: it is a question about where fetched books go and nothing else.
+                            if (preferences.hasServer && AbsDownloader.card(context) != null) {
+                                add(
+                                    SettingRow(
+                                        key = "keepon",
+                                        title = stringResource(R.string.settings_keep_on),
+                                        value = stringResource(
+                                            if (preferences.keepOnCard) R.string.settings_keep_on_card
+                                            else R.string.settings_keep_on_phone,
+                                        ),
+                                        beneath = true,
+                                    ),
+                                )
+                            }
+                            add(SettingRow("shelving", stringResource(R.string.settings_library_view), stringResource(preferences.shelving.labelRes)))
+                            add(SettingRow("skip", stringResource(R.string.settings_skip_amount), pluralStringResource(R.plurals.settings_seconds, preferences.skipSeconds, preferences.skipSeconds)))
+                            add(SettingRow("rewind", stringResource(R.string.settings_auto_rewind), pluralStringResource(R.plurals.settings_seconds, preferences.autoRewindSeconds, preferences.autoRewindSeconds)))
+                            add(SettingRow("sleep", stringResource(R.string.settings_sleep_duration), pluralStringResource(R.plurals.settings_minutes, preferences.sleepMinutes, preferences.sleepMinutes)))
+                            // Under the duration, because it is the other half of the same thing:
+                            // how long the timer runs, and how hard you have to shake to keep it
+                            // running when it is about to stop on you and you are still awake.
+                            add(SettingRow("shake", stringResource(R.string.settings_shake), stringResource(preferences.shake.labelRes)))
+                            // Off until turned on in Android's own settings, the only place it can be;
+                            // the row says which it is and goes there.
+                            add(
+                                SettingRow(
+                                    key = "lockscreen",
+                                    title = stringResource(R.string.settings_lockscreen_controls),
+                                    value = stringResource(
+                                        if (lockScreenControlsOn) R.string.settings_lockscreen_controls_on
+                                        else R.string.settings_lockscreen_controls_off,
+                                    ),
+                                ),
+                            )
+                            // Last, with the two hours it governs. It is the one setting here that
+                            // is a standing arrangement rather than a value, and it brings rows of
+                            // its own, so it does not belong in the middle of a list of numbers.
+                            add(
+                                SettingRow(
+                                    key = "autosleep",
+                                    title = stringResource(R.string.settings_auto_sleep),
+                                    value = null,
+                                    toggle = preferences.autoSleep,
+                                ),
+                            )
+                            // The hours only exist while the window does. Two rows saying when something
+                            // that is switched off starts and ends are two rows of nothing.
+                            if (preferences.autoSleep) {
+                                // One line, two columns, indented under the switch that governs them:
+                                // a start and an end are read together, and they exist only while it is on.
+                                add(
+                                    SettingRow(
+                                        key = "autosleepstart",
+                                        title = stringResource(R.string.settings_starts_at),
+                                        value = clock(preferences.autoSleepStart),
+                                        beside = SettingRow(
+                                            key = "autosleepend",
+                                            title = stringResource(R.string.settings_ends_at),
+                                            value = clock(preferences.autoSleepEnd),
+                                        ),
+                                        beneath = true,
+                                    )
                                 )
                             }
                         },
-                        playingIndex = atPart,
-                        open = chaptersOpen,
-                        onOpen = { chaptersOpen = true },
-                        onPick = { row ->
-                            goToPart(row.id)
-                            chaptersOpen = false
-                        },
-                        onDismiss = { chaptersOpen = false },
-                    ),
-                )
-            }
-        }
-
-        Screen.Search -> {
-            // Matched on both the book and whoever wrote it, because a reader looking for a book
-            // by author does not think of that as a different kind of search.
-            val found = remember(shelvedBooks, query) {
-                if (query.isBlank()) {
-                    emptyList()
-                } else {
-                    shelvedBooks.filter {
-                        it.shownTitle().contains(query, true) ||
-                            it.shownAuthor()?.contains(query, true) == true
-                    }.map { it.toRow(context.resources) }
-                }
-            }
-            val searchShelves = remember(shelvedBooks, preferences.shelving) {
-                shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }.distinct()
-                    .sortedWith(String.CASE_INSENSITIVE_ORDER)
-                    .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
-            }
-            SearchScreen(
-                query = query,
-                shelves = searchShelves,
-                found = found,
-                nowPlaying = nowPlaying,
-                onQueryChange = { query = it },
-                onBack = { screen = Screen.Library },
-                onShelfClick = { screen = Screen.Shelf(it.id) },
-                onBookClick = { row ->
-                    books.firstOrNull { it.uri == row.id }?.let(openBook)
-                },
-                onNowPlayingClick = { screen = Screen.Player },
-                onPlayPauseClick = playPause,
-            )
-        }
-
-        Screen.Bookmarks -> {
-            val book = playing
-            if (book == null) {
-                screen = Screen.Library
-            } else {
-                val marks by library.bookmarks(book.uri).collectAsState(initial = emptyList())
-                val now = System.currentTimeMillis()
-                BookmarksScreen(
-                    bookmarks = marks.map {
-                        BookmarkRow(
-                            id = it.id,
-                            when_ = stringResource(
-                                R.string.bookmarks_when,
-                                DateUtils.getRelativeTimeSpanString(it.createdAt, now, DateUtils.MINUTE_IN_MILLIS),
-                                DateFormat.getTimeFormat(context).format(it.createdAt),
-                            ),
-                            position = it.positionMs.asClock(),
-                            automatic = it.automatic,
-                        )
-                    },
-                    onClose = { screen = Screen.Player },
-                    onGoTo = { row ->
-                        val mark = marks.firstOrNull { it.id == row.id } ?: return@BookmarksScreen
-                        val at = chapters.indexOfFirst { it.uri == mark.chapterUri }
-                        if (at >= 0) withPlayer { it.seekTo(at, mark.positionMs) }
-                        screen = Screen.Player
-                    },
-                    onDelete = { row -> scope.launch { library.deleteBookmark(row.id) } },
-                    onAdd = {
-                        val chapter = chapterUri
-                        if (chapter != null) {
-                            scope.launch {
-                                library.addBookmark(book.uri, chapter, position, automatic = false)
-                            }
-                        }
-                    },
-                )
-            }
-        }
-
-        Screen.Folders -> {
-            FoldersScreen(
-                folders = grants.map { uri ->
-                    FolderRow(
-                        id = uri.toString(),
-                        // The tail of the document id is what the reader called the folder; the
-                        // rest is the provider's business.
-                        name = uri.lastPathSegment.orEmpty().substringAfterLast('/')
-                            .substringAfterLast(':').ifBlank { uri.toString() },
-                        byAuthor = shapes[uri.toString()] == TreeShape.AuthorsThenBooks,
-                        // What the scan made of it, which is the answer the reader needs when a
-                        // book has not turned up. Until one has run, what they said it was.
-                        how = when (shapes[uri.toString()]) {
-                            TreeShape.AuthorsThenBooks -> stringResource(R.string.folders_shape_authors_then_books)
-                            TreeShape.BooksInFolders -> stringResource(R.string.folders_shape_books)
-                            TreeShape.SingleBook -> stringResource(R.string.folders_shape_one_book)
-                            TreeShape.Empty -> stringResource(R.string.folders_shape_none)
-                            null -> preferences.reading(uri.toString())?.let { stringResource(it.labelRes) }.orEmpty()
-                        },
-                    )
-                },
-                onBack = { screen = Screen.Settings },
-                onScanNow = { scanning = true },
-                onAdd = { pickFolder.launch(null) },
-                onChange = { row -> asking = row.id.toUri() },
-                onRemove = { row ->
-                    // Giving the grant back is the removal: there is nowhere else the folder is
-                    // written down, so it cannot come back out of step with what is permitted.
-                    runCatching {
-                        context.contentResolver.releasePersistableUriPermission(
-                            row.id.toUri(),
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                        )
-                    }
-                    preferences.forgetReading(row.id)
-                    grants = context.contentResolver.persistedUriPermissions.map { it.uri }
-                    scanning = true
-                },
-            )
-        }
-
-        Screen.Server -> {
-            ServerScreen(
-                address = preferences.serverUrl,
-                key = preferences.serverToken,
-                bookCount = books.count { it.sourceType == AbsSync.SOURCE_ABS },
-                kept = keptBooks,
-                isBusy = serverBusy,
-                status = serverStatus,
-                onBack = { screen = Screen.Settings },
-                onConnect = { entered ->
-                    scope.launch {
-                        serverBusy = true
-                        serverStatus = context.getString(R.string.server_asking)
-                        val server = AbsServer(entered.address.withScheme(), entered.key)
-                        val client = AbsClient(server, context.resources)
-                        when (val found = client.libraries()) {
-                            is AbsResult.Failure -> serverStatus = found.message
-                            is AbsResult.Success -> {
-                                // A server can hold podcasts as well as books, and this app has
-                                // nothing to say about a podcast.
-                                val shelf = found.value.firstOrNull { it.mediaType == "book" }
-                                if (shelf == null) {
-                                    serverStatus = context.getString(R.string.server_no_book_library)
-                                } else {
-                                    preferences.serverUrl = server.base
-                                    preferences.serverToken = entered.key
-                                    preferences.serverLibraryId = shelf.id
-                                    serverStatus = syncServer(context, client, shelf.id, library.library) {
-                                        serverStatus = it
-                                    }
+                        onClose = { screen = Screen.Library },
+                        onAbout = { showAbout = true },
+                        onRowClick = { row ->
+                            when (row.key) {
+                                "folders" -> screen = Screen.Folders
+                                "server" -> screen = Screen.Server
+                                "shelving" -> editing = Editing.Shelving
+                                "skip" -> editing = Editing.Skip
+                                "rewind" -> editing = Editing.AutoRewind
+                                "sleep" -> editing = Editing.Sleep
+                                // A switch is its own dialog: there is one other value and no question
+                                // worth asking about it.
+                                "autosleep" -> preferences.autoSleep = !preferences.autoSleep
+                                "keepon" -> preferences.keepOnCard = !preferences.keepOnCard
+                                "autosleepstart" -> editing = Editing.AutoSleepStart
+                                "autosleepend" -> editing = Editing.AutoSleepEnd
+                                "shake" -> editing = Editing.Shake
+                                "lockscreen" -> runCatching {
+                                    context.startActivity(
+                                        Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                    )
                                 }
                             }
-                        }
-                        serverBusy = false
-                    }
-                },
-                onGiveBack = { givingBack = it },
-                onSyncNow = {
-                    scope.launch {
-                        serverBusy = true
-                        val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
-                        serverStatus = syncServer(context, client, preferences.serverLibraryId, library.library) {
-                            serverStatus = it
-                        }
-                        serverBusy = false
-                    }
-                },
-                onForget = {
-                    scope.launch {
-                        serverBusy = true
-                        // A book still arriving would land after its row had gone, as a file
-                        // nothing knows about. Stopped first, and waited for.
-                        if (KeepService.now.value != null) {
-                            KeepService.stop(context)
-                            withTimeoutOrNull(10_000) { KeepService.now.first { it == null } }
-                        }
-                        // The downloads go with it. Keeping hours of audio for a server the
-                        // reader has just disowned is keeping it for nothing.
-                        books.filter { it.sourceType == AbsSync.SOURCE_ABS }
-                            .forEach { AbsDownloader.remove(context, library.library, it.uri) }
-                        library.library.forgetSource(AbsSync.SOURCE_ABS)
-                        preferences.serverUrl = ""
-                        preferences.serverToken = ""
-                        preferences.serverLibraryId = ""
-                        serverStatus = context.getString(R.string.server_forgotten)
-                        serverBusy = false
-                    }
-                },
-            )
-        }
-
-        Screen.Settings -> {
-            // Read again whenever the app comes back, which is how the reader returns from
-            // turning the service on in Android's settings.
-            var lockScreenControlsOn by remember { mutableStateOf(LockScreenControls.isEnabled(context)) }
-            val settingsLifecycle = LocalLifecycleOwner.current
-            DisposableEffect(settingsLifecycle) {
-                val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        lockScreenControlsOn = LockScreenControls.isEnabled(context)
-                    }
+                        },
+                    )
                 }
-                settingsLifecycle.lifecycle.addObserver(observer)
-                onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
             }
-            SettingsScreen(
-                rows = buildList {
-                    // How many folders, not a sentence about what the row is for: a row
-                    // earns its second line by saying something that changes.
-                    add(
-                        SettingRow(
-                            key = "folders",
-                            title = stringResource(R.string.settings_folders),
-                            value = when (grants.size) {
-                                0 -> stringResource(R.string.settings_folders_none)
-                                else -> pluralStringResource(R.plurals.settings_folders_count, grants.size, grants.size)
-                            },
-                        ),
-                    )
-                    // Under the folders, because it answers the same question: where the books
-                    // come from. A reader without a server sees a row that says so and nothing
-                    // more, which is cheaper than a screen they have to open to find out.
-                    add(
-                        SettingRow(
-                            key = "server",
-                            title = stringResource(R.string.settings_server),
-                            value = if (preferences.hasServer) {
-                                val onServer = books.count { it.sourceType == AbsSync.SOURCE_ABS }
-                                val here = books.count { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
-                                stringResource(R.string.settings_server_kept, here, onServer)
-                            } else {
-                                stringResource(R.string.settings_server_none)
-                            },
-                        ),
-                    )
-                    // Only where there is a card to choose, and only with a server to fetch
-                    // from: it is a question about where fetched books go and nothing else.
-                    if (preferences.hasServer && AbsDownloader.card(context) != null) {
-                        add(
-                            SettingRow(
-                                key = "keepon",
-                                title = stringResource(R.string.settings_keep_on),
-                                value = stringResource(
-                                    if (preferences.keepOnCard) R.string.settings_keep_on_card
-                                    else R.string.settings_keep_on_phone,
-                                ),
-                                beneath = true,
-                            ),
-                        )
-                    }
-                    add(SettingRow("shelving", stringResource(R.string.settings_library_view), stringResource(preferences.shelving.labelRes)))
-                    add(SettingRow("skip", stringResource(R.string.settings_skip_amount), pluralStringResource(R.plurals.settings_seconds, preferences.skipSeconds, preferences.skipSeconds)))
-                    add(SettingRow("rewind", stringResource(R.string.settings_auto_rewind), pluralStringResource(R.plurals.settings_seconds, preferences.autoRewindSeconds, preferences.autoRewindSeconds)))
-                    add(SettingRow("sleep", stringResource(R.string.settings_sleep_duration), pluralStringResource(R.plurals.settings_minutes, preferences.sleepMinutes, preferences.sleepMinutes)))
-                    // Under the duration, because it is the other half of the same thing:
-                    // how long the timer runs, and how hard you have to shake to keep it
-                    // running when it is about to stop on you and you are still awake.
-                    add(SettingRow("shake", stringResource(R.string.settings_shake), stringResource(preferences.shake.labelRes)))
-                    // Off until turned on in Android's own settings, the only place it can be;
-                    // the row says which it is and goes there.
-                    add(
-                        SettingRow(
-                            key = "lockscreen",
-                            title = stringResource(R.string.settings_lockscreen_controls),
-                            value = stringResource(
-                                if (lockScreenControlsOn) R.string.settings_lockscreen_controls_on
-                                else R.string.settings_lockscreen_controls_off,
-                            ),
-                        ),
-                    )
-                    // Last, with the two hours it governs. It is the one setting here that
-                    // is a standing arrangement rather than a value, and it brings rows of
-                    // its own, so it does not belong in the middle of a list of numbers.
-                    add(
-                        SettingRow(
-                            key = "autosleep",
-                            title = stringResource(R.string.settings_auto_sleep),
-                            value = null,
-                            toggle = preferences.autoSleep,
-                        ),
-                    )
-                    // The hours only exist while the window does. Two rows saying when something
-                    // that is switched off starts and ends are two rows of nothing.
-                    if (preferences.autoSleep) {
-                        // One line, two columns, indented under the switch that governs them:
-                        // a start and an end are read together, and they exist only while it is on.
-                        add(
-                            SettingRow(
-                                key = "autosleepstart",
-                                title = stringResource(R.string.settings_starts_at),
-                                value = clock(preferences.autoSleepStart),
-                                beside = SettingRow(
-                                    key = "autosleepend",
-                                    title = stringResource(R.string.settings_ends_at),
-                                    value = clock(preferences.autoSleepEnd),
-                                ),
-                                beneath = true,
-                            )
-                        )
-                    }
+        }
+        val fetching = keepingState
+        when {
+            fetching != null -> DownloadBar(
+                text = stringResource(R.string.download_bar, fetching.title),
+                progress = if (fetching.total > 0) {
+                    stringResource(R.string.download_bar_progress, fetching.done, fetching.total)
+                } else {
+                    null
                 },
-                onClose = { screen = Screen.Library },
-                onAbout = { showAbout = true },
-                onRowClick = { row ->
-                    when (row.key) {
-                        "folders" -> screen = Screen.Folders
-                        "server" -> screen = Screen.Server
-                        "shelving" -> editing = Editing.Shelving
-                        "skip" -> editing = Editing.Skip
-                        "rewind" -> editing = Editing.AutoRewind
-                        "sleep" -> editing = Editing.Sleep
-                        // A switch is its own dialog: there is one other value and no question
-                        // worth asking about it.
-                        "autosleep" -> preferences.autoSleep = !preferences.autoSleep
-                        "keepon" -> preferences.keepOnCard = !preferences.keepOnCard
-                        "autosleepstart" -> editing = Editing.AutoSleepStart
-                        "autosleepend" -> editing = Editing.AutoSleepEnd
-                        "shake" -> editing = Editing.Shake
-                        "lockscreen" -> runCatching {
-                            context.startActivity(
-                                Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }
-                    }
-                },
+                onClick = { stoppingDownload = true },
             )
+            downloadSaid != null -> DownloadBar(text = downloadSaid.orEmpty(), progress = null, onClick = null)
         }
     }
 
@@ -1025,6 +1064,24 @@ private fun Mimidoku() {
                 KeepService.keep(context, book.uri, book.shownTitle())
             },
         )
+    }
+
+    if (stoppingDownload) {
+        val fetching = keepingState
+        if (fetching == null) {
+            // Finished while the question was being read: there is nothing left to stop.
+            stoppingDownload = false
+        } else {
+            ConfirmDialog(
+                title = stringResource(R.string.download_stop_title, fetching.title),
+                action = stringResource(R.string.keep_stop),
+                onDismiss = { stoppingDownload = false },
+                onConfirm = {
+                    stoppingDownload = false
+                    KeepService.stop(context)
+                },
+            )
+        }
     }
 
     // Asked, the same way removing a bookmark is. What it costs to undo is minutes of wifi, and
@@ -1315,7 +1372,7 @@ private fun List<BookEntity>.withoutServerCopiesOfWhatIsHere(): List<BookEntity>
 private fun String.withoutExtension(): String = substringBeforeLast('.')
 
 
-private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null) = BookRow(
+private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null, failed: Boolean = false) = BookRow(
     id = uri,
     title = shownTitle(),
     author = shownAuthor(),
@@ -1330,6 +1387,7 @@ private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null) =
     state = when {
         kept -> null
         keepingNow != null -> keepingNow
+        failed -> resources.getString(R.string.library_download_failed)
         else -> resources.getString(R.string.library_not_on_phone)
     },
 )
@@ -1418,6 +1476,7 @@ private suspend fun MediaController.load(
 
 /** Long enough to read a three-word sentence, short enough not to become part of the screen. */
 private const val ANNOUNCEMENT_MS = 2_500L
+private const val DOWNLOAD_SAID_MS = 8_000L
 
 /** The sleep timer is shown the way a kitchen timer is: minutes and seconds, never hours. */
 private fun Long.asMinutes(): String {
