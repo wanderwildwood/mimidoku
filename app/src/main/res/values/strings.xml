@@ -269,6 +269,8 @@
     <string name="settings_lockscreen_controls">Lock-screen controls</string>
     <string name="settings_lockscreen_controls_on">On</string>
     <string name="settings_lockscreen_controls_off">Off — turn on in Accessibility</string>
+    <!-- Settings switch: the book being read is handed to the Glance app for its lock-screen panel -->
+    <string name="settings_reading_on_lock_screen">Show the book being read in Glance</string>
     <!-- The controls drawn on the lock screen -->
     <string name="lockscreen_nothing_named">Audio Reading</string>
     <string name="lockscreen_open_app">Open Audio Reading</string>
@@ -279,4 +281,16 @@
     <!-- Shown in Android's Accessibility settings under this service -->
     <string name="lockscreen_service_label">Audio Reading lock-screen controls</string>
     <string name="lockscreen_service_description">Shows Audio Reading\'s controls on the lock screen while a book plays. Only an accessibility service may draw above the lock screen, which is why this is one. It listens only to the system lock screen, and reads one thing there: whether the PIN field is showing, so the controls can make way for it. It reads no other app, and nothing leaves the phone.</string>
+
+    <!-- On Glance's lock-screen panel, beside the book -->
+    <string name="glance_playing">Playing</string>
+    <string name="glance_paused">Paused</string>
+    <!-- On Glance's lock-screen panel: "The Long Walk · Chapter 4" -->
+    <string name="glance_chapter">%1$s · Chapter %2$d</string>
+    <!-- On Glance's lock-screen panel, for a book with no chapters: "The Long Walk · 2:13:05 left" -->
+    <string name="glance_left">%1$s · %2$s left</string>
+
+    <!-- An audiobook file opened from another app, such as a file manager -->
+    <string name="opened_file_unreadable">Could not open that file</string>
+    <string name="opened_file_needs_access">Audio Reading needs access to audio files to open that one</string>
 </resources>

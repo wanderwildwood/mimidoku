@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.data.LibraryRepository
 import com.wanderwildwood.mimidoku.data.Preferences
+import com.wanderwildwood.mimidoku.glance.NowReading
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,6 +115,10 @@ class PlaybackService : MediaSessionService() {
         exoPlayer.addListener(object : Player.Listener {
             override fun onAudioSessionIdChanged(audioSessionId: Int) = applyBoost()
             override fun onIsPlayingChanged(isPlaying: Boolean) = timer.onPlayingChanged(isPlaying)
+
+            // Play, pause, a seek, the next file, a stop: Glance's line is worked out again,
+            // and Glance is told if it would now say something different.
+            override fun onEvents(player: Player, events: Player.Events) = publishReading(player)
         })
 
         // Media3's own notification icon is a musical note, and it is what the home screen
@@ -217,6 +222,27 @@ class PlaybackService : MediaSessionService() {
         }.onFailure { Log.w(TAG, "Loudness enhancer refused", it) }
     }
 
+    /** Where the player is, for Glance's lock-screen panel; nothing while stopped or finished. */
+    private fun publishReading(player: Player) {
+        val chapter = player.currentMediaItem?.mediaId?.takeIf { it.isNotEmpty() }
+        val idle = player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED
+        NowReading.set(
+            this,
+            if (chapter == null || idle) {
+                null
+            } else {
+                NowReading.Now(
+                    chapterUri = chapter,
+                    positionMs = player.currentPosition,
+                    durationMs = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L,
+                    isPlaying = player.isPlaying,
+                    speed = player.playbackParameters.speed,
+                    at = NowReading.elapsed(),
+                )
+            },
+        )
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     /**
@@ -232,6 +258,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         _activeSession.value = null
+        NowReading.set(this, null)
         sleep?.release()
         sleep = null
         scope.cancel()

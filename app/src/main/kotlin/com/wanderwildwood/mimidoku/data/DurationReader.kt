@@ -34,26 +34,39 @@ class DurationReader(private val context: Context) {
             val touched = mutableSetOf<String>()
             for (chapter in batch) {
                 coroutineContext.ensureActive()
-                val read = read(chapter.audioUri)
-                // A book that is one file names itself in its title tag and usually has no album
-                // at all; a book that is a folder of files puts the book in the album and the
-                // chapter in the title. Taking the title as the book's name in that second case
-                // would name every book after its first chapter.
-                val single = dao.chapterCountOf(chapter.bookUri) == 1
-                // A file that cannot be read gets -1 rather than 0, so it is not asked about again
-                // on every pass. Something the reader has to fix is not something to retry forever.
-                dao.setChapterDuration(chapter.uri, read?.durationMs ?: -1L)
-                // Whatever the first file that has one says; these queries only write where
-                // nothing has been written yet, so later files cannot overrule the first.
-                read?.genre?.let { dao.setGenre(chapter.bookUri, it) }
-                (read?.album ?: read?.title?.takeIf { single })
-                    ?.let { dao.setTagTitle(chapter.bookUri, it) }
-                read?.author?.let { dao.setTagAuthor(chapter.bookUri, it) }
-                marks(chapter, single)
+                measure(chapter)
                 touched += chapter.bookUri
             }
             touched.forEach { dao.refreshBookDuration(it) }
         }
+    }
+
+    /**
+     * One file, now, for a book that cannot wait for the pass above: a file another app has just
+     * handed over, which the reader is about to listen to and which no scan will ever reach.
+     */
+    suspend fun now(chapter: ChapterEntity) = withContext(Dispatchers.IO) {
+        measure(chapter)
+        dao.refreshBookDuration(chapter.bookUri)
+    }
+
+    private suspend fun measure(chapter: ChapterEntity) {
+        val read = read(chapter.audioUri)
+        // A book that is one file names itself in its title tag and usually has no album
+        // at all; a book that is a folder of files puts the book in the album and the
+        // chapter in the title. Taking the title as the book's name in that second case
+        // would name every book after its first chapter.
+        val single = dao.chapterCountOf(chapter.bookUri) == 1
+        // A file that cannot be read gets -1 rather than 0, so it is not asked about again
+        // on every pass. Something the reader has to fix is not something to retry forever.
+        dao.setChapterDuration(chapter.uri, read?.durationMs ?: -1L)
+        // Whatever the first file that has one says; these queries only write where
+        // nothing has been written yet, so later files cannot overrule the first.
+        read?.genre?.let { dao.setGenre(chapter.bookUri, it) }
+        (read?.album ?: read?.title?.takeIf { single })
+            ?.let { dao.setTagTitle(chapter.bookUri, it) }
+        read?.author?.let { dao.setTagAuthor(chapter.bookUri, it) }
+        marks(chapter, single)
     }
 
     /**

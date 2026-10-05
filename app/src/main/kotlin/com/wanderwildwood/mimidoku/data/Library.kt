@@ -20,6 +20,14 @@ import kotlinx.coroutines.flow.Flow
 const val SOURCE_LOCAL = "LOCAL"
 
 /**
+ * A book that is one file another app handed over - "Open with" from a file manager - rather
+ * than one found in a granted folder. Kept so its place is remembered when it is opened again,
+ * and kept off the shelves: the app may only be able to read it for as long as the app that
+ * handed it over allows. See [com.wanderwildwood.mimidoku.library.OpenedBook].
+ */
+const val SOURCE_OPENED = "OPENED"
+
+/**
  * A book as the app remembers it.
  *
  * Keyed by the document uri of its folder, because that is the one thing about a book that does
@@ -167,6 +175,10 @@ interface LibraryDao {
      */
     @Query("SELECT * FROM books WHERE lastPlayedAt IS NOT NULL AND kept = 1 ORDER BY lastPlayedAt DESC LIMIT 1")
     suspend fun lastRead(): BookEntity?
+
+    /** The same, leaving out one source: an opened file that can no longer be read. */
+    @Query("SELECT * FROM books WHERE lastPlayedAt IS NOT NULL AND kept = 1 AND sourceType != :sourceType ORDER BY lastPlayedAt DESC LIMIT 1")
+    suspend fun lastReadNotFrom(sourceType: String): BookEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBooks(books: List<BookEntity>)
