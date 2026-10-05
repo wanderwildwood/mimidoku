@@ -31,13 +31,15 @@
     <!-- On a book row: how far into the book the reader is. %1$d is a whole number from 0 to 100 -->
     <string name="library_percent">%1$d%%</string>
     <!-- On a book row while it downloads -->
-    <string name="library_keeping">Keeping…</string>
+    <string name="library_keeping">Downloading…</string>
     <!-- On a book row while it downloads. %1$d files done out of %2$d -->
-    <string name="library_keeping_progress">Keeping — %1$d of %2$d</string>
+    <string name="library_keeping_progress">Downloading — %1$d of %2$d</string>
     <!-- Dialog asking to download a book. %1$s is the book's title -->
-    <string name="library_keep_title">Keep \"%1$s\" on this phone?</string>
+    <string name="library_keep_title">Download \"%1$s\" to this phone?</string>
     <!-- The button that confirms the download (verb) -->
-    <string name="library_keep_action">Keep</string>
+    <string name="library_keep_action">Download</string>
+    <!-- On a book row after its download failed, until it is tried again -->
+    <string name="library_download_failed">Download failed — tap to try again</string>
     <!-- Said once a download has finished. %1$s is the book's title -->
     <string name="library_kept">\"%1$s\" is on this phone.</string>
 
@@ -111,7 +113,7 @@
     </plurals>
     <string name="settings_server">Audiobook server</string>
     <!-- %1$d books downloaded out of %2$d on the server -->
-    <string name="settings_server_kept">%1$d of %2$d kept on this phone</string>
+    <string name="settings_server_kept">%1$d of %2$d on this phone</string>
     <!-- No server has been set up -->
     <string name="settings_server_none">None</string>
     <string name="settings_library_view">Library view</string>
@@ -204,7 +206,7 @@
     <string name="server_on_this_phone">On this phone</string>
     <string name="server_key_note">A key is made on the server, under Users, and can be taken back there at any time. It is kept on this phone, sealed with a key that never leaves it, and it is not your password. A server at home is plain http, which this app allows and which means anyone else on your network can read the key and the audio; a server reachable from outside the house wants an https address instead.</string>
     <string name="server_privacy_note">Where you are in a book stays on this phone. The server is never told, and never tells this app.</string>
-    <string name="server_cd_give_back">Give this book back to the server</string>
+    <string name="server_cd_give_back">Remove this book from this phone</string>
     <!-- The row after one press: a second press forgets the server -->
     <string name="server_forget_confirm">Forget this server — its books and downloads go; tap again</string>
     <string name="server_forget">Forget this server</string>
@@ -228,8 +230,8 @@
         <item quantity="other">%1$d books.</item>
     </plurals>
     <!-- Dialog asking to delete a downloaded book. %1$s is the book's title -->
-    <string name="server_give_back_title">Give \"%1$s\" back to the server? Your place in it is kept.</string>
-    <string name="server_give_back_action">Give back</string>
+    <string name="server_give_back_title">Remove \"%1$s\" from this phone? It stays on the server, and so does your place in it.</string>
+    <string name="server_give_back_action">Remove</string>
     <!-- What a downloaded book takes up -->
     <string name="server_size_gb">%1$.1f GB</string>
     <string name="server_size_mb">%1$d MB</string>
@@ -245,13 +247,21 @@
     <string name="download_server_answered">The server answered %1$d.</string>
     <string name="download_unfinished">That chapter did not finish downloading.</string>
     <string name="download_not_saved">The download could not be saved.</string>
+    <!-- Said when a download has given up. %1$s is the book's title -->
+    <string name="download_failed">\"%1$s\" did not download.</string>
+    <!-- The line along the bottom while a book downloads. %1$s is the book's title -->
+    <string name="download_bar">Downloading \"%1$s\"</string>
+    <!-- Beside it: %1$d chapters done out of %2$d -->
+    <string name="download_bar_progress">%1$d of %2$d</string>
+    <!-- Dialog from that line. %1$s is the book's title -->
+    <string name="download_stop_title">Stop downloading \"%1$s\"?</string>
 
     <!-- Downloading in the background: the notification's button, what is said when it is pressed (%1$s is the book's title), and the name of the notification category in Android's settings -->
     <string name="keep_stop">Stop</string>
-    <string name="keep_stopped">Stopped keeping \"%1$s\".</string>
+    <string name="keep_stopped">Stopped downloading \"%1$s\".</string>
     <string name="keep_channel">Downloads</string>
     <!-- Settings row, shown only when the phone has a memory card: where books downloaded from the server are put. Books already downloaded stay where they are -->
-    <string name="settings_keep_on">Keep server books on</string>
+    <string name="settings_keep_on">Download server books to</string>
     <string name="settings_keep_on_phone">This phone</string>
     <string name="settings_keep_on_card">Memory card</string>
 
