@@ -57,8 +57,11 @@ class Preferences private constructor(context: Context) {
      */
     var sleepArmed: Boolean by flag("sleepArmed", false)
 
-    /** Whether the book being read is handed to Glance for its lock-screen panel. */
-    var readingOnLockScreen: Boolean by flag("readingOnLockScreen", true)
+    /**
+     * Whether the book being read is handed to Glance for its lock-screen panel. Off unless
+     * turned on: the app draws its own strip on the lock screen, and the two would say it twice.
+     */
+    var readingOnLockScreen: Boolean by flag("readingOnLockScreen", false)
 
     /**
      * The nightly window, kept as minutes since midnight.
