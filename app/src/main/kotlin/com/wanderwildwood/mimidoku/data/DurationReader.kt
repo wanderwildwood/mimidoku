@@ -1,5 +1,6 @@
 package com.wanderwildwood.mimidoku.data
 
+import com.wanderwildwood.mimidoku.library.Sameness
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import androidx.core.net.toUri
@@ -130,6 +131,8 @@ class DurationReader(private val context: Context) {
             val ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 ?.toLongOrNull() ?: return@use null
             fun tag(key: Int) = retriever.extractMetadata(key)?.trim()?.ifBlank { null }
+            // "<unknown>" written into a file is the absence of an artist, not one.
+            fun name(key: Int) = tag(key)?.takeUnless { Sameness.isPlaceholder(it) }
             Read(
                 durationMs = ms,
                 genre = tag(MediaMetadataRetriever.METADATA_KEY_GENRE),
@@ -138,8 +141,8 @@ class DurationReader(private val context: Context) {
                 // The plain artist first. In an audiobook it is usually the credit the reader
                 // would recognise — often author and narrator together — while the album artist
                 // is frequently whatever the ripping tool put there.
-                author = tag(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                    ?: tag(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
+                author = name(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                    ?: name(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
             )
         }
     }.getOrNull()

@@ -140,6 +140,21 @@ fun ConfirmDialog(
     }
 }
 
+/** Something the reader should know, and one way out. */
+@Composable
+fun NoticeDialog(text: String, onDismiss: () -> Unit) {
+    EInkDialog(onDismiss = onDismiss) {
+        DialogTitle(text)
+        Spacer(modifier = Modifier.height(44.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            DialogAction(stringResource(R.string.dialog_ok), onDismiss)
+        }
+    }
+}
+
 /**
  * What this is and what it is built out of.
  *

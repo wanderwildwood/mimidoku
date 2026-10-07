@@ -18,6 +18,21 @@
     <string name="library_cd_search">What are you looking for?</string>
     <string name="library_cd_settings">Settings</string>
     <string name="library_scanning">Scanning library…</string>
+    <string name="remove_armed">Remove from phone — tap again</string>
+    <string name="remove_server_stays">The server\'s copy stays</string>
+    <plurals name="remove_books">
+        <item quantity="one">%d book, from the phone</item>
+        <item quantity="other">%d books, from the phone</item>
+    </plurals>
+    <plurals name="remove_books_server">
+        <item quantity="one">%d book, from the phone; the server\'s copy stays</item>
+        <item quantity="other">%d books, from the phone; the server\'s copies stay</item>
+    </plurals>
+    <string name="remove_read_only">This folder was allowed for reading only. Choose it again under Settings, Audiobook folders, Add, and books in it can be removed.</string>
+    <plurals name="remove_partly">
+        <item quantity="one">%d file would not go, and is still on the phone.</item>
+        <item quantity="other">%d files would not go, and are still on the phone.</item>
+    </plurals>
     <string name="library_recent">Recent</string>
     <string name="library_no_books">No books yet</string>
     <!-- Shelf headings for books whose files do not say who wrote them, their genre or their status -->

@@ -233,6 +233,18 @@ interface LibraryDao {
     @Query("DELETE FROM books WHERE sourceType = :sourceType")
     suspend fun deleteBooksOfSource(sourceType: String)
 
+    @Query("DELETE FROM books WHERE uri = :uri")
+    suspend fun deleteBook(uri: String)
+
+    /** One book and everything hung on it: chapters, marks, bookmarks. */
+    @Transaction
+    suspend fun forgetBook(uri: String) {
+        deleteBook(uri)
+        deleteOrphanedChapters()
+        deleteOrphanedBookmarks()
+        deleteOrphanedMarks()
+    }
+
     @Transaction
     suspend fun forgetSource(sourceType: String) {
         deleteBooksOfSource(sourceType)

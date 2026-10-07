@@ -48,6 +48,8 @@ import com.wanderwildwood.mimidoku.data.SOURCE_LOCAL
 import com.wanderwildwood.mimidoku.data.SOURCE_OPENED
 import com.wanderwildwood.mimidoku.glance.GlanceProvider
 import com.wanderwildwood.mimidoku.library.OpenedBook
+import com.wanderwildwood.mimidoku.library.Removal
+import com.wanderwildwood.mimidoku.library.Sameness
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
 import com.wanderwildwood.mimidoku.data.Shelving
@@ -73,6 +75,7 @@ import com.wanderwildwood.mimidoku.ui.PlayerScreen
 import com.wanderwildwood.mimidoku.ui.AboutDialog
 import com.wanderwildwood.mimidoku.ui.ChoiceDialog
 import com.wanderwildwood.mimidoku.ui.ConfirmDialog
+import com.wanderwildwood.mimidoku.ui.NoticeDialog
 import com.wanderwildwood.mimidoku.ui.Icons
 import com.wanderwildwood.mimidoku.ui.BookmarkRow
 import com.wanderwildwood.mimidoku.ui.ChapterRow
@@ -176,21 +179,30 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
     val clock = { minutesOfDay: Int -> timeFormat.format(dayAt(minutesOfDay)) }
 
-    val books by library.books.collectAsState(initial = emptyList())
+    val storedBooks by library.books.collectAsState(initial = emptyList())
+    // Every screen reads the books with each author folder named once -- see [namedByFolder].
+    val books = remember(storedBooks) { storedBooks.namedByFolder() }
+    val byUri = remember(books) { books.associateBy { it.uri } }
+    // The book in the player comes straight from the database, so it is named the same way here.
+    val authorOf = { book: BookEntity -> (byUri[book.uri] ?: book).shownAuthor() }
 
     // What the shelves show. Everything on the card, and from a server only what is not already
     // here -- see [withoutServerCopiesOfWhatIsHere]. The unfiltered list stays for the places
     // that are counting what the *server* holds rather than showing what there is to read.
     // A file opened from another app is a book too, but not one on a shelf: see [OpenedBook].
-    val shelvedBooks = remember(books) {
-        books.filter { it.sourceType != SOURCE_OPENED }.withoutServerCopiesOfWhatIsHere()
+    val shelvedCopies = remember(books) {
+        books.filter { it.sourceType != SOURCE_OPENED }.withoutServerCopiesOfWhatIsHere().oneOfEach()
     }
+    val shelvedBooks = remember(shelvedCopies) { shelvedCopies.map { it.first() } }
+    // Every copy behind a row, by the row's book: removing the row removes all of them.
+    val copiesOf = remember(shelvedCopies) { shelvedCopies.associate { it.first().uri to it.drop(1) } }
 
     // Every book that has been played and is still here to play, the last one first. A file
     // opened from another app counts: it was read, and this is the way back to it.
     val recentBooks = remember(books) {
         books.filter { it.lastPlayedAt != null && it.kept }
             .withoutServerCopiesOfWhatIsHere()
+            .oneOfEach().map { it.first() }
             .sortedByDescending { it.lastPlayedAt }
             .take(RECENT_COUNT)
     }
@@ -252,6 +264,9 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     var keptSizes by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     // A book the reader has asked to give back, waiting on the question being answered.
     var givingBack by remember { mutableStateOf<KeptBook?>(null) }
+    // Something a removal has to say: that the folder was granted for reading only, or that some
+    // files would not go.
+    var notice by remember { mutableStateOf<String?>(null) }
     // The folder whose reading is being asked about: set when one is granted, and again whenever
     // a row is pressed to correct it.
     var asking by remember { mutableStateOf<Uri?>(null) }
@@ -367,7 +382,16 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         // Without taking the permission, the grant dies with this activity.
-        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // Writing too, so a book can be taken off the phone from here. A provider that will not
+        // grant it still gives reading, and the app reads.
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }.onFailure {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         grants = context.contentResolver.persistedUriPermissions.map { it.uri }
         // Asked once the folder has been read, not before: what is in it decides which answer the
         // question opens on, and the app cannot suggest one without looking.
@@ -635,6 +659,32 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
         }
     }
 
+    // Books off the phone, from a held and pressed-again row. The player lets go of a book being
+    // taken away, as it does when one is given back to the server.
+    val removeFromPhone: (List<BookEntity>) -> Unit = { targets ->
+        val gone = targets.distinctBy { it.uri }
+        scope.launch {
+            if (Removal.readOnly(context, library.library, gone)) {
+                notice = context.getString(R.string.remove_read_only)
+                return@launch
+            }
+            if (gone.any { it.uri == playing?.uri }) {
+                controller?.stop()
+                controller?.clearMediaItems()
+                playing = null
+                chapters = emptyList()
+                marks = emptyList()
+            }
+            when (val outcome = Removal.remove(context, library.library, gone)) {
+                Removal.Outcome.Done -> Unit
+                Removal.Outcome.ReadOnly -> notice = context.getString(R.string.remove_read_only)
+                is Removal.Outcome.Partly ->
+                    notice = context.resources.getQuantityString(R.plurals.remove_partly, outcome.left, outcome.left)
+            }
+            keptSizes = keptSizes - gone.map { it.uri }.toSet()
+        }
+    }
+
     // Every screen sits above the download line, so a book being fetched is never out of sight.
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
@@ -646,10 +696,28 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                     // made-up author: it says the files do not name one. The row is only there when
                     // something is on it, so a tidy library never sees it.
                     val shelves = remember(shelvedBooks, preferences.shelving) {
-                        val named = shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }
-                            .collateIgnoringCase()
+                        val named = shelvedBooks.shelfHeadings(preferences.shelving)
                             .sortedWith(String.CASE_INSENSITIVE_ORDER)
-                            .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
+                            .map { name ->
+                                // Only an author's shelf can be removed, and only when some of it is
+                                // on the phone: a genre is not a thing anyone meant to delete.
+                                val here = if (preferences.shelving == Shelving.Author) {
+                                    shelvedBooks.filter { it.kept && it.isOnShelf(name, Shelving.Author) }
+                                } else {
+                                    emptyList()
+                                }
+                                LibraryRow(
+                                    title = preferences.shelving.shown(name, context.resources),
+                                    id = name,
+                                    removeNote = here.takeIf { it.isNotEmpty() }?.let { books ->
+                                        context.resources.getQuantityString(
+                                            if (books.any { it.sourceType == AbsSync.SOURCE_ABS }) R.plurals.remove_books_server else R.plurals.remove_books,
+                                            books.size,
+                                            books.size,
+                                        )
+                                    },
+                                )
+                            }
                         if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
                             named + LibraryRow(title = preferences.shelving.unnamed(context.resources), id = UNNAMED)
                         } else {
@@ -670,6 +738,12 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
+                        onRemoveShelf = { row ->
+                            removeFromPhone(
+                                shelvedBooks.filter { it.kept && it.isOnShelf(row.id, Shelving.Author) }
+                                    .flatMap { listOf(it) + copiesOf[it.uri].orEmpty() },
+                            )
+                        },
                     )
                 }
 
@@ -694,6 +768,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
                         showAuthor = true,
+                        onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                     )
                 }
 
@@ -704,7 +779,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         // spellings would open holding only the books that used one of them.
                         shelvedBooks.filter { book ->
                             val shelf = book.shelf(shelving)
-                            if (current.name == null) shelf == null else shelf.equals(current.name, ignoreCase = true)
+                            if (current.name == null) shelf == null else shelf != null && Sameness.key(shelf) == Sameness.key(current.name)
                         }.map { book ->
                             book.toRow(
                                 context.resources,
@@ -725,6 +800,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
+                        onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                     )
                 }
 
@@ -735,7 +811,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                     } else {
                         PlayerScreen(
                             playback = Playback(
-                                author = book.shownAuthor(),
+                                author = authorOf(book),
                                 title = book.shownTitle(),
                                 chapter = if (parts.size > 1) parts.getOrNull(atPart)?.title.orEmpty() else "",
                                 positionMs = shownPosition,
@@ -768,7 +844,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                                         context.getString(if (preferences.skipSilence) R.string.player_skip_silence_on else R.string.player_skip_silence_off)
                                 },
                                 onBookmarks = { screen = Screen.Bookmarks },
-                                onAuthor = book.shownAuthor()?.let { author ->
+                                onAuthor = authorOf(book)?.let { author ->
                                     { screen = Screen.Shelf(author, by = Shelving.Author, back = Screen.Player) }
                                 },
                                 onLock = {
@@ -844,7 +920,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         }
                     }
                     val searchShelves = remember(shelvedBooks, preferences.shelving) {
-                        shelvedBooks.mapNotNull { it.shelf(preferences.shelving) }.distinct()
+                        shelvedBooks.shelfHeadings(preferences.shelving)
                             .sortedWith(String.CASE_INSENSITIVE_ORDER)
                             .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
                     }
@@ -1221,6 +1297,8 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     // Asked, the same way removing a bookmark is. What it costs to undo is minutes of wifi, and
     // the reader's place in the book is not at stake either way -- that stays whether the audio
     // is here or not, which is worth saying on the dialog rather than leaving them to wonder.
+    notice?.let { NoticeDialog(text = it, onDismiss = { notice = null }) }
+
     givingBack?.let { book ->
         ConfirmDialog(
             title = stringResource(R.string.server_give_back_title, book.title),
@@ -1376,30 +1454,24 @@ private fun BookEntity.shownTitle(): String = tagTitle ?: name
  * Where there is no folder to go by -- audio loose in the chosen directory -- the tag is all
  * there is, and it is used.
  */
-private fun BookEntity.shownAuthor(): String? = author ?: tagAuthor
+private fun BookEntity.shownAuthor(): String? = author ?: tagAuthor?.takeUnless { Sameness.isPlaceholder(it) }
 
 /**
- * One shelf per name, however the folders spell it. A card that has both "alan Watts" and
- * "Alan Watts" on it is one author with two folders, not two authors, and distinct() alone
- * puts them on separate shelves sitting next to each other -- which looks exactly like a bug
- * in the scan when it is really just what is on the card.
- *
- * A name that starts with a capital wins, and only then the one used by most books. Counting
- * first was the obvious rule and the wrong one: a tagged book carries "Aldous Huxley" while its
- * folder is called "aldous huxley", the folders outnumber the tags, and the library ends up
- * listing its authors in lower case. These are people's names.
+ * The books with each author's folder named once, the way [Sameness.folderHeading] chooses: books
+ * the reader filed together stay on one shelf, under the spelling their tags agree on. Folders
+ * spelled alike ("Basil Moor", "basil moor ") count as one folder. Only the name shown
+ * changes; nothing is written back.
  */
-private fun List<String>.collateIgnoringCase(): List<String> =
-    groupBy { it.lowercase() }
-        .map { (_, spellings) ->
-            spellings.groupingBy { it }.eachCount().entries
-                .sortedWith(
-                    compareByDescending<Map.Entry<String, Int>> {
-                        it.key.firstOrNull()?.isUpperCase() == true
-                    }.thenByDescending { it.value }
-                )
-                .first().key
-        }
+private fun List<BookEntity>.namedByFolder(): List<BookEntity> {
+    val filed = filter { it.sourceType == SOURCE_LOCAL && it.author != null }
+    if (filed.isEmpty()) return this
+    val names = filed.groupBy { Sameness.key(it.author!!) }
+        .mapValues { (_, inFolder) -> Sameness.folderHeading(inFolder.map { it.author!! }, inFolder.map { it.tagAuthor }) }
+    return map { book ->
+        val folder = book.author
+        if (book.sourceType == SOURCE_LOCAL && folder != null) book.copy(author = names[Sameness.key(folder)] ?: folder) else book
+    }
+}
 
 /**
  * The name of the shelf for books that cannot answer.
@@ -1420,6 +1492,36 @@ private fun Shelving.unnamed(resources: Resources): String = when (this) {
  * A plain heading string would be a real author on the day somebody tags a book "No author".
  */
 private const val UNNAMED = "\u0000unnamed"
+
+/**
+ * The shelves' headings: one per name however the files spell it -- see [Sameness.headings]. The
+ * card's spelling is preferred, being the one the reader filed.
+ */
+private fun List<BookEntity>.shelfHeadings(shelving: Shelving): List<String> =
+    Sameness.headings(mapNotNull { book -> book.shelf(shelving)?.let { Sameness.Spelling(it, book.sourceType == SOURCE_LOCAL) } })
+
+/** Whether a book sits on the shelf headed [name], matched the way the headings were made. */
+private fun BookEntity.isOnShelf(name: String, shelving: Shelving): Boolean =
+    shelf(shelving)?.let { Sameness.key(it) == Sameness.key(name) } == true
+
+/**
+ * The library with each book once: copies of one book -- one title by one author at one length --
+ * folded into the copy most worth showing, which is the one on the phone, then the one being read,
+ * then the card's. Nothing is deleted; the copies stay behind the row, and go with it if it is
+ * removed.
+ */
+private fun List<BookEntity>.oneOfEach(): List<List<BookEntity>> =
+    Sameness.copies(
+        this,
+        title = { it.shownTitle() },
+        author = { it.shownAuthor() },
+        lengthMs = { it.durationMs },
+        toleranceMs = SAME_BOOK_MS,
+        prefer = compareByDescending<BookEntity> { it.kept }
+            .thenByDescending { it.lastPlayedAt ?: Long.MIN_VALUE }
+            .thenByDescending { it.sourceType == SOURCE_LOCAL }
+            .thenBy { it.uri },
+    )
 
 /** How many books Recent lists: a few screens' worth, the books a reader is plausibly between. */
 private const val RECENT_COUNT = 20
@@ -1530,6 +1632,8 @@ private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null, f
     } else {
         null
     },
+    removable = kept && sourceType != SOURCE_OPENED,
+    fromServer = sourceType == AbsSync.SOURCE_ABS,
     state = when {
         kept -> null
         keepingNow != null -> keepingNow

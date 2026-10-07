@@ -279,7 +279,7 @@ class BookScanner(private val resolver: ContentResolver) {
 
     private val gate = Semaphore(CONCURRENT_QUERIES)
 
-    private companion object {
+    internal companion object {
         /**
          * Enough to hide the latency, and no more: measured on a 155-book library on an exFAT
          * microSD, 12 gave 13.5s and 32 gave 13.8s. The provider serialises internally past about
