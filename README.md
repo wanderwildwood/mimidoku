@@ -42,6 +42,18 @@ A book that arrives as one long recording is read for the chapter marks inside i
 chapter frames, an m4b's chapter list -- so thirteen hours still opens as a list of chapters rather
 than as one bar to drag.
 
+An author is one shelf however the files spell the name: books filed in one author's folder stay
+together under the spelling their tags agree on, and "Basil Moor", "basil moor " and a
+server's "Basil Moor," are one person. The same book twice -- one title by one author at one
+length -- is listed once. **Recent**, above the shelves, lists the books lately played.
+
+Hold a book, or an author, and press again to take it off the phone: the row says "Remove from
+phone -- tap again" and lets go after four seconds. It deletes that book's audio from the folder
+you granted, and the folder it leaves empty; nothing outside a granted folder, and never a
+server's copy -- a book fetched from a server goes back to being one to fetch. A folder granted
+before this could be done was granted for reading only, and has to be chosen again under
+Settings → Audiobook folders → Add.
+
 Sleep timer -- by hand, or on its own between two hours you set -- playback speed, chapter
 list, bookmarks, and a shake to keep the timer going.
 

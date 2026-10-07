@@ -2,6 +2,14 @@ package com.wanderwildwood.mimidoku.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +42,11 @@ import com.mudita.mmd.components.lazy.LazyColumnMMD
 data class LibraryRow(
     val title: String,
     val id: String,
+    /**
+     * What removing the shelf would take, said on the armed row -- or null where a shelf cannot
+     * be removed: a genre, a status, or an author with nothing on the phone.
+     */
+    val removeNote: String? = null,
 )
 
 /**
@@ -54,6 +67,7 @@ fun LibraryScreen(
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onRecentClick: (() -> Unit)? = null,
+    onRemoveShelf: ((LibraryRow) -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
@@ -100,7 +114,11 @@ fun LibraryScreen(
                 }
             }
             items(rows, key = { it.id }) { row ->
-                ShelfRow(row = row, onClick = { onRowClick(row) })
+                ShelfRow(
+                    row = row,
+                    onClick = { onRowClick(row) },
+                    onRemove = onRemoveShelf?.takeIf { row.removeNote != null }?.let { { it(row) } },
+                )
             }
         }
 
@@ -114,29 +132,77 @@ fun LibraryScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ShelfRow(row: LibraryRow, icon: ImageVector = Icons.Folder, onClick: () -> Unit) {
+private fun ShelfRow(
+    row: LibraryRow,
+    icon: ImageVector = Icons.Folder,
+    onClick: () -> Unit,
+    onRemove: (() -> Unit)? = null,
+) {
+    // Held, an author's row arms: a press opens the shelf, so removing every book on it takes a
+    // hold and then a second press, and the row disarms itself if that press does not come.
+    var armed by remember(row.id) { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (armed) {
+            delay(ARMED_MS)
+            armed = false
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(63.dp)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = {
+                    if (armed && onRemove != null) {
+                        armed = false
+                        onRemove()
+                    } else {
+                        onClick()
+                    }
+                },
+                onLongClick = onRemove?.let { { armed = true } },
+            )
             .padding(start = 32.dp, end = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color.Black,
-            modifier = Modifier.size(34.dp),
-        )
-        Spacer(modifier = Modifier.width(18.dp))
-        TextMMD(
-            text = row.title,
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.Black,
-            maxLines = 1,
-        )
+        // Armed, the row is a question rather than a shelf, and the folder gives way so the
+        // question can be read whole.
+        if (!armed) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.Black,
+                modifier = Modifier.size(34.dp),
+            )
+            Spacer(modifier = Modifier.width(18.dp))
+        }
+        if (armed) {
+            Column {
+                TextMMD(
+                    text = stringResource(R.string.remove_armed),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                TextMMD(
+                    text = row.removeNote.orEmpty(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        } else {
+            TextMMD(
+                text = row.title,
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.Black,
+                maxLines = 1,
+            )
+        }
     }
 }
 

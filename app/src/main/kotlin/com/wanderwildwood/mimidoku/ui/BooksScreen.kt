@@ -1,7 +1,16 @@
 package com.wanderwildwood.mimidoku.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.wanderwildwood.mimidoku.R
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +42,12 @@ data class BookRow(
      * are never both worth showing.
      */
     val state: String? = null,
+    /** Whether there is anything of it on the phone to take off. */
+    val removable: Boolean = false,
+    /** Whether a server has it too, which removing it from the phone leaves alone. */
+    val fromServer: Boolean = false,
+    /** Other copies of the same book, folded into this row; removing the row removes them too. */
+    val copies: List<String> = emptyList(),
 )
 
 /**
@@ -52,13 +67,19 @@ fun BooksScreen(
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     showAuthor: Boolean = false,
+    onRemove: ((BookRow) -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(title = shelf, onClose = onClose)
 
         LazyColumnMMD(modifier = Modifier.weight(1f)) {
             items(books, key = { it.id }) { book ->
-                BookLine(book = book, showAuthor = showAuthor, onClick = { onBookClick(book) })
+                BookLine(
+                    book = book,
+                    showAuthor = showAuthor,
+                    onClick = { onBookClick(book) },
+                    onRemove = onRemove?.takeIf { book.removable }?.let { { it(book) } },
+                )
             }
         }
 
@@ -80,21 +101,45 @@ fun BooksScreen(
  * caps and 16sp, and under it one line: who, if asked, how long, and how far in — or, for a book
  * not on the phone, where it is, since a book that has to be fetched cannot have been started.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit) {
-    val details = listOfNotNull(
-        book.author?.takeIf { showAuthor },
-        book.duration,
-        book.state ?: book.percent,
-    ).joinToString(" · ")
+fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit, onRemove: (() -> Unit)? = null) {
+    // A press opens the book, so taking it off the phone is a hold: the row arms, says what a
+    // second press will do, and disarms itself after four seconds so nothing is left live.
+    var armed by remember(book.id) { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (armed) {
+            delay(ARMED_MS)
+            armed = false
+        }
+    }
+    val details = if (armed) {
+        if (book.fromServer) stringResource(R.string.remove_server_stays) else book.title
+    } else {
+        listOfNotNull(
+            book.author?.takeIf { showAuthor },
+            book.duration,
+            book.state ?: book.percent,
+        ).joinToString(" · ")
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = {
+                    if (armed && onRemove != null) {
+                        armed = false
+                        onRemove()
+                    } else {
+                        onClick()
+                    }
+                },
+                onLongClick = onRemove?.let { { armed = true } },
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         TextMMD(
-            text = book.title,
+            text = if (armed) stringResource(R.string.remove_armed) else book.title,
             style = MaterialTheme.typography.titleMedium,
             color = Color.Black,
             maxLines = 2,
@@ -114,3 +159,6 @@ fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit) {
     // and under every book it reads as a stack of headings.
     HorizontalDividerMMD(thickness = 0.5.dp)
 }
+
+/** How long an armed row waits for its second press, as every armed row in these apps does. */
+const val ARMED_MS = 4_000L
