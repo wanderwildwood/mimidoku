@@ -1,27 +1,20 @@
 package com.wanderwildwood.mimidoku.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One book on a shelf, as the list needs it. */
@@ -43,11 +36,11 @@ data class BookRow(
 )
 
 /**
- * One shelf: the books filed under an author, or under nothing.
+ * One shelf: the books filed under an author, or under nothing — or the books lately read.
  *
- * A book gets a card rather than a line because three things have to be read at once — who wrote
- * it, what it is, and how long it will take — and three lines of equal weight in a flat list stop
- * being three facts about one book.
+ * Each book is a plain row, the title over one line of what is worth knowing before pressing it,
+ * with a rule between books as every other list in these apps has. The author is said only where
+ * the shelf does not already say it ([showAuthor]).
  */
 @Composable
 fun BooksScreen(
@@ -58,16 +51,14 @@ fun BooksScreen(
     onBookClick: (BookRow) -> Unit,
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
+    showAuthor: Boolean = false,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(title = shelf, onClose = onClose)
 
-        LazyColumnMMD(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 9.dp),
-        ) {
+        LazyColumnMMD(modifier = Modifier.weight(1f)) {
             items(books, key = { it.id }) { book ->
-                BookCard(book = book, onClick = { onBookClick(book) })
+                BookLine(book = book, showAuthor = showAuthor, onClick = { onBookClick(book) })
             }
         }
 
@@ -81,53 +72,45 @@ fun BooksScreen(
     }
 }
 
-/** Shared with search, which shows the same card for whatever a query turned up. */
+/**
+ * One book, as a row. Shared with search and Recent, which name the author because their books
+ * come from every shelf.
+ *
+ * The title is set in the list size the rest of the app's rows use rather than a card's small
+ * caps and 16sp, and under it one line: who, if asked, how long, and how far in — or, for a book
+ * not on the phone, where it is, since a book that has to be fetched cannot have been started.
+ */
 @Composable
-fun BookCard(book: BookRow, onClick: () -> Unit) {
+fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit) {
+    val details = listOfNotNull(
+        book.author?.takeIf { showAuthor },
+        book.duration,
+        book.state ?: book.percent,
+    ).joinToString(" · ")
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .border(1.dp, CardOutline, RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
-            .padding(start = 17.dp, end = 13.dp, top = 13.dp, bottom = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        if (book.author != null) {
+        TextMMD(
+            text = book.title,
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.Black,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (details.isNotEmpty()) {
             TextMMD(
-                text = book.author.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                lineHeight = 16.5.sp,
+                text = details,
+                style = MaterialTheme.typography.bodySmall,
                 color = Color.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        TextMMD(
-            text = book.title,
-            style = MaterialTheme.typography.titleSmall,
-            lineHeight = 19.5.sp,
-            color = Color.Black,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (book.duration != null) {
-            // How long it is and how far in you are belong on one line: they are the same
-            // question asked from either end.
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextMMD(text = book.duration, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
-                val trailing = book.state ?: book.percent
-                if (trailing != null) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    TextMMD(text = trailing, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = Color.Black)
-                }
-            }
-        }
     }
+    // A hairline, as Files has between its rows: MMD's default rule is the weight of a top bar's,
+    // and under every book it reads as a stack of headings.
+    HorizontalDividerMMD(thickness = 0.5.dp)
 }
-
-/**
- * The card's edge is nearly white, which on the panel is a suggestion of an edge rather than a
- * line. That is the intent: the card groups three lines, and a black rule around every book would
- * be louder than the books.
- */
-private val CardOutline = Color(0xFFEBEBEB)

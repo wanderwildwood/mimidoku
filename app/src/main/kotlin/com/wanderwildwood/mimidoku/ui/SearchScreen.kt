@@ -105,12 +105,9 @@ fun SearchScreen(
                 }
             }
         } else {
-            LazyColumnMMD(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(start = 7.dp, end = 7.dp, top = 15.dp),
-            ) {
+            LazyColumnMMD(modifier = Modifier.weight(1f)) {
                 items(found, key = { it.id }) { book ->
-                    BookCard(book = book, onClick = { onBookClick(book) })
+                    BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
                 }
             }
         }

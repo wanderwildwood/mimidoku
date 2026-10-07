@@ -18,6 +18,7 @@
     <string name="library_cd_search">What are you looking for?</string>
     <string name="library_cd_settings">Settings</string>
     <string name="library_scanning">Scanning library…</string>
+    <string name="library_recent">Recent</string>
     <string name="library_no_books">No books yet</string>
     <!-- Shelf headings for books whose files do not say who wrote them, their genre or their status -->
     <string name="library_no_author">No author</string>
