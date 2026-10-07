@@ -118,4 +118,34 @@ val Info: ImageVector = symbol("Info", "M440-280h80v-240h-80v240Zm40-320q17 0 28
                 }
             }
             .build()
+
+    /**
+     * A clock, for the books lately read, drawn at the folder's weight so the two sit in one list
+     * as one kind of mark. A stock history glyph is a hairline arrow round a hairline face.
+     */
+    val Recent: ImageVector =
+        ImageVector.Builder(
+            name = "Recent",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        )
+            .apply {
+                path(
+                    fill = null,
+                    stroke = SolidColor(Color.Black),
+                    strokeLineWidth = 2.3f,
+                    strokeLineCap = StrokeCap.Butt,
+                    strokeLineJoin = StrokeJoin.Round,
+                ) {
+                    moveTo(12f, 2.15f)
+                    arcTo(9.85f, 9.85f, 0f, true, true, 11.99f, 2.15f)
+                    close()
+                    moveTo(12f, 6.2f)
+                    verticalLineTo(12f)
+                    lineTo(15.8f, 14.6f)
+                }
+            }
+            .build()
 }

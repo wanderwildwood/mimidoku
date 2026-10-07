@@ -142,6 +142,8 @@ private sealed interface Screen {
      * author's shelf whatever the library is sorted by, and back from there is the player.
      */
     data class Shelf(val name: String?, val by: Shelving? = null, val back: Screen = Library) : Screen
+    /** The books lately read, newest first, from every shelf. */
+    data object Recent : Screen
     data object Player : Screen
     data object Settings : Screen
     data object Search : Screen
@@ -182,6 +184,15 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     // A file opened from another app is a book too, but not one on a shelf: see [OpenedBook].
     val shelvedBooks = remember(books) {
         books.filter { it.sourceType != SOURCE_OPENED }.withoutServerCopiesOfWhatIsHere()
+    }
+
+    // Every book that has been played and is still here to play, the last one first. A file
+    // opened from another app counts: it was read, and this is the way back to it.
+    val recentBooks = remember(books) {
+        books.filter { it.lastPlayedAt != null && it.kept }
+            .withoutServerCopiesOfWhatIsHere()
+            .sortedByDescending { it.lastPlayedAt }
+            .take(RECENT_COUNT)
     }
 
     var screen by remember { mutableStateOf<Screen>(Screen.Library) }
@@ -658,6 +669,31 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         onSettingsClick = { screen = Screen.Settings },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
+                        onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
+                    )
+                }
+
+                Screen.Recent -> {
+                    val recent = remember(recentBooks, keepingNow, preferences.failedDownloads) {
+                        recentBooks.map { book ->
+                            book.toRow(
+                                context.resources,
+                                keepingNow?.takeIf { it.first == book.uri }?.second,
+                                failed = book.uri in preferences.failedDownloads,
+                            )
+                        }
+                    }
+                    BooksScreen(
+                        shelf = stringResource(R.string.library_recent),
+                        books = recent,
+                        nowPlaying = nowPlaying,
+                        onClose = { screen = Screen.Library },
+                        onBookClick = { row ->
+                            books.firstOrNull { it.uri == row.id }?.let(openBook)
+                        },
+                        onNowPlayingClick = { screen = Screen.Player },
+                        onPlayPauseClick = playPause,
+                        showAuthor = true,
                     )
                 }
 
@@ -1384,6 +1420,9 @@ private fun Shelving.unnamed(resources: Resources): String = when (this) {
  * A plain heading string would be a real author on the day somebody tags a book "No author".
  */
 private const val UNNAMED = "\u0000unnamed"
+
+/** How many books Recent lists: a few screens' worth, the books a reader is plausibly between. */
+private const val RECENT_COUNT = 20
 
 /**
  * Which shelf a book belongs on, which depends on what the reader asked to see.

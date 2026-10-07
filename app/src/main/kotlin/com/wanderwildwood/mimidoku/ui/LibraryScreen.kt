@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +53,7 @@ fun LibraryScreen(
     onSettingsClick: () -> Unit,
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
+    onRecentClick: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
@@ -85,6 +87,18 @@ fun LibraryScreen(
         }
 
         LazyColumnMMD(modifier = Modifier.weight(1f)) {
+            // The books lately read, above the shelves, once there are any: the way back to a
+            // book is usually the book that was being read, and that should not mean
+            // remembering whose shelf it sits on.
+            if (onRecentClick != null) {
+                item(key = RECENT) {
+                    ShelfRow(
+                        row = LibraryRow(title = stringResource(R.string.library_recent), id = RECENT),
+                        icon = Icons.Recent,
+                        onClick = onRecentClick,
+                    )
+                }
+            }
             items(rows, key = { it.id }) { row ->
                 ShelfRow(row = row, onClick = { onRowClick(row) })
             }
@@ -101,7 +115,7 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun ShelfRow(row: LibraryRow, onClick: () -> Unit) {
+private fun ShelfRow(row: LibraryRow, icon: ImageVector = Icons.Folder, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -111,7 +125,7 @@ private fun ShelfRow(row: LibraryRow, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Folder,
+            imageVector = icon,
             contentDescription = null,
             tint = Color.Black,
             modifier = Modifier.size(34.dp),
@@ -125,3 +139,6 @@ private fun ShelfRow(row: LibraryRow, onClick: () -> Unit) {
         )
     }
 }
+
+/** The Recent row's key, kept clear of every shelf name: no author is called this. */
+private const val RECENT = "\u0000recent"
