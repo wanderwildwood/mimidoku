@@ -77,21 +77,26 @@ object Sameness {
     private val PLACEHOLDERS = setOf("<unknown>", "unknown", "unknown artist", "various artists", "various")
 
     /**
-     * The heading for one author's folder.
+     * The heading for one author's folder: the folder's own name.
      *
-     * The folder decides which books belong together -- the reader put them there -- but not
-     * how the author is spelled: a folder typed in a hurry as "basill moor" holding books
-     * the publisher tagged "Basil Moor" is one author, and the tag is the better spelling.
-     * So the name most of its tagged books carry, and the folder's own name only where none
-     * of them is tagged. A book whose files disagree contributes one tag, the first real one.
+     * The folder says who wrote the books in it -- the reader filed them -- and the tags do not
+     * get a say in that. They were tried once, the name most of a folder's books carried, and
+     * on a real card the tags are whatever the files came with: the narrator, the author and
+     * the narrator run together, the author with a degree after the name, a publisher, a
+     * course's lecturer, a translator's byline, or "(02" from a disc number that landed in the
+     * artist field. A folder with one tagged book was renamed after that one tag, and a folder
+     * whose books all disagreed took whichever tag sorted first. Every one of those was a shelf
+     * that stopped saying who the reader had filed there, and a shelf a server's copy of the
+     * same author no longer matched.
+     *
+     * The one thing a tag may lend is its capitals, and only when it spells the same name: a
+     * folder typed "alan moor" holding books tagged "Alan Moor" is shown as the tag has it,
+     * the way [headings] prefers a capital. A tag that is any other name is left alone.
      */
     fun folderHeading(folderNames: List<String>, tags: List<String?>): String {
-        val real = tags.filterNot { isPlaceholder(it) }.filterNotNull()
-        if (real.isEmpty()) return headings(folderNames.map { Spelling(it, onCard = true) }).first()
-        val commonest = real.groupBy { key(it) }.values
-            .sortedWith(compareByDescending<List<String>> { it.size }.thenBy { key(it.first()) })
-            .first()
-        return headings(commonest.map { Spelling(it, onCard = true) }).first()
+        val folder = headings(folderNames.map { Spelling(it, onCard = true) }).first()
+        val sameName = tags.filterNotNull().filterNot { isPlaceholder(it) }.filter { key(it) == key(folder) }
+        return headings(folderNames.map { Spelling(it, onCard = true) } + sameName.map { Spelling(it, onCard = false) }).first()
     }
 
     /**

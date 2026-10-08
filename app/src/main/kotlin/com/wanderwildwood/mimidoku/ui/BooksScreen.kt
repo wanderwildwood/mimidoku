@@ -12,6 +12,8 @@ import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -68,11 +70,13 @@ fun BooksScreen(
     onPlayPauseClick: () -> Unit,
     showAuthor: Boolean = false,
     onRemove: ((BookRow) -> Unit)? = null,
+    // Held by the caller, so the shelf is where it was left when a book is closed again.
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(title = shelf, onClose = onClose)
 
-        LazyColumnMMD(modifier = Modifier.weight(1f)) {
+        LazyColumnMMD(modifier = Modifier.weight(1f), state = listState) {
             items(books, key = { it.id }) { book ->
                 BookLine(
                     book = book,

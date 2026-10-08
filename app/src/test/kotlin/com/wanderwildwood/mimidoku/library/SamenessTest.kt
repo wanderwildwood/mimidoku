@@ -131,25 +131,63 @@ class SamenessTest {
     }
 
     /**
-     * The layout found on the Kompakt: one folder typed "basill moor", three books tagged
-     * "Basil Moor" and six with no artist or "<unknown>" -- among them "02 The Lantern Field",
-     * whose files disagree. It was two shelves; it is one, under the tag's spelling.
+     * The shape of a real card: author folders the reader named, holding books whose files
+     * carry whatever artist tag they came with -- the author with a degree and the narrator
+     * run on, a publisher's series name, the lecturer of a course, a co-author, the author
+     * with "(audio)" after the name, a disc number that landed in the artist field. The folder
+     * is the author; none of these renames the shelf.
      */
     @Test
-    fun `one author folder is one shelf named by its tags`() {
-        val folder = "basill moor"
-        val books = listOf(
-            "The Salt Road 1" to "Basil Moor",
-            "The Salt Road 2" to "Basil Moor",
-            "02 The Lantern Field" to "Basil Moor",
-            "00 A Year on the Shore" to null,
-            "01 The Iron Bell" to "<unknown>",
-            "03 The Copper Tide" to null,
-            "04 Wren's Harbour" to "<unknown>",
-            "The Long Coast - BBC Dramatisation" to null,
+    fun `a folder is named by the folder, not by its books' tags`() {
+        val shelves = listOf(
+            "Basil Moor" to listOf("Basil Moor, M.D./Pip Narrow", "Basil Moor, M.D./Pip Narrow"),
+            "Fern Guides" to listOf("Fern Field Guides", "Fern Field Guides"),
+            "The Long Lectures" to listOf("Professor Ada Fern"),
+            "Molly O'Day" to listOf("Molly O'Day, Tom Quill"),
+            "Wren Harbour" to listOf("Wren Harbour (audio)"),
+            "Iris Vale" to listOf(null, null, null, "(02", "CD4"),
+            "Lantern and Field" to listOf("R Lantern, D Field"),
         )
-        val heading = Sameness.folderHeading(books.map { folder }, books.map { it.second })
-        assertEquals("Basil Moor", heading)
+        for ((folder, tags) in shelves) {
+            assertEquals(folder, Sameness.folderHeading(tags.map { folder }, tags))
+        }
+    }
+
+    /**
+     * Six books, six different tags, none of them twice: the commonest tag was whichever
+     * sorted first, and a folder called "Tobias Quill" was shelved as "Quill, Tobias - editor".
+     */
+    @Test
+    fun `a folder whose books all disagree keeps its own name`() {
+        val tags = listOf(
+            "T. Quill (Narr. Sam Quill)",
+            "T.Quill",
+            "The Lantern Field [Volume I]",
+            "Tobias Quill  - BBC Radio",
+            null,
+            "Quill, Tobias - editor",
+        )
+        assertEquals("Tobias Quill", Sameness.folderHeading(tags.map { "Tobias Quill" }, tags))
+    }
+
+    @Test
+    fun `a lower-case folder borrows capitals from a tag of the same name`() {
+        val tags = listOf("Alan Moor", "Alan Moor", "Alan Moor", null)
+        assertEquals("Alan Moor", Sameness.folderHeading(tags.map { "alan moor" }, tags))
+    }
+
+    @Test
+    fun `a tag of the same name does not lower a capitalised folder`() {
+        val tags = listOf("alan moor", "alan moor")
+        assertEquals("Alan Moor", Sameness.folderHeading(tags.map { "Alan Moor" }, tags))
+    }
+
+    @Test
+    fun `a misspelt folder is still the folder`() {
+        // Different letters are a different key; the folder is what the reader filed, and the
+        // fix for a misspelling is renaming the folder, not reading the tag over it.
+        val tags = listOf("Philippa Moor", "Philippa Moor", "Philippa Moor")
+        assertEquals("phillippa moor", Sameness.folderHeading(tags.map { "phillippa moor" }, tags))
     }
 
     @Test

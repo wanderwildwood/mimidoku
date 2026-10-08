@@ -42,9 +42,9 @@ A book that arrives as one long recording is read for the chapter marks inside i
 chapter frames, an m4b's chapter list -- so thirteen hours still opens as a list of chapters rather
 than as one bar to drag.
 
-An author is one shelf however the files spell the name: books filed in one author's folder stay
-together under the spelling their tags agree on, and "Basil Moor", "basil moor " and a
-server's "Basil Moor," are one person. The same book twice -- one title by one author at one
+An author is one shelf however the files spell the name: the folder you filed the books in names
+the shelf, whatever the files' tags say, and "Basil Moor", "basil moor " and a server's
+"Basil Moor," are one person. The same book twice -- one title by one author at one
 length -- is listed once. **Recent**, above the shelves, lists the books lately played.
 
 Hold a book, or an author, and press again to take it off the phone: the row says "Remove from

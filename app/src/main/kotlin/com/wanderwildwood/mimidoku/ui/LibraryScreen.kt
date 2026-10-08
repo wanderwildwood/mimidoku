@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -68,6 +70,8 @@ fun LibraryScreen(
     onPlayPauseClick: () -> Unit,
     onRecentClick: (() -> Unit)? = null,
     onRemoveShelf: ((LibraryRow) -> Unit)? = null,
+    // Held by the caller, so the list is where it was left when a shelf is closed again.
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
@@ -100,7 +104,7 @@ fun LibraryScreen(
             )
         }
 
-        LazyColumnMMD(modifier = Modifier.weight(1f)) {
+        LazyColumnMMD(modifier = Modifier.weight(1f), state = listState) {
             // The books lately read, above the shelves, once there are any: the way back to a
             // book is usually the book that was being read, and that should not mean
             // remembering whose shelf it sits on.
