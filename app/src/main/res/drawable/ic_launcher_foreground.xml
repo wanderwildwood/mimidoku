@@ -1,60 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  An open book inside a pair of headphones.
-
-  The mark comes from eInk Audiobook Player, the app this one replaces. Keeping it means
-  the icon on the home screen does not change under someone who only wanted a better
-  player, and it is the same hand's drawing either way.
+  Audio Reading's launcher mark in the Kompakt's own style: a rounded ring with an open book
+  inside a pair of headphones, black on white. The drawing is on the stock icons' 81 grid
+  (ring r=19.25, stroke 2.5) and is scaled to 60dp inside the adaptive icon's 66dp safe zone, so the
+  ring sits where the ring on Mudita's own, non-adaptive icons does under any mask.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-<path
-    android:pathData="M 28.5 53.5 A 25.5 25.5 0 0 1 79.5 53.5"
-    android:strokeColor="#000000"
-    android:strokeWidth="5"
-    android:strokeLineCap="round" />
-  <path
-    android:pathData="M24.25,54.25 A4.25,4.25 0 0 1 28.5,50 A4.25,4.25 0 0 1 32.75,54.25 L32.75,60.75 A4.25,4.25 0 0 1 28.5,65 A4.25,4.25 0 0 1 24.25,60.75 Z"
-    android:fillColor="#000000" />
-  <path
-    android:pathData="M75.25,54.25 A4.25,4.25 0 0 1 79.5,50 A4.25,4.25 0 0 1 83.75,54.25 L83.75,60.75 A4.25,4.25 0 0 1 79.5,65 A4.25,4.25 0 0 1 75.25,60.75 Z"
-    android:fillColor="#000000" />
-  <path
-    android:pathData="M 38 52 L 54 56 L 54 75 L 38 71 Z"
-    android:strokeColor="#000000"
-    android:strokeWidth="4"
-    android:strokeLineJoin="round" />
-  <path
-    android:pathData="M 70 52 L 54 56 L 54 75 L 70 71 Z"
-    android:strokeColor="#000000"
-    android:strokeWidth="4"
-    android:strokeLineJoin="round" />
-  <path
-    android:pathData="M 54 56 L 54 75"
-    android:strokeColor="#000000"
-    android:strokeWidth="3.2"
-    android:strokeLineCap="round" />
-  <path
-    android:pathData="M 41.4 59.5 L 50.4 60.9"
-    android:strokeColor="#000000"
-    android:strokeWidth="2.1"
-    android:strokeLineCap="round" />
-  <path
-    android:pathData="M 66.6 59.5 L 57.6 60.9"
-    android:strokeColor="#000000"
-    android:strokeWidth="2.1"
-    android:strokeLineCap="round" />
-  <path
-    android:pathData="M 41.4 65.9 L 50.4 67.3"
-    android:strokeColor="#000000"
-    android:strokeWidth="2.1"
-    android:strokeLineCap="round" />
-  <path
-    android:pathData="M 66.6 65.9 L 57.6 67.3"
-    android:strokeColor="#000000"
-    android:strokeWidth="2.1"
-    android:strokeLineCap="round" />
+    <group
+        android:scaleX="0.7407"
+        android:scaleY="0.7407"
+        android:translateX="24"
+        android:translateY="24">
+        <path
+            android:pathData="M19.25,2.5C9.999,2.5 2.5,9.999 2.5,19.25V61.75C2.5,71.001 9.999,78.5 19.25,78.5H61.75C71.001,78.5 78.5,71.001 78.5,61.75V19.25C78.5,9.999 71.001,2.5 61.75,2.5H19.25ZM0,19.25C0,8.619 8.619,0 19.25,0H61.75C72.382,0 81,8.619 81,19.25V61.75C81,72.382 72.382,81 61.75,81H19.25C8.619,81 0,72.382 0,61.75V19.25Z"
+            android:fillColor="#FF000000"
+            android:fillType="evenOdd"/>
+        <path
+            android:pathData="M23.85,42.75 A16.65,16.65 0 0,1 57.15,42.75"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+        <path
+            android:pathData="M23.85,40.95 A2.7,2.7 0 0,1 26.55,43.65 L26.55,50.85 A2.7,2.7 0 0,1 23.85,53.55 A2.7,2.7 0 0,1 21.15,50.85 L21.15,43.65 A2.7,2.7 0 0,1 23.85,40.95Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+        <path
+            android:pathData="M57.15,40.95 A2.7,2.7 0 0,1 59.85,43.65 L59.85,50.85 A2.7,2.7 0 0,1 57.15,53.55 A2.7,2.7 0 0,1 54.45,50.85 L54.45,43.65 A2.7,2.7 0 0,1 57.15,40.95Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+        <path
+            android:pathData="M40.5,47.7 L31.05,45 L31.05,56.25 L40.5,58.95 L49.95,56.25 L49.95,45 L40.5,47.7Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+        <path
+            android:pathData="M40.5,47.7 L40.5,58.95"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF000000"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+    </group>
 </vector>
