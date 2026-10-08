@@ -3,6 +3,8 @@ package com.wanderwildwood.mimidoku.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -51,6 +53,9 @@ fun SearchScreen(
     onBookClick: (BookRow) -> Unit,
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
+    // Held by the caller, so both lists are where they were left when a book is closed again.
+    shelfListState: LazyListState = rememberLazyListState(),
+    foundListState: LazyListState = rememberLazyListState(),
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Row(
@@ -83,6 +88,7 @@ fun SearchScreen(
         if (query.isBlank()) {
             LazyColumnMMD(
                 modifier = Modifier.weight(1f),
+                state = shelfListState,
                 contentPadding = PaddingValues(top = 72.dp),
             ) {
                 items(shelves, key = { it.id }) { shelf ->
@@ -105,7 +111,7 @@ fun SearchScreen(
                 }
             }
         } else {
-            LazyColumnMMD(modifier = Modifier.weight(1f)) {
+            LazyColumnMMD(modifier = Modifier.weight(1f), state = foundListState) {
                 items(found, key = { it.id }) { book ->
                     BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
                 }

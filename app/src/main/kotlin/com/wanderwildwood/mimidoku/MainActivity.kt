@@ -20,7 +20,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -219,6 +223,16 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     var marks by remember { mutableStateOf<List<MarkEntity>>(emptyList()) }
     var editing by remember { mutableStateOf<Editing?>(null) }
     var query by remember { mutableStateOf("") }
+
+    // Where each list was scrolled to, kept here rather than in the screen so that opening a shelf
+    // or a book and coming back lands on the rows that were on screen, not at the top. The
+    // library, Recent and search each have one list; a shelf's place is kept per shelf, since a
+    // reader well down one author should not find the next author's shelf starting there.
+    val libraryList = rememberLazyListState()
+    val recentList = rememberLazyListState()
+    val searchShelfList = rememberLazyListState()
+    val searchFoundList = rememberLazyListState()
+    val shelfLists = rememberSaveable(saver = shelfListsSaver) { mutableMapOf<String, LazyListState>() }
     var announcement by remember { mutableStateOf<String?>(null) }
     // The sleep timer belongs to the service. These are the screen's copy of what it says.
     var sleepArmed by remember { mutableStateOf(false) }
@@ -737,6 +751,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         onSettingsClick = { screen = Screen.Settings },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
+                        listState = libraryList,
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
                         onRemoveShelf = { row ->
                             removeFromPhone(
@@ -769,6 +784,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         onPlayPauseClick = playPause,
                         showAuthor = true,
                         onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
+                        listState = recentList,
                     )
                 }
 
@@ -801,6 +817,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
                         onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
+                        listState = shelfLists.getOrPut("$shelving\u0000${current.name ?: UNNAMED}") { LazyListState() },
                     )
                 }
 
@@ -937,6 +954,8 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
+                        shelfListState = searchShelfList,
+                        foundListState = searchFoundList,
                     )
                 }
 
@@ -1457,10 +1476,10 @@ private fun BookEntity.shownTitle(): String = tagTitle ?: name
 private fun BookEntity.shownAuthor(): String? = author ?: tagAuthor?.takeUnless { Sameness.isPlaceholder(it) }
 
 /**
- * The books with each author's folder named once, the way [Sameness.folderHeading] chooses: books
- * the reader filed together stay on one shelf, under the spelling their tags agree on. Folders
- * spelled alike ("Basil Moor", "basil moor ") count as one folder. Only the name shown
- * changes; nothing is written back.
+ * The books with each author's folder named once, the way [Sameness.folderHeading] chooses: the
+ * folder's own name, which is who the reader filed there, with capitals lent by a tag only where
+ * the tag spells that same name. Folders spelled alike ("Basil Moor", "basil moor ") count as
+ * one folder. Only the name shown changes; nothing is written back.
  */
 private fun List<BookEntity>.namedByFolder(): List<BookEntity> {
     val filed = filter { it.sourceType == SOURCE_LOCAL && it.author != null }
@@ -1522,6 +1541,21 @@ private fun List<BookEntity>.oneOfEach(): List<List<BookEntity>> =
             .thenByDescending { it.sourceType == SOURCE_LOCAL }
             .thenBy { it.uri },
     )
+
+/**
+ * The shelves' scroll places across a configuration change or the process being put down: each
+ * shelf's key, then the first row on screen and how far it was scrolled past, which is what a
+ * [LazyListState] is made from.
+ */
+private val shelfListsSaver = listSaver<MutableMap<String, LazyListState>, Any>(
+    save = { lists ->
+        lists.flatMap { (key, state) -> listOf(key, state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset) }
+    },
+    restore = { saved ->
+        saved.chunked(3).associate { (key, index, offset) -> key as String to LazyListState(index as Int, offset as Int) }
+            .toMutableMap()
+    },
+)
 
 /** How many books Recent lists: a few screens' worth, the books a reader is plausibly between. */
 private const val RECENT_COUNT = 20
