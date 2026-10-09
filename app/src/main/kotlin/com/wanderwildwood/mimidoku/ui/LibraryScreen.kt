@@ -76,16 +76,16 @@ fun LibraryScreen(
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
             title = stringResource(R.string.library_title),
-            afterTitle = {
-                Spacer(modifier = Modifier.width(8.dp))
+            // Search sits with Settings at the far end, the way the Kompakt's own apps keep
+            // their actions, rather than hanging off the title.
+            trailing = {
                 Icon(
                     imageVector = Icons.Search,
                     contentDescription = stringResource(R.string.library_cd_search),
                     tint = Color.Black,
                     modifier = Modifier.size(25.dp).clickable(onClick = onSearchClick),
                 )
-            },
-            trailing = {
+                Spacer(modifier = Modifier.width(20.dp))
                 Icon(
                     imageVector = Icons.Settings,
                     contentDescription = stringResource(R.string.library_cd_settings),
