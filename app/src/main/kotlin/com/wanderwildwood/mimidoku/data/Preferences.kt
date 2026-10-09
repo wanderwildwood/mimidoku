@@ -100,6 +100,14 @@ class Preferences private constructor(context: Context) {
     var marksPass: Int by number("marksPass", 0)
 
     /**
+     * Which recording of the server's catalogue this library has had. The catalogue is read
+     * again once, on its own, when the app learns to keep something new from it -- the folder
+     * each book sits in, from 1.3.30 -- so that a reader is not asked to press Sync now to see a
+     * fix they never knew needed one.
+     */
+    var serverPass: Int by number("serverPass", 0)
+
+    /**
      * An Audiobookshelf server, if the reader has one.
      *
      * The key is an api key made on the server rather than a password, because that is the thing

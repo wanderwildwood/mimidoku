@@ -411,6 +411,16 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
         if (grants.isNotEmpty()) scanning = true
     }
 
+    // The server's catalogue is read again, once, when this app has learnt to keep something
+    // new from it -- see [Preferences.serverPass]. Quietly: the shelves fill in as it lands, and
+    // a failure is nothing to announce, since the next open tries again.
+    LaunchedEffect(Unit) {
+        if (!preferences.hasServer || preferences.serverLibraryId.isBlank() || preferences.serverPass >= SERVER_PASS) return@LaunchedEffect
+        val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
+        val synced = AbsSync.sync(client, preferences.serverLibraryId, library.library, context) { _, _ -> }
+        if (synced is AbsResult.Success) preferences.serverPass = SERVER_PASS
+    }
+
     // Reading a tree over SAF is disk work and belongs off the main thread.
     LaunchedEffect(scanning) {
         if (!scanning) return@LaunchedEffect
@@ -1480,12 +1490,23 @@ private val LEADING_NUMBER = Regex("^\\d{1,3}[\\s._-]+")
  * the server's folder names, so a book on both is the same folder under the same name even when
  * the server's librarian has typed a tidier title than the folder carries.
  */
-private fun BookEntity.sameBookKeys(): Set<String> =
-    listOfNotNull(tagTitle, name, shownTitle())
+private fun BookEntity.sameBookKeys(): Set<String> {
+    // "Basil Moor - The Marsh Book": a folder often carries the author in front, and a server
+    // reads that as author and title and keeps only the title.
+    val byline = shownAuthor()?.let { Sameness.key(it) }?.takeIf { it.isNotBlank() }
+    return listOfNotNull(tagTitle, name, shownTitle())
         .map { Sameness.key(it) }
         .flatMap { listOf(it, it.replace(LEADING_NUMBER, "")) }
+        .flatMap { key ->
+            val sansByline = byline?.let { key.removePrefix("$it - ").removePrefix("$it-").trim() }
+            listOfNotNull(key, sansByline)
+        }
         .filter { it.isNotBlank() }
         .toSet()
+}
+
+/** The name of the folder a book sits in, as the card and the server both have it. */
+private fun BookEntity.folderKey(): String = Sameness.key(name)
 
 /**
  * The folder wins, and the tag only fills a gap.
@@ -1587,6 +1608,9 @@ private val shelfListsSaver = listSaver<MutableMap<String, LazyListState>, Any>(
 
 /** How many books Recent lists: a few screens' worth, the books a reader is plausibly between. */
 private const val RECENT_COUNT = 20
+
+/** The catalogue reading that records each server book's folder -- see [Preferences.serverPass]. */
+private const val SERVER_PASS = 1
 
 /**
  * The library as the screens read it, made once from what the database holds.
@@ -1713,18 +1737,28 @@ private fun List<BookEntity>.withoutServerCopiesOfWhatIsHere(): List<BookEntity>
     // whose title matched nothing on the card still matched its folder: "The Marsh Book" on
     // the server was "01 The Marsh Book" on the card, and was listed twice for it.
     val here = HashMap<String, MutableList<BookEntity>>()
+    // The card's folders by name and by author: a card copied from a server holds the server's
+    // folder under the server's author, and two folders of the same name under the same author
+    // are one folder, however the two sides measured its length. Lengths are the tie-breaker
+    // for titles, where two readings of one book really can share a name; a folder is a place.
+    val folders = HashSet<Pair<String, String>>()
     for (book in this) {
-        if (book.sourceType != SOURCE_LOCAL || book.durationMs <= 0) continue
+        if (book.sourceType != SOURCE_LOCAL) continue
+        folders += book.folderKey() to Sameness.key(book.shownAuthor().orEmpty())
+        if (book.durationMs <= 0) continue
         for (key in book.sameBookKeys()) here.getOrPut(key) { mutableListOf() } += book
     }
-    if (here.isEmpty()) return this
+    if (here.isEmpty() && folders.isEmpty()) return this
     return filterNot { book ->
         book.sourceType != SOURCE_LOCAL &&
             !book.kept &&
-            book.durationMs > 0 &&
-            book.sameBookKeys().any { key ->
-                here[key]?.any { abs(it.durationMs - book.durationMs) <= SAME_BOOK_MS } == true
-            }
+            (
+                (book.folderKey() to Sameness.key(book.shownAuthor().orEmpty())) in folders ||
+                    book.durationMs > 0 &&
+                    book.sameBookKeys().any { key ->
+                        here[key]?.any { abs(it.durationMs - book.durationMs) <= SAME_BOOK_MS } == true
+                    }
+                )
     }
 }
 
