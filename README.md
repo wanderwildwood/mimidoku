@@ -1,4 +1,4 @@
-# 耳読 mimidoku — Audio Reading
+# 耳読 mimidoku — Audiobooks
 
 An audiobook player for the Mudita Kompakt, written from scratch.
 

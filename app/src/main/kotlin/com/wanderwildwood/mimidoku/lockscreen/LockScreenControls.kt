@@ -85,7 +85,7 @@ import kotlinx.coroutines.launch
  * This app's controls on the Kompakt's lock screen. Optional, and off until the reader turns
  * this service on in Android's Accessibility settings.
  *
- * The same file is in Music Box and in Audio Reading, differing only in its package, the app
+ * The same file is in Music Box and in Audiobooks, differing only in its package, the app
  * it follows and the words; the strip is meant to look alike in both, and alike to the one
  * inkOS draws at the foot of its home screen.
  *
