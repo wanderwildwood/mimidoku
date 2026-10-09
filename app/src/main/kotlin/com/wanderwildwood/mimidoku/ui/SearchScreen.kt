@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -86,10 +85,11 @@ fun SearchScreen(
         // ignoring. Once there is a query it is books that were asked for, and a book takes the
         // same card here as it does on its shelf.
         if (query.isBlank()) {
+            // No room left above the first shelf: it sat a bar's height below the line for no
+            // reason anyone could name, and read as something missing.
             LazyColumnMMD(
                 modifier = Modifier.weight(1f),
                 state = shelfListState,
-                contentPadding = PaddingValues(top = 72.dp),
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     Row(

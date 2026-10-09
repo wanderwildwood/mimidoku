@@ -1610,7 +1610,7 @@ private val shelfListsSaver = listSaver<MutableMap<String, LazyListState>, Any>(
 private const val RECENT_COUNT = 20
 
 /** The catalogue reading that records each server book's folder -- see [Preferences.serverPass]. */
-private const val SERVER_PASS = 1
+private const val SERVER_PASS = 2
 
 /**
  * The library as the screens read it, made once from what the database holds.
