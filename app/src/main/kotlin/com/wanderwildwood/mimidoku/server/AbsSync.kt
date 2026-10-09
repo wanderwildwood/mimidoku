@@ -115,7 +115,10 @@ object AbsSync {
         val uri = bookUri(book.id)
         books += BookEntity(
             uri = uri,
-            name = book.title,
+            // The folder, as a card book's name is its folder: a card copied from this server
+            // holds the same folder under the same name, and the two are matched by it. What is
+            // shown is the title, which goes in the tag below.
+            name = book.folder ?: book.title,
             author = book.author,
             chapterCount = book.tracks.size,
             durationMs = book.tracks.sumOf { it.durationMs },

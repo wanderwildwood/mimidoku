@@ -38,6 +38,12 @@ data class AbsMark(val title: String, val startMs: Long)
 data class AbsBook(
     val id: String,
     val title: String,
+    /**
+     * The name of the folder the book sits in on the server, or null when the server did not
+     * say. A card that was copied from the server has the same folder under the same name,
+     * which is how a copy is told from a second reading -- see the library's duplicate filter.
+     */
+    val folder: String?,
     val author: String?,
     val genre: String?,
     val tracks: List<AbsTrack>,
@@ -100,6 +106,10 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
             AbsBook(
                 id = id,
                 title = metadata.optString("title", "").ifBlank { "Untitled" },
+                // "Author/01 Title" relative to the library folder; the last part is the book's
+                // own folder. A book that is one file sitting loose has its file name here.
+                folder = body.optString("relPath", "").trim().trimEnd('/')
+                    .substringAfterLast('/').ifBlank { null },
                 // The first of the authors the server lists, not its `authorName`, which is a
                 // display string built by joining them: a book tagged
                 // "Bessel Van der Kolk, M.D./Sean Pratt" arrives with an authorName carrying the

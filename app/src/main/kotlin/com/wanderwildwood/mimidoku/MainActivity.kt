@@ -104,7 +104,10 @@ import com.wanderwildwood.mimidoku.ui.Transport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -183,33 +186,21 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
     val clock = { minutesOfDay: Int -> timeFormat.format(dayAt(minutesOfDay)) }
 
-    val storedBooks by library.books.collectAsState(initial = emptyList())
-    // Every screen reads the books with each author folder named once -- see [namedByFolder].
-    val books = remember(storedBooks) { storedBooks.namedByFolder() }
-    val byUri = remember(books) { books.associateBy { it.uri } }
+    // Everything the screens are built from, worked out away from the thread that draws them --
+    // see [Shelves]. The database says again every few seconds while a book plays, and sorting
+    // a library of thousands into shelves each time it did was done in the middle of drawing:
+    // every screen took seconds to open while anything was playing.
+    val shelves by remember(library) {
+        library.books.distinctUntilChanged().map { Shelves.of(it) }.flowOn(Dispatchers.Default)
+    }.collectAsState(initial = Shelves.EMPTY)
+    val books = shelves.books
+    val byUri = shelves.byUri
+    val shelvedCopies = shelves.shelvedCopies
+    val shelvedBooks = shelves.shelvedBooks
+    val copiesOf = shelves.copiesOf
+    val recentBooks = shelves.recentBooks
     // The book in the player comes straight from the database, so it is named the same way here.
     val authorOf = { book: BookEntity -> (byUri[book.uri] ?: book).shownAuthor() }
-
-    // What the shelves show. Everything on the card, and from a server only what is not already
-    // here -- see [withoutServerCopiesOfWhatIsHere]. The unfiltered list stays for the places
-    // that are counting what the *server* holds rather than showing what there is to read.
-    // A file opened from another app is a book too, but not one on a shelf: see [OpenedBook].
-    val shelvedCopies = remember(books) {
-        books.filter { it.sourceType != SOURCE_OPENED }.withoutServerCopiesOfWhatIsHere().oneOfEach()
-    }
-    val shelvedBooks = remember(shelvedCopies) { shelvedCopies.map { it.first() } }
-    // Every copy behind a row, by the row's book: removing the row removes all of them.
-    val copiesOf = remember(shelvedCopies) { shelvedCopies.associate { it.first().uri to it.drop(1) } }
-
-    // Every book that has been played and is still here to play, the last one first. A file
-    // opened from another app counts: it was read, and this is the way back to it.
-    val recentBooks = remember(books) {
-        books.filter { it.lastPlayedAt != null && it.kept }
-            .withoutServerCopiesOfWhatIsHere()
-            .oneOfEach().map { it.first() }
-            .sortedByDescending { it.lastPlayedAt }
-            .take(RECENT_COUNT)
-    }
 
     var screen by remember { mutableStateOf<Screen>(Screen.Library) }
     var controller by remember { mutableStateOf<MediaController?>(null) }
@@ -1456,8 +1447,45 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
     }
 }
 
-/** What the files say, or what the folders say when the files say nothing. */
-private fun BookEntity.shownTitle(): String = tagTitle ?: name
+/**
+ * What the files say, or what the folders say when the files say nothing -- or when the files
+ * say less.
+ *
+ * A folder of files names the book in its album tag, as a rule, and the tag is taken at its
+ * word. But an album tag is sometimes the *series*: a card held "Basil Moor - The Second Marsh
+ * Book, Volume Two" with every file in it tagged with the album "The Marsh Books", so the book
+ * was listed under the series' name and could not be told from its sibling. Where the folder's
+ * name contains the tag and says more besides -- more than a number in front and the author's
+ * name, which a folder often carries -- the folder is the fuller name, and it is shown. A
+ * server's title is a librarian's and is never second-guessed.
+ */
+private fun BookEntity.shownTitle(): String {
+    val tag = tagTitle ?: return name
+    if (sourceType != SOURCE_LOCAL) return tag
+    val folder = Sameness.key(name)
+    val album = Sameness.key(tag)
+    if (folder == album || album.isEmpty() || !folder.contains(album)) return tag
+    val rest = author?.let { folder.replace(Sameness.key(it), " ") }.orEmpty().ifEmpty { folder }
+        .replace(album, " ")
+        .replace(LEADING_NUMBER, "")
+    return if (rest.any { it.isLetter() }) name else tag
+}
+
+/** "01 ", "1. ", "03 - ": the place in a series a folder is often numbered with, not its name. */
+private val LEADING_NUMBER = Regex("^\\d{1,3}[\\s._-]+")
+
+/**
+ * Every name a book can be matched to a copy of itself by: its tag title, its folder's name,
+ * and what it shows, each with and without a number in front. A card copied from a server keeps
+ * the server's folder names, so a book on both is the same folder under the same name even when
+ * the server's librarian has typed a tidier title than the folder carries.
+ */
+private fun BookEntity.sameBookKeys(): Set<String> =
+    listOfNotNull(tagTitle, name, shownTitle())
+        .map { Sameness.key(it) }
+        .flatMap { listOf(it, it.replace(LEADING_NUMBER, "")) }
+        .filter { it.isNotBlank() }
+        .toSet()
 
 /**
  * The folder wins, and the tag only fills a gap.
@@ -1561,6 +1589,49 @@ private val shelfListsSaver = listSaver<MutableMap<String, LazyListState>, Any>(
 private const val RECENT_COUNT = 20
 
 /**
+ * The library as the screens read it, made once from what the database holds.
+ *
+ * [books] is every book with each author folder named once -- see [namedByFolder]. The shelves
+ * show everything on the card, and from a server only what is not already here -- see
+ * [withoutServerCopiesOfWhatIsHere] -- with copies of one recording folded into one row; the
+ * unfiltered list stays for the places that count what the *server* holds. A file opened from
+ * another app is a book too, but not one on a shelf: see [OpenedBook]. [recentBooks] is every
+ * book that has been played and is still here to play, the last one first; an opened file
+ * counts, since it was read and this is the way back to it.
+ */
+private class Shelves(
+    val books: List<BookEntity>,
+    val byUri: Map<String, BookEntity>,
+    val shelvedCopies: List<List<BookEntity>>,
+    val shelvedBooks: List<BookEntity>,
+    /** Every copy behind a row, by the row's book: removing the row removes all of them. */
+    val copiesOf: Map<String, List<BookEntity>>,
+    val recentBooks: List<BookEntity>,
+) {
+    companion object {
+        val EMPTY = of(emptyList())
+
+        fun of(stored: List<BookEntity>): Shelves {
+            val books = stored.namedByFolder()
+            val shelvedCopies = books.filter { it.sourceType != SOURCE_OPENED }
+                .withoutServerCopiesOfWhatIsHere().oneOfEach()
+            return Shelves(
+                books = books,
+                byUri = books.associateBy { it.uri },
+                shelvedCopies = shelvedCopies,
+                shelvedBooks = shelvedCopies.map { it.first() },
+                copiesOf = shelvedCopies.associate { it.first().uri to it.drop(1) },
+                recentBooks = books.filter { it.lastPlayedAt != null && it.kept }
+                    .withoutServerCopiesOfWhatIsHere()
+                    .oneOfEach().map { it.first() }
+                    .sortedByDescending { it.lastPlayedAt }
+                    .take(RECENT_COUNT),
+            )
+        }
+    }
+}
+
+/**
  * Which shelf a book belongs on, which depends on what the reader asked to see.
  *
  * This is the shelf's key, not what the reader sees: [shown] words it. For an author or a genre
@@ -1638,15 +1709,22 @@ private const val SAME_BOOK_MS = 30_000L
  * audio on the phone that nothing on screen could reach or give back.
  */
 private fun List<BookEntity>.withoutServerCopiesOfWhatIsHere(): List<BookEntity> {
-    val here = filter { it.sourceType == SOURCE_LOCAL && it.durationMs > 0 }
-        .groupBy { it.shownTitle().trim().lowercase() }
+    // Every card book under every name it answers to -- see [sameBookKeys]. A server book
+    // whose title matched nothing on the card still matched its folder: "The Marsh Book" on
+    // the server was "01 The Marsh Book" on the card, and was listed twice for it.
+    val here = HashMap<String, MutableList<BookEntity>>()
+    for (book in this) {
+        if (book.sourceType != SOURCE_LOCAL || book.durationMs <= 0) continue
+        for (key in book.sameBookKeys()) here.getOrPut(key) { mutableListOf() } += book
+    }
     if (here.isEmpty()) return this
     return filterNot { book ->
         book.sourceType != SOURCE_LOCAL &&
             !book.kept &&
             book.durationMs > 0 &&
-            here[book.shownTitle().trim().lowercase()]
-                ?.any { abs(it.durationMs - book.durationMs) <= SAME_BOOK_MS } == true
+            book.sameBookKeys().any { key ->
+                here[key]?.any { abs(it.durationMs - book.durationMs) <= SAME_BOOK_MS } == true
+            }
     }
 }
 
