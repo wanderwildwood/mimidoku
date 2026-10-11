@@ -79,6 +79,7 @@ fun ChapterSheet(
             LazyColumnMMD(
                 state = listState,
                 contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
+                isScrollbarVisible = false,
             ) {
                 items(chapters, key = { it.id }) { chapter ->
                     ChapterLine(

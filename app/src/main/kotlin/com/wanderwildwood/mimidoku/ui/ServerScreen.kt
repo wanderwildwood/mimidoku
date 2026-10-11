@@ -130,7 +130,7 @@ fun ServerScreen(
                 modifier = Modifier.padding(start = 16.dp),
             )
 
-            LazyColumnMMD(modifier = Modifier.weight(1f)) {
+            LazyColumnMMD(modifier = Modifier.weight(1f), isScrollbarVisible = false) {
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         TextFieldMMD(

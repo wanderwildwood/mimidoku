@@ -76,7 +76,7 @@ fun SettingsScreen(
             onClose = onClose,
             trailing = { BarButton(Icons.Info, stringResource(R.string.settings_cd_about), onAbout) },
         )
-        LazyColumnMMD(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)) {
+        LazyColumnMMD(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp), isScrollbarVisible = false) {
             items(rows, key = { it.key }) { row ->
                 SettingLine(row = row, onClick = onRowClick)
             }

@@ -76,7 +76,7 @@ fun BooksScreen(
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(title = shelf, onClose = onClose)
 
-        LazyColumnMMD(modifier = Modifier.weight(1f), state = listState) {
+        LazyColumnMMD(modifier = Modifier.weight(1f), state = listState, isScrollbarVisible = false) {
             items(books, key = { it.id }) { book ->
                 BookLine(
                     book = book,
