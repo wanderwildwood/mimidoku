@@ -62,7 +62,7 @@ fun BookmarksScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenTopBar(title = stringResource(R.string.bookmarks_title), onClose = onClose)
-            LazyColumnMMD(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
+            LazyColumnMMD(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp), isScrollbarVisible = false) {
                 items(bookmarks, key = { it.id }) { bookmark ->
                     BookmarkLine(
                         bookmark = bookmark,

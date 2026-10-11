@@ -92,7 +92,7 @@ fun FoldersScreen(
                 modifier = Modifier.padding(start = 16.dp),
             )
 
-            LazyColumnMMD(modifier = Modifier.weight(1f).padding(top = 36.dp)) {
+            LazyColumnMMD(modifier = Modifier.weight(1f).padding(top = 36.dp), isScrollbarVisible = false) {
                 items(folders, key = { it.id }) { folder ->
                     FolderLine(
                         folder = folder,

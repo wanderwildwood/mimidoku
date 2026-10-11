@@ -90,6 +90,7 @@ fun SearchScreen(
             LazyColumnMMD(
                 modifier = Modifier.weight(1f),
                 state = shelfListState,
+                isScrollbarVisible = false,
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     Row(
@@ -111,7 +112,7 @@ fun SearchScreen(
                 }
             }
         } else {
-            LazyColumnMMD(modifier = Modifier.weight(1f), state = foundListState) {
+            LazyColumnMMD(modifier = Modifier.weight(1f), state = foundListState, isScrollbarVisible = false) {
                 items(found, key = { it.id }) { book ->
                     BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
                 }
