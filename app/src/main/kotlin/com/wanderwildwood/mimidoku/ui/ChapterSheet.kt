@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One chapter, as the list shows it: which one it is, what it is called, where it starts. */
 data class ChapterRow(
@@ -77,10 +76,9 @@ fun ChapterSheet(
                 .background(Color.White),
         ) {
             ListJumpBox(state = listState, jump = ListJump.Pages) {
-                LazyColumnMMD(
+                PagedColumn(
                     state = listState,
                     contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
-                    isScrollbarVisible = false,
                 ) {
                     items(chapters, key = { it.id }) { chapter ->
                         ChapterLine(

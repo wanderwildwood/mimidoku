@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 
 /**
@@ -83,10 +82,9 @@ fun SearchScreen(
         if (query.isBlank()) {
             // No room left above the first shelf: it sat a bar's height below the line for no
             // reason anyone could name, and read as something missing.
-            LazyColumnMMD(
+            PagedColumn(
                 modifier = Modifier.weight(1f),
                 state = shelfListState,
-                isScrollbarVisible = false,
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     Row(
@@ -108,7 +106,7 @@ fun SearchScreen(
                 }
             }
         } else {
-            LazyColumnMMD(modifier = Modifier.weight(1f), state = foundListState, isScrollbarVisible = false) {
+            PagedColumn(modifier = Modifier.weight(1f), state = foundListState) {
                 items(found, key = { it.id }) { book ->
                     BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
                 }
