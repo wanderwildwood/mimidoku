@@ -741,6 +741,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                     }
                     LibraryScreen(
                         rows = shelves,
+                        sortedNames = remember(shelves) { shelves.filter { it.id != UNNAMED }.map { it.title } },
                         status = when {
                             scanning -> stringResource(R.string.library_scanning)
                             shelvedBooks.isEmpty() -> stringResource(R.string.library_no_books)
@@ -817,6 +818,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
+                        byTitle = shelving == Shelving.Author,
                         onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                         listState = shelfLists.getOrPut("$shelving\u0000${current.name ?: UNNAMED}") { LazyListState() },
                     )

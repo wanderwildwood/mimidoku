@@ -69,6 +69,8 @@ fun BooksScreen(
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     showAuthor: Boolean = false,
+    // Whether the shelf runs by title, as an author's does; any other is paged by dots.
+    byTitle: Boolean = false,
     onRemove: ((BookRow) -> Unit)? = null,
     // Held by the caller, so the shelf is where it was left when a book is closed again.
     listState: LazyListState = rememberLazyListState(),
@@ -76,14 +78,20 @@ fun BooksScreen(
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(title = shelf, onClose = onClose)
 
-        LazyColumnMMD(modifier = Modifier.weight(1f), state = listState, isScrollbarVisible = false) {
-            items(books, key = { it.id }) { book ->
-                BookLine(
-                    book = book,
-                    showAuthor = showAuthor,
-                    onClick = { onBookClick(book) },
-                    onRemove = onRemove?.takeIf { book.removable }?.let { { it(book) } },
-                )
+        ListJumpBox(
+            state = listState,
+            jump = remember(books, byTitle) { if (byTitle) ListJump.Letters(books.map { it.title }) else ListJump.Pages },
+            modifier = Modifier.weight(1f),
+        ) {
+            LazyColumnMMD(state = listState, isScrollbarVisible = false) {
+                items(books, key = { it.id }) { book ->
+                    BookLine(
+                        book = book,
+                        showAuthor = showAuthor,
+                        onClick = { onBookClick(book) },
+                        onRemove = onRemove?.takeIf { book.removable }?.let { { it(book) } },
+                    )
+                }
             }
         }
 

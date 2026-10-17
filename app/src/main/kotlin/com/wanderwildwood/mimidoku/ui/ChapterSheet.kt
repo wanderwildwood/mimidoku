@@ -76,17 +76,19 @@ fun ChapterSheet(
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(Color.White),
         ) {
-            LazyColumnMMD(
-                state = listState,
-                contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
-                isScrollbarVisible = false,
-            ) {
-                items(chapters, key = { it.id }) { chapter ->
-                    ChapterLine(
-                        chapter = chapter,
-                        playing = chapter.id == playingIndex,
-                        onClick = { onPick(chapter) },
-                    )
+            ListJumpBox(state = listState, jump = ListJump.Pages) {
+                LazyColumnMMD(
+                    state = listState,
+                    contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
+                    isScrollbarVisible = false,
+                ) {
+                    items(chapters, key = { it.id }) { chapter ->
+                        ChapterLine(
+                            chapter = chapter,
+                            playing = chapter.id == playingIndex,
+                            onClick = { onPick(chapter) },
+                        )
+                    }
                 }
             }
         }

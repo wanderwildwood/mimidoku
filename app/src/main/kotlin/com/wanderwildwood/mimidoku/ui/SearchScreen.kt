@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.lazy.LazyColumnMMD
+import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 
 /**
  * Search.
@@ -40,6 +42,7 @@ import com.mudita.mmd.components.lazy.LazyColumnMMD
  * focused on arrival: raising the keyboard costs a full-screen redraw and covers the list that
  * the reader may well have come here to scroll.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     query: String,
@@ -57,29 +60,22 @@ fun SearchScreen(
     foundListState: LazyListState = rememberLazyListState(),
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(73.dp).padding(start = 16.dp, end = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Back,
-                contentDescription = stringResource(R.string.cd_back),
-                tint = Color.Black,
-                modifier = Modifier.size(24.dp).clickable(onClick = onBack),
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                // Taken from the theme rather than naming a face here, so this field cannot
-                //  drift away from every other piece of text in the app.
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
-                cursorBrush = SolidColor(Color.Black),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+        // The field sits where a title would, in the same bar every other screen has.
+        TopAppBarMMD(
+            title = {
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    // Taken from the theme rather than naming a face here, so this field cannot
+                    //  drift away from every other piece of text in the app.
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
+                    cursorBrush = SolidColor(Color.Black),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), onBack) },
+        )
 
         // Nothing typed yet: the shelves, so that the list is worth scrolling rather than worth
         // ignoring. Once there is a query it is books that were asked for, and a book takes the

@@ -70,6 +70,9 @@ fun LibraryScreen(
     onPlayPauseClick: () -> Unit,
     onRecentClick: (() -> Unit)? = null,
     onRemoveShelf: ((LibraryRow) -> Unit)? = null,
+    // What the shelves are sorted by, in their order; a row after them, the shelf of books that
+    // name nothing, is left out.
+    sortedNames: List<String> = rows.map { it.title },
     // Held by the caller, so the list is where it was left when a shelf is closed again.
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -79,19 +82,8 @@ fun LibraryScreen(
             // Search sits with Settings at the far end, the way the Kompakt's own apps keep
             // their actions, rather than hanging off the title.
             trailing = {
-                Icon(
-                    imageVector = Icons.Search,
-                    contentDescription = stringResource(R.string.library_cd_search),
-                    tint = Color.Black,
-                    modifier = Modifier.size(25.dp).clickable(onClick = onSearchClick),
-                )
-                Spacer(modifier = Modifier.width(20.dp))
-                Icon(
-                    imageVector = Icons.Settings,
-                    contentDescription = stringResource(R.string.library_cd_settings),
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp).clickable(onClick = onSettingsClick),
-                )
+                BarButton(Icons.Search, stringResource(R.string.library_cd_search), onSearchClick)
+                BarButton(Icons.Settings, stringResource(R.string.library_cd_settings), onSettingsClick)
             },
         )
 
@@ -104,25 +96,33 @@ fun LibraryScreen(
             )
         }
 
-        LazyColumnMMD(modifier = Modifier.weight(1f), state = listState, isScrollbarVisible = false) {
-            // The books lately read, above the shelves, once there are any: the way back to a
-            // book is usually the book that was being read, and that should not mean
-            // remembering whose shelf it sits on.
-            if (onRecentClick != null) {
-                item(key = RECENT) {
+        ListJumpBox(
+            state = listState,
+            jump = remember(sortedNames, onRecentClick != null) {
+                ListJump.Letters(sortedNames, firstIndex = if (onRecentClick != null) 1 else 0)
+            },
+            modifier = Modifier.weight(1f),
+        ) {
+            LazyColumnMMD(state = listState, isScrollbarVisible = false) {
+                // The books lately read, above the shelves, once there are any: the way back to a
+                // book is usually the book that was being read, and that should not mean
+                // remembering whose shelf it sits on.
+                if (onRecentClick != null) {
+                    item(key = RECENT) {
+                        ShelfRow(
+                            row = LibraryRow(title = stringResource(R.string.library_recent), id = RECENT),
+                            icon = Icons.Recent,
+                            onClick = onRecentClick,
+                        )
+                    }
+                }
+                items(rows, key = { it.id }) { row ->
                     ShelfRow(
-                        row = LibraryRow(title = stringResource(R.string.library_recent), id = RECENT),
-                        icon = Icons.Recent,
-                        onClick = onRecentClick,
+                        row = row,
+                        onClick = { onRowClick(row) },
+                        onRemove = onRemoveShelf?.takeIf { row.removeNote != null }?.let { { it(row) } },
                     )
                 }
-            }
-            items(rows, key = { it.id }) { row ->
-                ShelfRow(
-                    row = row,
-                    onClick = { onRowClick(row) },
-                    onRemove = onRemoveShelf?.takeIf { row.removeNote != null }?.let { { it(row) } },
-                )
             }
         }
 

@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +37,9 @@ import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 fun ScreenTopBar(
     title: String,
     onClose: (() -> Unit)? = null,
+    // A screen reached from another one, as Folders and Server are from Settings, steps back
+    // to it with an arrow instead.
+    onBack: (() -> Unit)? = null,
     afterTitle: @Composable RowScope.() -> Unit = {},
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
@@ -54,9 +59,21 @@ fun ScreenTopBar(
         },
         navigationIcon = {
             if (onClose != null) BarButton(Icons.Close, stringResource(R.string.cd_close), onClose)
+            else if (onBack != null) BarButton(Icons.Back, stringResource(R.string.cd_back), onBack)
         },
         actions = trailing,
     )
+}
+
+/** A press in the bar that is a word rather than a mark, such as "Scan now". */
+@Composable
+fun BarText(text: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.height(48.dp).clickable(onClick = onClick).padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TextMMD(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+    }
 }
 
 /**

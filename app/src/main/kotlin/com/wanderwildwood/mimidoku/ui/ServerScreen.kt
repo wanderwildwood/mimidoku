@@ -100,34 +100,12 @@ fun ServerScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Back,
-                    contentDescription = stringResource(R.string.cd_back),
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp).clickable(onClick = onBack),
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                if (connected && !isBusy) {
-                    TextMMD(
-                        text = stringResource(R.string.server_sync_now),
-                        style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = 22.sp,
-                        color = Color.Black,
-                        modifier = Modifier.clickable(onClick = onSyncNow),
-                    )
-                }
-            }
-
-            TextMMD(
-                text = stringResource(R.string.server_title),
-                style = MaterialTheme.typography.titleLarge,
-                lineHeight = 32.sp,
-                color = Color.Black,
-                modifier = Modifier.padding(start = 16.dp),
+            ScreenTopBar(
+                title = stringResource(R.string.server_title),
+                onBack = onBack,
+                trailing = {
+                    if (connected && !isBusy) BarText(stringResource(R.string.server_sync_now), onSyncNow)
+                },
             )
 
             LazyColumnMMD(modifier = Modifier.weight(1f), isScrollbarVisible = false) {
