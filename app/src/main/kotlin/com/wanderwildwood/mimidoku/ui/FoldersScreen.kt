@@ -27,7 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.wanderwildwood.mimidoku.R
 
 /** One folder the reader has granted, and what the app made of it. */
@@ -70,7 +69,7 @@ fun FoldersScreen(
                 trailing = { BarText(stringResource(R.string.folders_scan_now), onScanNow) },
             )
 
-            LazyColumnMMD(modifier = Modifier.weight(1f).padding(top = 12.dp), isScrollbarVisible = false) {
+            PagedColumn(modifier = Modifier.weight(1f).padding(top = 12.dp)) {
                 items(folders, key = { it.id }) { folder ->
                     FolderLine(
                         folder = folder,

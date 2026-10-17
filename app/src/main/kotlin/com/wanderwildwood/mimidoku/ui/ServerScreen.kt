@@ -34,7 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudita.mmd.components.buttons.ButtonMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.wanderwildwood.mimidoku.R
@@ -108,7 +107,7 @@ fun ServerScreen(
                 },
             )
 
-            LazyColumnMMD(modifier = Modifier.weight(1f), isScrollbarVisible = false) {
+            PagedColumn(modifier = Modifier.weight(1f)) {
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         TextFieldMMD(

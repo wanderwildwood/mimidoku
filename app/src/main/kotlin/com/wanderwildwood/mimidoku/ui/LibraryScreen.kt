@@ -38,7 +38,6 @@ import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One row in the library: a shelf holding books, or a book itself. */
 data class LibraryRow(
@@ -103,7 +102,7 @@ fun LibraryScreen(
             },
             modifier = Modifier.weight(1f),
         ) {
-            LazyColumnMMD(state = listState, isScrollbarVisible = false) {
+            PagedColumn(state = listState) {
                 // The books lately read, above the shelves, once there are any: the way back to a
                 // book is usually the book that was being read, and that should not mean
                 // remembering whose shelf it sits on.

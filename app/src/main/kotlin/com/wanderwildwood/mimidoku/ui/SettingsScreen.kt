@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One preference: what it is called, what it is set to, and what it looks like. */
 data class SettingRow(
@@ -76,7 +75,7 @@ fun SettingsScreen(
             onClose = onClose,
             trailing = { BarButton(Icons.Info, stringResource(R.string.settings_cd_about), onAbout) },
         )
-        LazyColumnMMD(contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp), isScrollbarVisible = false) {
+        PagedColumn(contentPadding = PaddingValues(top = 12.dp)) {
             items(rows, key = { it.key }) { row ->
                 SettingLine(row = row, onClick = onRowClick)
             }

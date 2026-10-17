@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 
 /** One book on a shelf, as the list needs it. */
 data class BookRow(
@@ -83,7 +82,7 @@ fun BooksScreen(
             jump = remember(books, byTitle) { if (byTitle) ListJump.Letters(books.map { it.title }) else ListJump.Pages },
             modifier = Modifier.weight(1f),
         ) {
-            LazyColumnMMD(state = listState, isScrollbarVisible = false) {
+            PagedColumn(state = listState) {
                 items(books, key = { it.id }) { book ->
                     BookLine(
                         book = book,
