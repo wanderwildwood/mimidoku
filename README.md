@@ -66,6 +66,10 @@ being read in Glance** turned on, the book being read or paused shows on its loc
 no chapters -- and nothing once playback stops. It is off to begin with, since the app's own strip on the
 lock screen already shows the book.
 
+With [Shelf](https://github.com/wanderwildwood/shoka) installed, a book's page there shows
+**Listen** when this library has a recording of it, matched by title and author, and opens it
+here. Shelf can ask only about one book at a time; no other app can ask at all.
+
 Released.
 
 ## Getting it, and keeping it
