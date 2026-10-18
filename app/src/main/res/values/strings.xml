@@ -309,4 +309,7 @@
     <!-- An audiobook file opened from another app, such as a file manager -->
     <string name="opened_file_unreadable">Could not open that file</string>
     <string name="opened_file_needs_access">Audiobooks needs access to audio files to open that one</string>
+    <string name="list_jump_setting">Letters and page dots</string>
+    <string name="list_jump_shown">Shown</string>
+    <string name="list_jump_hidden">Hidden</string>
 </resources>

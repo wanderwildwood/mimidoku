@@ -71,6 +71,8 @@ import com.wanderwildwood.mimidoku.ui.BookRow
 import com.wanderwildwood.mimidoku.ui.BooksScreen
 import com.wanderwildwood.mimidoku.ui.LibraryRow
 import com.wanderwildwood.mimidoku.ui.LibraryScreen
+import com.wanderwildwood.mimidoku.ui.ListJumpPrefs
+import com.wanderwildwood.mimidoku.ui.rememberListJumpShown
 import com.wanderwildwood.mimidoku.ui.MimidokuTheme
 import com.wanderwildwood.mimidoku.ui.NowPlaying
 import com.wanderwildwood.mimidoku.ui.Playback
@@ -1128,6 +1130,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                         settingsLifecycle.lifecycle.addObserver(observer)
                         onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
                     }
+                    val jumpShown by rememberListJumpShown()
                     SettingsScreen(
                         rows = buildList {
                             // How many folders, not a sentence about what the row is for: a row
@@ -1174,6 +1177,8 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                                 )
                             }
                             add(SettingRow("shelving", stringResource(R.string.settings_library_view), stringResource(preferences.shelving.labelRes)))
+                            // Under the library view, because it is part of how the long lists look.
+                            add(SettingRow("listjump", stringResource(R.string.list_jump_setting), null, toggle = jumpShown))
                             add(SettingRow("skip", stringResource(R.string.settings_skip_amount), pluralStringResource(R.plurals.settings_seconds, preferences.skipSeconds, preferences.skipSeconds)))
                             add(SettingRow("rewind", stringResource(R.string.settings_auto_rewind), pluralStringResource(R.plurals.settings_seconds, preferences.autoRewindSeconds, preferences.autoRewindSeconds)))
                             add(SettingRow("sleep", stringResource(R.string.settings_sleep_duration), pluralStringResource(R.plurals.settings_minutes, preferences.sleepMinutes, preferences.sleepMinutes)))
@@ -1241,6 +1246,7 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
                                 "folders" -> screen = Screen.Folders
                                 "server" -> screen = Screen.Server
                                 "shelving" -> editing = Editing.Shelving
+                                "listjump" -> ListJumpPrefs.setShown(context, !jumpShown)
                                 "skip" -> editing = Editing.Skip
                                 "rewind" -> editing = Editing.AutoRewind
                                 "sleep" -> editing = Editing.Sleep
