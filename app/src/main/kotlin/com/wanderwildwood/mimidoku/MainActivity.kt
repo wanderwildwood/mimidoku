@@ -1,5 +1,7 @@
 package com.wanderwildwood.mimidoku
 
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -72,6 +74,7 @@ import com.wanderwildwood.mimidoku.ui.BooksScreen
 import com.wanderwildwood.mimidoku.ui.LibraryRow
 import com.wanderwildwood.mimidoku.ui.LibraryScreen
 import com.wanderwildwood.mimidoku.ui.ListJumpPrefs
+import com.wanderwildwood.mimidoku.ui.RestrictedSettings
 import com.wanderwildwood.mimidoku.ui.rememberListJumpShown
 import com.wanderwildwood.mimidoku.ui.MimidokuTheme
 import com.wanderwildwood.mimidoku.ui.NowPlaying
@@ -126,6 +129,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 15 on draws every app targeting it edge to edge, and on a white bar left the
+        // status icons white too, an empty gap: dark icons on the white bar there. Android 12
+        // is left exactly as it was.
+        if (android.os.Build.VERSION.SDK_INT >= 35) {
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+                navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            )
+        }
         // Only a fresh start: a screen rebuilt after Android reclaimed it is handed the same
         // intent again, and the book was opened the first time.
         if (savedInstanceState == null) takeOpenedFile(intent)
@@ -1146,11 +1158,15 @@ private fun Mimidoku(
                     // Read again whenever the app comes back, which is how the reader returns from
                     // turning the service on in Android's settings.
                     var lockScreenControlsOn by remember { mutableStateOf(LockScreenControls.isEnabled(context)) }
+                    // Asked for and still off on the way back: on Android 13+ that is restricted settings.
+                    var lockScreenAsked by rememberSaveable { mutableStateOf(false) }
+                    var restricted by remember { mutableStateOf(false) }
                     val settingsLifecycle = LocalLifecycleOwner.current
                     DisposableEffect(settingsLifecycle) {
                         val observer = LifecycleEventObserver { _, event ->
                             if (event == Lifecycle.Event.ON_RESUME) {
                                 lockScreenControlsOn = LockScreenControls.isEnabled(context)
+                                restricted = RestrictedSettings.blocked(context)
                             }
                         }
                         settingsLifecycle.lifecycle.addObserver(observer)
@@ -1222,6 +1238,7 @@ private fun Mimidoku(
                                         if (lockScreenControlsOn) R.string.settings_lockscreen_controls_on
                                         else R.string.settings_lockscreen_controls_off,
                                     ),
+                                    restricted = lockScreenAsked && !lockScreenControlsOn && restricted,
                                 ),
                             )
                             // Beside the controls, because it is the other thing this app puts on
@@ -1287,10 +1304,13 @@ private fun Mimidoku(
                                 "autosleepstart" -> editing = Editing.AutoSleepStart
                                 "autosleepend" -> editing = Editing.AutoSleepEnd
                                 "shake" -> editing = Editing.Shake
-                                "lockscreen" -> runCatching {
-                                    context.startActivity(
-                                        Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                    )
+                                "lockscreen" -> {
+                                    lockScreenAsked = true
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                        )
+                                    }
                                 }
                             }
                         },
