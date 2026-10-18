@@ -32,6 +32,12 @@ whether it is paused, are handed to Glance - and only to Glance - to draw on the
 where anyone holding the phone can read them. Settings → **Show the book being read in Glance**
 stops it.
 
+## Shelf
+
+Shelf (com.wanderwildwood.shoka), when installed, can ask whether the library has one book, by
+its title and author, so that its book page can offer **Listen**. The answer is that book's
+entry or nothing. No other app is answered, and the library is never listed for anyone.
+
 ## What leaves the phone
 
 Nothing, until you add a server. Then: requests to that server, and nowhere else. Not for

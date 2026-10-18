@@ -101,6 +101,7 @@ import com.wanderwildwood.mimidoku.server.KeepService
 import com.wanderwildwood.mimidoku.server.AbsResult
 import com.wanderwildwood.mimidoku.server.AbsServer
 import com.wanderwildwood.mimidoku.server.AbsSync
+import com.wanderwildwood.mimidoku.shelf.ShelfLookup
 import com.wanderwildwood.mimidoku.ui.StepperDialog
 import com.wanderwildwood.mimidoku.ui.Transport
 import kotlinx.coroutines.Dispatchers
@@ -120,6 +121,9 @@ class MainActivity : ComponentActivity() {
     /** An audiobook file another app has asked this one to open, until it has been. */
     private val opened = mutableStateOf<Uri?>(null)
 
+    /** A book of the library Shelf has asked this one to open, by its key, until it has been. */
+    private val openedBook = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Only a fresh start: a screen rebuilt after Android reclaimed it is handed the same
@@ -127,7 +131,12 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) takeOpenedFile(intent)
         setContent {
             MimidokuTheme {
-                Mimidoku(openedFile = opened.value, onOpenedFileTaken = { opened.value = null })
+                Mimidoku(
+                    openedFile = opened.value,
+                    onOpenedFileTaken = { opened.value = null },
+                    openedBook = openedBook.value,
+                    onOpenedBookTaken = { openedBook.value = null },
+                )
             }
         }
     }
@@ -139,6 +148,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun takeOpenedFile(intent: Intent?) {
+        if (intent?.action == ShelfLookup.ACTION_OPEN_BOOK) {
+            intent.getStringExtra(ShelfLookup.EXTRA_BOOK)?.let { openedBook.value = it }
+            return
+        }
         if (intent?.action != Intent.ACTION_VIEW) return
         intent.data?.let { opened.value = it }
     }
@@ -177,7 +190,12 @@ private sealed interface Editing {
 }
 
 @Composable
-private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}) {
+private fun Mimidoku(
+    openedFile: Uri? = null,
+    onOpenedFileTaken: () -> Unit = {},
+    openedBook: String? = null,
+    onOpenedBookTaken: () -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val library = remember { LibraryRepository(context) }
@@ -576,6 +594,14 @@ private fun Mimidoku(openedFile: Uri? = null, onOpenedFileTaken: () -> Unit = {}
             fileToOpen = openedFile
             onOpenedFileTaken()
         }
+    }
+    // A book Shelf asked for: opened as a tap on it would open it, once there is a player.
+    LaunchedEffect(openedBook, controller) {
+        val key = openedBook ?: return@LaunchedEffect
+        if (controller == null) return@LaunchedEffect
+        // Taken off first, which cancels this effect, so the opening runs in the screen's scope.
+        onOpenedBookTaken()
+        scope.launch { library.book(key)?.let { openBook(it) } }
     }
     var fileWaitingForAccess by remember { mutableStateOf<Uri?>(null) }
     val askForAudioAccess = rememberLauncherForActivityResult(

@@ -40,6 +40,11 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- One book of the library, asked for by Shelf's "Listen". -->
+            <intent-filter>
+                <action android:name="com.wanderwildwood.mimidoku.OPEN_BOOK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <!--
                 "Open with" for an audiobook file: an m4b, by its type where the sender names it.
                 Other audio is songs and is left to a music player, so a plain mp3 or m4a does not
@@ -82,6 +87,12 @@
                 <data android:pathPattern=".*\\..*\\.M4B" />
             </intent-filter>
         </activity>
+
+        <!-- Whether a book is in the library, for Shelf's "Listen"; it answers Shelf alone. -->
+        <provider
+            android:name=".shelf.ShelfLookup"
+            android:authorities="com.wanderwildwood.mimidoku.books"
+            android:exported="true" />
 
         <!-- The book being read, for Glance's lock-screen panel; it answers Glance alone. -->
         <provider
