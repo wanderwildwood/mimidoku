@@ -12,7 +12,7 @@ nobody should write twice.
 
 | | |
 |---|---|
-| ![The library, which is just the folders on the card](screenshots/1-library.png) | ![One book's chapters](screenshots/2-shelf.png) |
+| ![The library, which is just the folders on the card](screenshots/1-library.png) | ![One author's books, one of them part-heard](screenshots/2-shelf.png) |
 | ![Playing, with the controls a thumb can find](screenshots/3-player.png) | ![Preferences](screenshots/4-preferences.png) |
 
 ## State
