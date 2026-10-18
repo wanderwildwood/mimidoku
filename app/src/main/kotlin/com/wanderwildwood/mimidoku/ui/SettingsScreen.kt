@@ -54,6 +54,8 @@ data class SettingRow(
      * sits costs nothing and needs no words.
      */
     val beneath: Boolean = false,
+    /** Kept out by Android's restricted settings: the row says how to let the app in, under it. */
+    val restricted: Boolean = false,
 )
 
 /**
@@ -99,18 +101,21 @@ private fun SettingLine(row: SettingRow, onClick: (SettingRow) -> Unit) {
         }
         return
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick(row) }
-            .padding(start = indent(row), end = 16.dp, bottom = 25.5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Label(row, Modifier.weight(1f))
-        if (row.toggle != null) {
-            Spacer(modifier = Modifier.width(16.dp))
-            SwitchMMD(checked = row.toggle, onCheckedChange = null)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick(row) }
+                .padding(start = indent(row), end = 16.dp, bottom = if (row.restricted) 4.dp else 25.5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Label(row, Modifier.weight(1f))
+            if (row.toggle != null) {
+                Spacer(modifier = Modifier.width(16.dp))
+                SwitchMMD(checked = row.toggle, onCheckedChange = null)
+            }
         }
+        if (row.restricted) RestrictedHint(Modifier.padding(start = indent(row), end = 16.dp, bottom = 19.5.dp))
     }
 }
 

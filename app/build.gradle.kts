@@ -16,8 +16,8 @@ android {
     // The Kompakt runs 28; nothing here needs anything newer.
     minSdk = 28
     targetSdk = 36
-    versionCode = 165
-    versionName = "1.3.35"
+    versionCode = 166
+    versionName = "1.3.36"
   }
 
   // A real keystore in signing/ signs every build type when it is present, so the
