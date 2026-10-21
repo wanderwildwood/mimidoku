@@ -46,6 +46,7 @@ An author is one shelf however the files spell the name: the folder you filed th
 the shelf, whatever the files' tags say, and "Basil Moor", "basil moor " and a server's
 "Basil Moor," are one person. The same book twice -- one title by one author at one
 length -- is listed once. **Recent**, above the shelves, lists the books lately played.
+With an Audiobookshelf server, a swipe down at the top of the library reads its catalogue again.
 
 Hold a book, or an author, and press again to take it off the phone: the row says "Remove from
 phone -- tap again" and lets go after four seconds. It deletes that book's audio from the folder
