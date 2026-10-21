@@ -271,6 +271,11 @@ private fun Mimidoku(
     // both gets neither any sooner.
     var serverBusy by remember { mutableStateOf(false) }
     var serverStatus by remember { mutableStateOf<String?>(null) }
+    // What a swipe down on the library set going, said in a line above the shelves: asking while
+    // it asks, then how it went for a few seconds.
+    var pullSaid by remember { mutableStateOf<String?>(null) }
+    var pullDone by remember { mutableStateOf(0) }
+    LaunchedEffect(pullDone) { if (pullDone > 0) { delay(3000); pullSaid = null } }
     // The book a reader has asked about keeping, waiting on the question being answered.
     var keeping by remember { mutableStateOf<BookEntity?>(null) }
     // Asked from the download line or the row of the book being fetched.
@@ -783,6 +788,7 @@ private fun Mimidoku(
                         rows = shelves,
                         sortedNames = remember(shelves) { shelves.filter { it.id != UNNAMED }.map { it.title } },
                         status = when {
+                            pullSaid != null -> pullSaid
                             scanning -> stringResource(R.string.library_scanning)
                             shelvedBooks.isEmpty() -> stringResource(R.string.library_no_books)
                             else -> null
@@ -794,6 +800,21 @@ private fun Mimidoku(
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
                         listState = libraryList,
+                        onPullAtTop = {
+                            // One job at a time on the server, as everywhere else: a pull while it
+                            // is already busy is not a second request.
+                            if (!serverBusy) scope.launch {
+                                serverBusy = true
+                                pullSaid = context.getString(R.string.library_pull_checking)
+                                val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
+                                pullSaid = when (val synced = AbsSync.sync(client, preferences.serverLibraryId, library.library, context)) {
+                                    is AbsResult.Failure -> synced.message
+                                    is AbsResult.Success -> context.getString(R.string.library_pull_done)
+                                }
+                                serverBusy = false
+                                pullDone++
+                            }
+                        }.takeIf { preferences.hasServer && preferences.serverLibraryId.isNotBlank() },
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
                         onRemoveShelf = { row ->
                             removeFromPhone(

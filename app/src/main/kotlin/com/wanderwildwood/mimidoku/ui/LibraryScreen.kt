@@ -74,6 +74,9 @@ fun LibraryScreen(
     sortedNames: List<String> = rows.map { it.title },
     // Held by the caller, so the list is where it was left when a shelf is closed again.
     listState: LazyListState = rememberLazyListState(),
+    // Only with a server: a swipe down on the first page reads its catalogue again. A library
+    // that lives on the card alone has nothing to ask, and the swipe does nothing there.
+    onPullAtTop: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         ScreenTopBar(
@@ -102,7 +105,7 @@ fun LibraryScreen(
             },
             modifier = Modifier.weight(1f),
         ) {
-            PagedColumn(state = listState) {
+            PagedColumn(state = listState, onPullAtTop = onPullAtTop) {
                 // The books lately read, above the shelves, once there are any: the way back to a
                 // book is usually the book that was being read, and that should not mean
                 // remembering whose shelf it sits on.
