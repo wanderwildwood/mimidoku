@@ -1,5 +1,8 @@
 <resources>
-    <style name="Theme.Mimidoku" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Mimidoku" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 
     <!-- The lock-screen strip's window: no animation in or out. The system otherwise animated it
          away, holding it on screen for 300-500 ms after an unlock, which on e-ink is the strip

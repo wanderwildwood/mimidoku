@@ -11,6 +11,8 @@
       parent is the same as values/themes.xml's; keep the two in step.
     -->
     <style name="Theme.Mimidoku" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowSplashScreenBackground">@android:color/white</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_nothing</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
