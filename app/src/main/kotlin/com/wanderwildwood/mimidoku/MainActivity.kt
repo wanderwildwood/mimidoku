@@ -1922,7 +1922,7 @@ private suspend fun MediaController.load(
 ) {
     // Only the artwork is set here. Everything else the notification shows - the title, the
     // author - is read out of the file itself, and a field set on the item would override it.
-    val cover = CoverArt.forBook(context, chapters.firstOrNull()?.audioUri)
+    val cover = CoverArt.mark(context)
     setMediaItems(
         chapters.map {
             MediaItem.Builder()
