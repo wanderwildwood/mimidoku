@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     An Audiobookshelf server on a home network is served over plain http, because that is what it
-    does out of the box and there is no certificate to be had for 192.168.1.70. Android has
+    does out of the box and there is no certificate to be had for an address such as 192.168.0.10. Android has
     refused cleartext by default since API 28, so a request to such a server fails before it
     leaves the phone.
 

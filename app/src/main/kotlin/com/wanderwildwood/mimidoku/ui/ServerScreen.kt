@@ -115,7 +115,7 @@ fun ServerScreen(
                             value = typedAddress,
                             onValueChange = { typedAddress = it },
                             label = { TextMMD(text = stringResource(R.string.server_address)) },
-                            placeholder = { TextMMD(text = "192.168.1.70:13378") },
+                            placeholder = { TextMMD(text = "192.168.0.10:13378") },
                             singleLine = true,
                             enabled = !isBusy,
                         )
