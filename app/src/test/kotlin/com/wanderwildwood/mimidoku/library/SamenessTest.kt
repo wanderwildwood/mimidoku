@@ -208,4 +208,10 @@ class SamenessTest {
         assert(Sameness.isPlaceholder(null))
         assert(!Sameness.isPlaceholder("Basil Moor"))
     }
+
+    @Test
+    fun `search folds accents and capitals`() {
+        assertEquals("elodie", Sameness.fold("Élodie"))
+        assertEquals(Sameness.fold("Jose Saramago"), Sameness.fold("José SARAMAGO"))
+    }
 }

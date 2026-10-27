@@ -41,7 +41,10 @@ class LibraryRepository(private val context: Context) {
 
         // Merged across every granted folder before writing: merge() removes what it did not see,
         // so handing it one folder at a time would have each scan delete the others' books.
-        val found = results.values.flatMap { it.books }.distinctBy { it.chapters.first().uri }
+        val hidden = preferences.hiddenBooks
+        val found = results.values.flatMap { it.books }
+            .distinctBy { it.chapters.first().uri }
+            .filter { it.chapters.first().uri.toString() !in hidden }
         val books = found.map { it.toEntity() }
         val chapters = found.flatMap { book ->
             book.chapters.mapIndexed { index, chapter ->

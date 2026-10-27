@@ -25,6 +25,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalCursorBlinkEnabled
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.DisposableEffect
@@ -40,6 +42,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
@@ -55,6 +58,7 @@ import com.wanderwildwood.mimidoku.data.SOURCE_OPENED
 import com.wanderwildwood.mimidoku.glance.GlanceProvider
 import com.wanderwildwood.mimidoku.library.OpenedBook
 import com.wanderwildwood.mimidoku.library.Removal
+import com.wanderwildwood.mimidoku.ui.RemoveDialog
 import com.wanderwildwood.mimidoku.library.Sameness
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
@@ -73,9 +77,7 @@ import com.wanderwildwood.mimidoku.ui.BookRow
 import com.wanderwildwood.mimidoku.ui.BooksScreen
 import com.wanderwildwood.mimidoku.ui.LibraryRow
 import com.wanderwildwood.mimidoku.ui.LibraryScreen
-import com.wanderwildwood.mimidoku.ui.ListJumpPrefs
 import com.wanderwildwood.mimidoku.ui.RestrictedSettings
-import com.wanderwildwood.mimidoku.ui.rememberListJumpShown
 import com.wanderwildwood.mimidoku.ui.MimidokuTheme
 import com.wanderwildwood.mimidoku.ui.NowPlaying
 import com.wanderwildwood.mimidoku.ui.Playback
@@ -142,13 +144,17 @@ class MainActivity : ComponentActivity() {
         // intent again, and the book was opened the first time.
         if (savedInstanceState == null) takeOpenedFile(intent)
         setContent {
-            MimidokuTheme {
-                Mimidoku(
-                    openedFile = opened.value,
-                    onOpenedFileTaken = { opened.value = null },
-                    openedBook = openedBook.value,
-                    onOpenedBookTaken = { openedBook.value = null },
-                )
+            // A steady cursor: a blinking one is a repaint twice a second on an e-ink panel
+            // for as long as a field has focus.
+            CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
+                MimidokuTheme {
+                    Mimidoku(
+                        openedFile = opened.value,
+                        onOpenedFileTaken = { opened.value = null },
+                        openedBook = openedBook.value,
+                        onOpenedBookTaken = { openedBook.value = null },
+                    )
+                }
             }
         }
     }
@@ -238,6 +244,8 @@ private fun Mimidoku(
     var controller by remember { mutableStateOf<MediaController?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var position by remember { mutableStateOf(0L) }
+    // Whether the book playing has been played to its end and that has been written down.
+    var endNoted by remember { mutableStateOf(false) }
     var duration by remember { mutableStateOf(0L) }
     var scanning by remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf<BookEntity?>(null) }
@@ -306,6 +314,8 @@ private fun Mimidoku(
     var keptSizes by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     // A book the reader has asked to give back, waiting on the question being answered.
     var givingBack by remember { mutableStateOf<KeptBook?>(null) }
+    // A removal waiting on the reader's answer: which books, and what they take up.
+    var removeAsk by remember { mutableStateOf<RemoveAsk?>(null) }
     // Something a removal has to say: that the folder was granted for reading only, or that some
     // files would not go.
     var notice by remember { mutableStateOf<String?>(null) }
@@ -336,13 +346,30 @@ private fun Mimidoku(
         while (true) {
             controller?.let {
                 isPlaying = it.isPlaying
-                position = it.currentPosition
+                // Whole seconds, assigned only when they change: every other half-second the
+                // screen would be told about a position it draws no differently, and the panel
+                // was redrawn twice a second for nothing.
+                (it.currentPosition / 1000 * 1000).let { whole -> if (whole != position) position = whole }
+
+                // A book played to its end is written down as finished, once.
+                val over = it.playbackState == Player.STATE_ENDED
+                val last = playing
+                if (over && last != null && !endNoted) {
+                    endNoted = true
+                    it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }?.let { chapter ->
+                        library.rememberPosition(last.uri, chapter, it.duration.coerceAtLeast(0))
+                    }
+                } else if (!over) {
+                    endNoted = false
+                }
 
                 // The timer's own state, kept by the service. A controller holds a copy of the
                 // session's extras, so reading them here costs nothing across the binder.
                 val extras = it.sessionExtras
                 sleepArmed = extras.getBoolean(PlaybackService.SLEEP_ARMED)
-                sleepRemainingMs = extras.getLong(PlaybackService.SLEEP_REMAINING)
+                (extras.getLong(PlaybackService.SLEEP_REMAINING) / 1000 * 1000).let { whole ->
+                    if (whole != sleepRemainingMs) sleepRemainingMs = whole
+                }
                 val said = extras.getInt(PlaybackService.SLEEP_EVENT_ID)
                 if (said != sleepEventId) {
                     sleepEventId = said
@@ -351,8 +378,8 @@ private fun Mimidoku(
                     }
                 }
 
-                duration = it.duration.takeIf { d -> d > 0 } ?: 0L
-                chapterUri = it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }
+                (it.duration.takeIf { d -> d > 0 } ?: 0L).let { d -> if (d != duration) duration = d }
+                it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }.let { id -> if (id != chapterUri) chapterUri = id }
 
                 // Written every few seconds rather than on every tick: often enough that killing
                 // the app loses a moment rather than a chapter, rarely enough not to write to
@@ -575,7 +602,13 @@ private fun Mimidoku(
     }
 
     val nowPlaying = playing?.let {
-        NowPlaying(title = it.shownTitle(), remaining = remaining.asClock(), isPlaying = isPlaying)
+        // Minutes off the player and seconds on it: the strip is read at a glance, and a number
+        // that changes every second makes the panel redraw every second to say nothing new.
+        NowPlaying(
+            title = it.shownTitle(),
+            remaining = if (screen == Screen.Player) remaining.asClock() else remaining.asMinutesLeft(context.resources),
+            isPlaying = isPlaying,
+        )
     }
     // Coming back after a pause, playback steps back a little first: the last few seconds before
     // a reader stops listening are the ones they did not take in.
@@ -697,6 +730,11 @@ private fun Mimidoku(
         } else if (c != null) {
             if (c.isPlaying) {
                 c.pause()
+            } else if (c.playbackState == Player.STATE_ENDED) {
+                // The book has been played to its end: play begins it again, from the first
+                // chapter, rather than seeking back from the end and ending at once.
+                c.seekTo(0, 0L)
+                c.play()
             } else {
                 val back = preferences.autoRewindSeconds * 1_000L
                 if (back > 0) c.seekTo((c.currentPosition - back).coerceAtLeast(0))
@@ -721,8 +759,23 @@ private fun Mimidoku(
 
     // Books off the phone, from a held and pressed-again row. The player lets go of a book being
     // taken away, as it does when one is given back to the server.
-    val removeFromPhone: (List<BookEntity>) -> Unit = { targets ->
-        val gone = targets.distinctBy { it.uri }
+    val removeFromPhone: (String, List<BookEntity>) -> Unit = { name, targets ->
+        // Asked first, in words: taking a book off the shelf and deleting the reader's files are
+        // different answers, and which one is wanted is not for the app to guess.
+        val asked = targets.distinctBy { it.uri }
+        scope.launch {
+            val (cardFiles, cardBytes) = Removal.weigh(context, library.library, asked)
+            val fetched = asked.filter { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
+            removeAsk = RemoveAsk(
+                title = name,
+                books = asked,
+                files = cardFiles + fetched.sumOf { it.chapterCount },
+                bytes = cardBytes + fetched.sumOf { keptSizes[it.uri] ?: 0L },
+            )
+        }
+    }
+
+    val deleteFromPhone: (List<BookEntity>) -> Unit = { gone ->
         scope.launch {
             if (Removal.readOnly(context, library.library, gone)) {
                 notice = context.getString(R.string.remove_read_only)
@@ -769,13 +822,7 @@ private fun Mimidoku(
                                 LibraryRow(
                                     title = preferences.shelving.shown(name, context.resources),
                                     id = name,
-                                    removeNote = here.takeIf { it.isNotEmpty() }?.let { books ->
-                                        context.resources.getQuantityString(
-                                            if (books.any { it.sourceType == AbsSync.SOURCE_ABS }) R.plurals.remove_books_server else R.plurals.remove_books,
-                                            books.size,
-                                            books.size,
-                                        )
-                                    },
+                                    removable = here.isNotEmpty(),
                                 )
                             }
                         if (shelvedBooks.any { it.shelf(preferences.shelving) == null }) {
@@ -786,11 +833,9 @@ private fun Mimidoku(
                     }
                     LibraryScreen(
                         rows = shelves,
-                        sortedNames = remember(shelves) { shelves.filter { it.id != UNNAMED }.map { it.title } },
                         status = when {
                             pullSaid != null -> pullSaid
                             scanning -> stringResource(R.string.library_scanning)
-                            shelvedBooks.isEmpty() -> stringResource(R.string.library_no_books)
                             else -> null
                         },
                         nowPlaying = nowPlaying,
@@ -816,8 +861,11 @@ private fun Mimidoku(
                             }
                         }.takeIf { preferences.hasServer && preferences.serverLibraryId.isNotBlank() },
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
+                        onChooseFolder = { pickFolder.launch(null) },
+                        onConnectServer = { screen = Screen.Server }.takeIf { !preferences.hasServer },
                         onRemoveShelf = { row ->
                             removeFromPhone(
+                                row.title,
                                 shelvedBooks.filter { it.kept && it.isOnShelf(row.id, Shelving.Author) }
                                     .flatMap { listOf(it) + copiesOf[it.uri].orEmpty() },
                             )
@@ -846,7 +894,7 @@ private fun Mimidoku(
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
                         showAuthor = true,
-                        onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
+                        onRemove = { row -> removeFromPhone(row.title, books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                         listState = recentList,
                     )
                 }
@@ -879,8 +927,7 @@ private fun Mimidoku(
                         },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
-                        byTitle = shelving == Shelving.Author,
-                        onRemove = { row -> removeFromPhone(books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
+                        onRemove = { row -> removeFromPhone(row.title, books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                         listState = shelfLists.getOrPut("$shelving\u0000${current.name ?: UNNAMED}") { LazyListState() },
                     )
                 }
@@ -988,9 +1035,11 @@ private fun Mimidoku(
                         if (query.isBlank()) {
                             emptyList()
                         } else {
+                            // Accents and capitals do not matter: "Elodie" finds "Élodie".
+                            val wanted = Sameness.fold(query)
                             shelvedBooks.filter {
-                                it.shownTitle().contains(query, true) ||
-                                    it.shownAuthor()?.contains(query, true) == true
+                                Sameness.fold(it.shownTitle()).contains(wanted) ||
+                                    it.shownAuthor()?.let { author -> Sameness.fold(author).contains(wanted) } == true
                             }.map { book ->
                                 book.toRow(
                                     context.resources,
@@ -1094,7 +1143,7 @@ private fun Mimidoku(
                             runCatching {
                                 context.contentResolver.releasePersistableUriPermission(
                                     row.id.toUri(),
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                                 )
                             }
                             preferences.forgetReading(row.id)
@@ -1193,7 +1242,6 @@ private fun Mimidoku(
                         settingsLifecycle.lifecycle.addObserver(observer)
                         onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
                     }
-                    val jumpShown by rememberListJumpShown()
                     SettingsScreen(
                         rows = buildList {
                             // How many folders, not a sentence about what the row is for: a row
@@ -1240,8 +1288,17 @@ private fun Mimidoku(
                                 )
                             }
                             add(SettingRow("shelving", stringResource(R.string.settings_library_view), stringResource(preferences.shelving.labelRes)))
-                            // Under the library view, because it is part of how the long lists look.
-                            add(SettingRow("listjump", stringResource(R.string.list_jump_setting), null, toggle = jumpShown))
+                            // Only while something is hidden: the way back for a book taken off the shelf
+                            // with its files left alone.
+                            if (preferences.hiddenBooks.isNotEmpty()) {
+                                add(
+                                    SettingRow(
+                                        "unhide",
+                                        stringResource(R.string.settings_unhide),
+                                        pluralStringResource(R.plurals.settings_unhide_count, preferences.hiddenBooks.size, preferences.hiddenBooks.size),
+                                    ),
+                                )
+                            }
                             add(SettingRow("skip", stringResource(R.string.settings_skip_amount), pluralStringResource(R.plurals.settings_seconds, preferences.skipSeconds, preferences.skipSeconds)))
                             add(SettingRow("rewind", stringResource(R.string.settings_auto_rewind), pluralStringResource(R.plurals.settings_seconds, preferences.autoRewindSeconds, preferences.autoRewindSeconds)))
                             add(SettingRow("sleep", stringResource(R.string.settings_sleep_duration), pluralStringResource(R.plurals.settings_minutes, preferences.sleepMinutes, preferences.sleepMinutes)))
@@ -1310,7 +1367,10 @@ private fun Mimidoku(
                                 "folders" -> screen = Screen.Folders
                                 "server" -> screen = Screen.Server
                                 "shelving" -> editing = Editing.Shelving
-                                "listjump" -> ListJumpPrefs.setShown(context, !jumpShown)
+                                "unhide" -> {
+                                    preferences.hiddenBooks = emptySet()
+                                    scanning = true
+                                }
                                 "skip" -> editing = Editing.Skip
                                 "rewind" -> editing = Editing.AutoRewind
                                 "sleep" -> editing = Editing.Sleep
@@ -1393,6 +1453,30 @@ private fun Mimidoku(
     // the reader's place in the book is not at stake either way -- that stays whether the audio
     // is here or not, which is worth saying on the dialog rather than leaving them to wonder.
     notice?.let { NoticeDialog(text = it, onDismiss = { notice = null }) }
+
+    removeAsk?.let { ask ->
+        RemoveDialog(
+            title = stringResource(R.string.remove_title, ask.title),
+            files = ask.files,
+            bytes = ask.bytes,
+            onCard = ask.books.any { it.sourceType == SOURCE_LOCAL },
+            downloaded = ask.books.any { it.sourceType == AbsSync.SOURCE_ABS && it.kept },
+            onShelf = {
+                scope.launch {
+                    if (ask.books.any { it.uri == playing?.uri && it.sourceType != AbsSync.SOURCE_ABS }) {
+                        controller?.stop()
+                        controller?.clearMediaItems()
+                        playing = null
+                        chapters = emptyList()
+                        marks = emptyList()
+                    }
+                    preferences.hiddenBooks = Removal.shelve(library.library, ask.books, preferences.hiddenBooks)
+                }
+            },
+            onDelete = { deleteFromPhone(ask.books) },
+            onDismiss = { removeAsk = null },
+        )
+    }
 
     givingBack?.let { book ->
         ConfirmDialog(
@@ -1760,6 +1844,9 @@ private fun Shelving.shown(key: String, resources: Resources): String = when {
 }
 
 /** One part of a book: a file of its own, or a marked place inside a longer one. */
+/** A removal waiting on the reader's answer. */
+private data class RemoveAsk(val title: String, val books: List<BookEntity>, val files: Int, val bytes: Long)
+
 private data class Part(val title: String, val chapterUri: String, val startMs: Long)
 
 /**
@@ -1848,8 +1935,10 @@ private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null, f
     duration = durationMs.takeIf { it > 0 }?.asClock(),
     // Only once the reader has actually started it. A row of zeroes against every book they have
     // not opened yet says nothing and reads as clutter.
-    percent = if (lastPlayedAt != null && durationMs > 0) {
-        resources.getString(R.string.library_percent, (progressMs * 100 / durationMs).coerceIn(0, 100))
+    percent = if (isFinished()) {
+        resources.getString(R.string.library_finished)
+    } else if (lastPlayedAt != null && durationMs > 0) {
+        resources.getString(R.string.library_percent, (progressMs * 100 / durationMs).coerceIn(0, 99))
     } else {
         null
     },
@@ -1940,8 +2029,9 @@ private suspend fun MediaController.load(
         }
     )
     // Pick up where the reader left off, if they have been here before.
+    // A finished book begins again from the top rather than being offered at its last second.
     val resumeAt = chapters.indexOfFirst { it.uri == book.currentChapterUri }
-    if (resumeAt >= 0) seekTo(resumeAt, book.positionMs)
+    if (resumeAt >= 0 && !book.isFinished()) seekTo(resumeAt, book.positionMs)
     prepare()
 }
 
@@ -1970,6 +2060,19 @@ private fun MediaController.ask(action: String, on: Boolean) {
 private const val SAVE_EVERY_TICKS = 10
 
 /** Hours only when there are hours, because most chapters do not have any. */
+/** The strip's reading off the player: hours and minutes left, never seconds. */
+private fun Long.asMinutesLeft(resources: Resources): String {
+    val minutes = ((this / 1000) + 59) / 60
+    return if (minutes >= 60) {
+        resources.getString(R.string.now_playing_hours, minutes / 60, minutes % 60)
+    } else {
+        resources.getString(R.string.now_playing_minutes, minutes)
+    }
+}
+
+/** Whether the reader has been through the whole book: its last few seconds count as the end. */
+private fun BookEntity.isFinished(): Boolean = durationMs > 0 && progressMs >= durationMs - 3_000
+
 private fun Long.asClock(): String {
     if (this <= 0) return "0:00"
     val totalSeconds = this / 1000

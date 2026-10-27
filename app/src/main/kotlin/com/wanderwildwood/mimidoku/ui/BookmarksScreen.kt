@@ -61,7 +61,12 @@ fun BookmarksScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenTopBar(title = stringResource(R.string.bookmarks_title), onClose = onClose)
-            PagedColumn(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
+            if (bookmarks.isEmpty()) {
+                EmptyHelp(
+                    message = stringResource(R.string.bookmarks_empty),
+                    actions = listOf(stringResource(R.string.bookmarks_empty_add) to onAdd),
+                )
+            } else PagedColumn(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
                 items(bookmarks, key = { it.id }) { bookmark ->
                     BookmarkLine(
                         bookmark = bookmark,
@@ -100,7 +105,7 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(armed) {
         if (armed) {
-            delay(4000)
+            delay(ARMED_MS)
             armed = false
         }
     }

@@ -48,12 +48,15 @@ the shelf, whatever the files' tags say, and "Basil Moor", "basil moor " and a s
 length -- is listed once. **Recent**, above the shelves, lists the books lately played.
 With an Audiobookshelf server, a swipe down at the top of the library reads its catalogue again.
 
-Hold a book, or an author, and press again to take it off the phone: the row says "Remove from
-phone -- tap again" and lets go after four seconds. It deletes that book's audio from the folder
-you granted, and the folder it leaves empty; nothing outside a granted folder, and never a
-server's copy -- a book fetched from a server goes back to being one to fetch. A folder granted
-before this could be done was granted for reading only, and has to be chosen again under
-Settings → Audiobook folders → Add.
+Each book (and each author's shelf) has a plain "Remove" at the end of its row. It asks, and the
+two answers are different things. "Remove from the shelf" takes the book off the list and leaves
+every audio file where it is; the book stays off the list until you bring it back with Settings →
+Show removed books again. "Delete the audio files from this phone" erases the files from the folder
+you granted, and the folder it leaves empty: the button changes to "tap again" and lets go after six
+seconds, and the question says how many files and how much room they take. Nothing outside a granted
+folder is ever touched, and never a server's copy -- a book fetched from a server only offers to
+remove its download, and goes back to being one to fetch. A folder granted before this could be done
+was granted for reading only, and has to be chosen again under Settings → Audiobook folders → Add.
 
 Sleep timer -- by hand, or on its own between two hours you set -- playback speed, chapter
 list, bookmarks, and a shake to keep the timer going.
