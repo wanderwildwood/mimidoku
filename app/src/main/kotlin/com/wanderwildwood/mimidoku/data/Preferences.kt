@@ -132,6 +132,13 @@ class Preferences private constructor(context: Context) {
      */
     var failedDownloads: Set<String> by stringSet("failedDownloads")
 
+    /**
+     * Books on the card the reader took off the shelf without deleting their files. A rescan
+     * would find them again at once, so their addresses are kept here and the scan skips them
+     * until the reader asks for them back in Settings.
+     */
+    var hiddenBooks: Set<String> by stringSet("hiddenBooks")
+
     /** Whether there is a server to talk to at all. */
     val hasServer: Boolean get() = serverUrl.isNotBlank() && serverToken.isNotBlank()
 

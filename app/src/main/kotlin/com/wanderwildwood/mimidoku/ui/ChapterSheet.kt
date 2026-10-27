@@ -1,6 +1,7 @@
 package com.wanderwildwood.mimidoku.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -73,20 +74,20 @@ fun ChapterSheet(
                 .fillMaxSize()
                 .padding(top = 84.dp)
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color.White),
+                .background(Color.White)
+                .border(2.dp, Color.Black, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
         ) {
-            ListJumpBox(state = listState, jump = ListJump.Pages) {
-                PagedColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
-                ) {
-                    items(chapters, key = { it.id }) { chapter ->
-                        ChapterLine(
-                            chapter = chapter,
-                            playing = chapter.id == playingIndex,
-                            onClick = { onPick(chapter) },
-                        )
-                    }
+            PagedColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
+            ) {
+                items(chapters, key = { it.id }) { chapter ->
+                    ChapterLine(
+                        chapter = chapter,
+                        playing = chapter.id == playingIndex,
+                        onClick = { onPick(chapter) },
+                    )
                 }
             }
         }
@@ -121,7 +122,7 @@ private fun ChapterLine(chapter: ChapterRow, playing: Boolean, onClick: () -> Un
 }
 
 /**
- * Heavier than the one under a dialog. A dialog is a question about the screen behind it, which
- * stays legible on purpose; this covers the screen because you have stopped looking at it.
+ * No dimming, as under a dialog: a translucent black is a screenful of grey dots on E Ink. The
+ * sheet covers the screen with plain white and is drawn with a black edge instead.
  */
-private val Scrim = Color.Black.copy(alpha = 0.73f)
+private val Scrim = Color.White

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.graphics.SolidColor
@@ -71,6 +72,18 @@ fun SearchScreen(
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
                     cursorBrush = SolidColor(Color.Black),
                     modifier = Modifier.fillMaxWidth(),
+                    decorationBox = { field ->
+                        // Said in words while the field is empty; black and italic, never grey.
+                        if (query.isEmpty()) {
+                            TextMMD(
+                                text = stringResource(R.string.search_hint),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontStyle = FontStyle.Italic,
+                                color = Color.Black,
+                            )
+                        }
+                        field()
+                    },
                 )
             },
             navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), onBack) },
@@ -106,9 +119,18 @@ fun SearchScreen(
                 }
             }
         } else {
-            PagedColumn(modifier = Modifier.weight(1f), state = foundListState) {
-                items(found, key = { it.id }) { book ->
-                    BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
+            if (found.isEmpty()) {
+                TextMMD(
+                    text = stringResource(R.string.search_none, query.trim()),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f).padding(start = 16.dp, end = 16.dp, top = 24.dp),
+                )
+            } else {
+                PagedColumn(modifier = Modifier.weight(1f), state = foundListState) {
+                    items(found, key = { it.id }) { book ->
+                        BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
+                    }
                 }
             }
         }

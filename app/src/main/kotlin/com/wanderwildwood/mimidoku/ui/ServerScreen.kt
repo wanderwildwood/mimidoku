@@ -96,6 +96,10 @@ fun ServerScreen(
     }
 
     val connected = address.isNotBlank()
+    var why by remember { mutableStateOf<String?>(null) }
+    val busyWhy = stringResource(R.string.server_busy_why)
+    val incompleteWhy = stringResource(R.string.server_incomplete_why)
+    LaunchedEffect(isBusy, typedAddress, typedKey) { why = null }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -110,6 +114,13 @@ fun ServerScreen(
             PagedColumn(modifier = Modifier.weight(1f)) {
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
+                        TextMMD(
+                            text = stringResource(R.string.server_intro),
+                            style = MaterialTheme.typography.bodyMedium,
+                            lineHeight = 22.sp,
+                            color = Color.Black,
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
                         TextFieldMMD(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedAddress,
@@ -136,13 +147,30 @@ fun ServerScreen(
 
                         val entered = ServerEntry(typedAddress, typedKey)
                         ButtonMMD(
-                            onClick = { onConnect(entered) },
+                            // Never greyed out: a button that will not press does not say why.
+                            // Pressed too soon, it says what is missing, in words.
+                            onClick = {
+                                when {
+                                    isBusy -> why = busyWhy
+                                    !entered.isComplete -> why = incompleteWhy
+                                    else -> { why = null; onConnect(entered) }
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = entered.isComplete && !isBusy,
                         ) {
                             TextMMD(
                                 text = stringResource(if (connected) R.string.server_connect_again else R.string.server_connect),
                                 style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+
+                        if (why != null) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            TextMMD(
+                                text = why.orEmpty(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 22.sp,
+                                color = Color.Black,
                             )
                         }
 
@@ -270,7 +298,7 @@ private fun ForgetRow(onForget: () -> Unit) {
     // Long enough to mean it, short enough that a row left armed does not stay dangerous.
     LaunchedEffect(armed) {
         if (armed) {
-            delay(4000)
+            delay(ARMED_MS)
             armed = false
         }
     }

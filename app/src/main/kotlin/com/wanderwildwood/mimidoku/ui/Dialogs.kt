@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -164,27 +166,59 @@ fun NoticeDialog(text: String, onDismiss: () -> Unit) {
  */
 @Composable
 fun AboutDialog(version: String, onDismiss: () -> Unit) {
+    // About, then Privacy and Terms each on a page of their own: all three on one card ran off
+    // the bottom of the panel, and a dialog cannot scroll.
+    var page by remember { mutableIntStateOf(0) }
     EInkDialog(onDismiss = onDismiss) {
-        DialogTitle(stringResource(R.string.about_title))
-        Spacer(modifier = Modifier.height(20.dp))
+        if (page == 0) {
+            DialogTitle(stringResource(R.string.about_title))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        AboutText(stringResource(R.string.about_version, version))
+            AboutText(stringResource(R.string.about_version, version))
 
-        Spacer(modifier = Modifier.height(12.dp))
-        AboutText(stringResource(R.string.about_licence))
-        AboutText(stringResource(R.string.about_font))
-        AboutText(stringResource(R.string.about_icons))
+            Spacer(modifier = Modifier.height(12.dp))
+            AboutText(stringResource(R.string.about_licence))
+            AboutText(stringResource(R.string.about_font))
+            AboutText(stringResource(R.string.about_icons))
 
-        Spacer(modifier = Modifier.height(14.dp))
-        Llama()
+            Spacer(modifier = Modifier.height(6.dp))
+            AboutLink(stringResource(R.string.about_privacy_heading)) { page = 1 }
+            AboutLink(stringResource(R.string.about_terms_heading)) { page = 2 }
 
-        Spacer(modifier = Modifier.height(20.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            DialogAction(stringResource(R.string.about_close), onDismiss)
+            Spacer(modifier = Modifier.height(8.dp))
+            Llama()
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                DialogAction(stringResource(R.string.about_close), onDismiss)
+            }
+        } else {
+            val privacy = page == 1
+            DialogTitle(stringResource(if (privacy) R.string.about_privacy_heading else R.string.about_terms_heading))
+            Spacer(modifier = Modifier.height(16.dp))
+            AboutText(stringResource(if (privacy) R.string.about_privacy else R.string.about_terms))
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                DialogAction(stringResource(R.string.dialog_back)) { page = 0 }
+            }
         }
+    }
+}
+
+/** A line of the About that opens a page: as tall as a thumb, in words. */
+@Composable
+private fun AboutLink(text: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        TextMMD(text = text, style = MaterialTheme.typography.titleSmall, lineHeight = 21.sp, fontWeight = FontWeight.Bold, color = Color.Black)
     }
 }
 

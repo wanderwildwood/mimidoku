@@ -18,7 +18,10 @@ What it keeps from that folder is a list: book names, author names, chapter name
 sizes, durations, and where you are in each one. That list lives in a database that is
 app-private, which means other apps cannot read it and uninstalling takes it away.
 
-Nothing is copied. The audio stays where you put it.
+Nothing is copied. The audio stays where you put it. The app deletes your audio files only when
+you ask it to, by name: **Remove** on a book (or an author) offers "Remove from the shelf", which
+leaves every file alone, and "Delete the audio files from this phone", which erases them from the
+folder you granted and asks twice. It never deletes anything outside a folder you granted.
 
 A book opened from another app ("Open with" in a file manager) comes with that app's permission
 to read that one file. Only a file handed over by its path rather than shared needs more: then
@@ -57,9 +60,9 @@ in, and what it does is narrow on purpose:
 - It authenticates with an API key you make on the server and paste in. Not your password. You
   can revoke that key on the server at any time and the app simply stops working, which is the
   point of a key.
-- The key is kept in the app's private settings, which other apps cannot read. It is kept in
-  the clear, the way a key has to be to be usable. Anyone who can already read your app's
-  private data can read it.
+- The key is kept in the app's private settings, which other apps cannot read, and it is sealed
+  with a key held in the phone's Android keystore that cannot be exported. If that key is gone (a
+  reinstall, or the file reaching another phone) the app asks for the server again.
 - **A server on your home network is plain http, and this app permits that** — otherwise
   Android would refuse to talk to it at all. Over plain http, the key and the audio are
   readable by anyone else on that network. On a home wifi that is a fair trade. If your server
@@ -81,16 +84,16 @@ App-private means other apps cannot read it and it goes away when you uninstall.
 
 ## The permissions it does declare
 
-Six, and none of them reach your data:
-
 | Permission | Why |
 |---|---|
+| `INTERNET` | Talking to your own audiobook server, if you have given it one. Nothing else in this app uses the network. |
+| `ACCESS_NETWORK_STATE` | Added by a library the app uses; the app only asks whether the phone is online before contacting your server. |
 | `FOREGROUND_SERVICE` | Playback, and a download from your server, continue with the screen off. |
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The kind of foreground service the player is, which Android requires it to name. |
 | `FOREGROUND_SERVICE_DATA_SYNC` | The kind the downloader is. It runs only while a book you asked for is arriving, and stops when it is done. |
 | `POST_NOTIFICATIONS` | The player notification — the thing with the pause button in it — and the one that shows a download and its Stop button. You may refuse it and the app still plays and downloads. |
 | `WAKE_LOCK` | The processor stays awake while audio is playing or a book is downloading, and not otherwise. |
-| `INTERNET` | Talking to your own audiobook server, if you have given it one. Nothing else in this app uses the network. |
+| `READ_EXTERNAL_STORAGE` (Android 12 and older) and `READ_MEDIA_AUDIO` | Only when another app hands over an audiobook by its file path rather than sharing it. Asked for at that moment, and you can say no. Your library folders need neither. |
 
 No microphone, no location, no contacts, and no storage-wide read.
 

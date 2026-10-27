@@ -39,6 +39,16 @@ object Sameness {
     /** What two names are compared by: [tidy], and case folded. */
     fun key(name: String): String = tidy(name).lowercase(Locale.ROOT)
 
+    /**
+     * A name as a search compares it: no accents, no capitals, the apostrophe plain. "Élodie",
+     * "elodie" and "ELODIE" are the same word to someone typing on a small keyboard.
+     */
+    fun fold(text: String): String =
+        Normalizer.normalize(text, Normalizer.Form.NFD)
+            .replace(Regex("\\p{Mn}+"), "")
+            .let { tidy(it) }
+            .lowercase(Locale.ROOT)
+
     /** One spelling of a name as the library has it, and whether it came from the card. */
     data class Spelling(val name: String, val onCard: Boolean)
 

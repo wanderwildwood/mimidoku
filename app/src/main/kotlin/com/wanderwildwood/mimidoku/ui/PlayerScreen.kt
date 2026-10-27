@@ -440,23 +440,19 @@ private val KnobSize = 16.dp
 /** How much of the screen listens for the bar. Twice a fingertip, and all of it pressable. */
 private val SeekBarHeight = 44.dp
 
-private val TrackGrey = Color(0xFFB2B2B2)
+private val TrackGrey = Color.Black
 
 /**
  * What a locked control is drawn in.
  *
- * Grey rather than hidden: the reader locked the screen on purpose and should still be able to see
- * what is playing and how far in they are. Only the pressing is taken away.
+ * Black like everything else, not grey (a grey is a dither on E Ink): the reader locked the screen
+ * on purpose and should still be able to see what is playing and how far in they are. Only the
+ * pressing is taken away, and the closed padlock says so.
  */
-private val Dimmed = Color(0xFF666666)
+private val Dimmed = Color.Black
 
-/**
- * The toolbar dims further than the body does.
- *
- * What is along the top cannot be pressed at all while the screen is locked, so it recedes; what
- * is in the middle is still worth reading, and stays legible enough to read.
- */
-private val DimmedTool = Color(0xFF9F9F9F)
+/** The toolbar while the screen is locked: black too, and not pressable. */
+private val DimmedTool = Color.Black
 
 private fun Long.hourDigits(): Int = ((this / 1000) / 3600).toString().length
 

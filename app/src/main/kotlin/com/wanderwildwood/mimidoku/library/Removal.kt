@@ -52,6 +52,49 @@ object Removal {
                 .any { treeOf(it.uri.toUri()).let { tree -> tree == null || tree !in writable } }
         }
 
+    /**
+     * Takes the books off the shelf and leaves every file where it is. The books on the card are
+     * written down in [hidden] so the next scan does not list them again; a book opened from
+     * another app only loses its row. A book fetched from a server is not touched: giving that
+     * back is [remove], which deletes the app's own copy and nothing of the reader's.
+     */
+    suspend fun shelve(dao: LibraryDao, books: List<BookEntity>, hidden: Set<String>): Set<String> =
+        withContext(Dispatchers.IO) {
+            var now = hidden
+            for (book in books) {
+                when (book.sourceType) {
+                    SOURCE_LOCAL -> {
+                        now = now + book.uri
+                        dao.forgetBook(book.uri)
+                    }
+                    SOURCE_OPENED -> dao.forgetBook(book.uri)
+                    else -> Unit
+                }
+            }
+            now
+        }
+
+    /** How many audio files these books on the card are, and how much room they take. */
+    suspend fun weigh(context: Context, dao: LibraryDao, books: List<BookEntity>): Pair<Int, Long> =
+        withContext(Dispatchers.IO) {
+            var files = 0
+            var bytes = 0L
+            for (book in books.filter { it.sourceType == SOURCE_LOCAL }) {
+                for (part in dao.chaptersOf(book.uri)) {
+                    files++
+                    runCatching {
+                        context.contentResolver.query(
+                            part.uri.toUri(),
+                            arrayOf(android.provider.OpenableColumns.SIZE),
+                            null, null, null,
+                        )?.use { if (it.moveToFirst() && !it.isNull(0)) bytes += it.getLong(0) }
+                    }
+                }
+            }
+            files to bytes
+        }
+
+    /** Deletes the audio files themselves. Only ever called after the reader has asked for exactly that. */
     suspend fun remove(context: Context, dao: LibraryDao, books: List<BookEntity>): Outcome =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
