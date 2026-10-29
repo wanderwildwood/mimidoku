@@ -57,6 +57,7 @@ import com.wanderwildwood.mimidoku.data.SOURCE_LOCAL
 import com.wanderwildwood.mimidoku.data.SOURCE_OPENED
 import com.wanderwildwood.mimidoku.glance.GlanceProvider
 import com.wanderwildwood.mimidoku.library.OpenedBook
+import com.wanderwildwood.mimidoku.library.Progress
 import com.wanderwildwood.mimidoku.library.Removal
 import com.wanderwildwood.mimidoku.ui.RemoveDialog
 import com.wanderwildwood.mimidoku.library.Sameness
@@ -514,14 +515,15 @@ private fun Mimidoku(
         // down when there is not — a book offered back after a cold start has no player yet.
         val at = chapters.indexOfFirst { it.uri == (chapterUri ?: playing?.currentChapterUri) }
         val here = if (chapterUri != null) position else playing?.positionMs ?: 0L
-        val chapterLength = if (chapterUri != null && duration > 0) {
-            duration
-        } else {
-            chapters.getOrNull(at)?.durationMs ?: 0L
-        }
-        if (at < 0) (chapterLength - here).coerceAtLeast(0)
-        else chapters.drop(at + 1).sumOf { it.durationMs.coerceAtLeast(0) } +
-            (chapterLength - here).coerceAtLeast(0)
+        val chapterLength = Progress.chapterLength(
+            if (chapterUri != null) duration else 0L,
+            chapters.getOrNull(at)?.durationMs ?: 0L,
+        )
+        Progress.remaining(
+            if (at < 0) emptyList() else chapters.drop(at + 1).map { it.durationMs },
+            chapterLength,
+            here,
+        )
     }
     // A book is read in parts. Usually a part is a file; for a book delivered as one long
     // recording it is a mark inside that file. Everything downstream treats them the same, so
@@ -592,13 +594,24 @@ private fun Mimidoku(
     // book that has not been started reads 0:00:00 of 0:00:00 however far into it the reader is,
     // and the bar sits at the beginning of a book they are eleven hours through.
     val shownPosition = if (chapterUri != null) position else playing?.positionMs ?: 0L
-    val shownDuration = if (chapterUri != null && duration > 0) {
-        duration
-    } else {
+    val shownDuration = run {
         // A book that has never been started has no chapter written down, and pressing play would
         // start it at the first one, so that is the length to show.
-        val part = chapters.firstOrNull { it.uri == playing?.currentChapterUri } ?: chapters.firstOrNull()
-        part?.durationMs?.coerceAtLeast(0) ?: 0L
+        val part = chapters.firstOrNull { it.uri == (chapterUri ?: playing?.currentChapterUri) } ?: chapters.firstOrNull()
+        Progress.chapterLength(if (chapterUri != null) duration else 0L, part?.durationMs ?: 0L)
+    }
+
+    // A length the library has not read yet is read now, for the one file the player is about to
+    // show: the background pass works through the whole library and may be hours from this book,
+    // and the chapters held here are a snapshot, so they are read again afterwards.
+    LaunchedEffect(playing?.uri, chapters.size, chapterUri, playing?.currentChapterUri) {
+        if (chapterUri != null && duration > 0) return@LaunchedEffect
+        val part = chapters.firstOrNull { it.uri == (chapterUri ?: playing?.currentChapterUri) }
+            ?: chapters.firstOrNull() ?: return@LaunchedEffect
+        if (part.durationMs > 0) return@LaunchedEffect
+        val book = playing ?: return@LaunchedEffect
+        DurationReader(context).now(part)
+        if (playing?.uri == book.uri) chapters = library.chaptersOf(book.uri)
     }
 
     val nowPlaying = playing?.let {
@@ -948,6 +961,7 @@ private fun Mimidoku(
                                 announcement = announcement,
                                 skipSeconds = preferences.skipSeconds,
                                 sleepArmed = sleepArmed,
+                                sleepMinutes = preferences.sleepMinutes,
                                 sleepRemaining = sleepRemainingMs.takeIf { sleepArmed }?.asMinutes(),
                                 volumeBoosted = preferences.volumeBoosted,
                                 skipSilence = preferences.skipSilence,
