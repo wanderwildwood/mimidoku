@@ -426,14 +426,14 @@ private fun ControlsPanel(
             .fillMaxWidth()
             .background(surface, shape)
             .border(2.dp, ink, shape)
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Every target is 48 dp: five of them, 240 dp, inside the 256 dp strip of a 320 dp screen.
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(shape)
+                .size(48.dp)
                 .clickable(onClick = onOpen),
             contentAlignment = Alignment.Center,
         ) {
@@ -464,20 +464,20 @@ private fun ControlsPanel(
             R.string.lockscreen_play_pause, ink, 42, onPlayPause,
         )
         Control(StripGlyphs.Next, R.string.lockscreen_next, ink, 32, onNext)
-        Box(modifier = Modifier.padding(end = 8.dp)) {
-            Control(StripGlyphs.Stop, R.string.lockscreen_stop, ink, 32, onStop)
-        }
+        Control(StripGlyphs.Stop, R.string.lockscreen_stop, ink, 32, onStop)
     }
 }
 
 @Composable
 private fun Control(icon: ImageVector, description: Int, ink: Color, sizeDp: Int, onClick: () -> Unit) {
-    Icon(
-        imageVector = icon,
-        contentDescription = stringResource(description),
-        tint = ink,
-        modifier = Modifier.size(sizeDp.dp).clickable(onClick = onClick),
-    )
+    Box(modifier = Modifier.size(48.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = icon,
+            contentDescription = stringResource(description),
+            tint = ink,
+            modifier = Modifier.size(sizeDp.dp),
+        )
+    }
 }
 
 /**

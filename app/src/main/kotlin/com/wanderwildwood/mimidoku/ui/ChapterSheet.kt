@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
@@ -101,6 +102,7 @@ private fun ChapterLine(chapter: ChapterRow, playing: Boolean, onClick: () -> Un
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 3.dp)
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (playing) Color.Black else Color.White)
             .clickable(onClick = onClick)
