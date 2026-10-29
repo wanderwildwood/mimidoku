@@ -53,6 +53,18 @@ object Removal {
         }
 
     /**
+     * The copies this app fetched from a server, which are the only things of a server book that
+     * [remove] deletes. A server book that was never fetched has nothing here to delete, and the
+     * server is never reached either way.
+     */
+    internal fun serverCopies(books: List<BookEntity>): List<BookEntity> =
+        books.filter { it.sourceType != SOURCE_LOCAL && it.sourceType != SOURCE_OPENED && it.kept }
+
+    /** Which books [shelve] writes into the hidden set: only those on the card, never a server book. */
+    internal fun hiding(books: List<BookEntity>): List<String> =
+        books.filter { it.sourceType == SOURCE_LOCAL }.map { it.uri }
+
+    /**
      * Takes the books off the shelf and leaves every file where it is. The books on the card are
      * written down in [hidden] so the next scan does not list them again; a book opened from
      * another app only loses its row. A book fetched from a server is not touched: giving that
@@ -60,18 +72,10 @@ object Removal {
      */
     suspend fun shelve(dao: LibraryDao, books: List<BookEntity>, hidden: Set<String>): Set<String> =
         withContext(Dispatchers.IO) {
-            var now = hidden
             for (book in books) {
-                when (book.sourceType) {
-                    SOURCE_LOCAL -> {
-                        now = now + book.uri
-                        dao.forgetBook(book.uri)
-                    }
-                    SOURCE_OPENED -> dao.forgetBook(book.uri)
-                    else -> Unit
-                }
+                if (book.sourceType == SOURCE_LOCAL || book.sourceType == SOURCE_OPENED) dao.forgetBook(book.uri)
             }
-            now
+            hidden + hiding(books)
         }
 
     /** How many audio files these books on the card are, and how much room they take. */
@@ -124,9 +128,10 @@ object Removal {
                 when (book.sourceType) {
                     SOURCE_LOCAL -> Unit
                     SOURCE_OPENED -> dao.forgetBook(book.uri)
-                    else -> if (book.kept) AbsDownloader.remove(context, dao, book.uri)
+                    else -> Unit
                 }
             }
+            for (copy in serverCopies(books)) AbsDownloader.remove(context, dao, copy.uri)
             if (left > 0) Outcome.Partly(left) else Outcome.Done
         }
 

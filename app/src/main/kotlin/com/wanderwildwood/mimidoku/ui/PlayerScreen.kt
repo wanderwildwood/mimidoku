@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +35,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -111,41 +116,34 @@ fun PlayerScreen(
     transport: Transport,
     chapters: Chapters,
 ) {
+  var moreOpen by rememberSaveable { mutableStateOf(false) }
   Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         val locked = playback.locked
+        // Six buttons, each a 48 dp target with its word under it. The two switches that are
+        // changed rarely (volume boost, skip silence) sit behind More, where they can say whether
+        // they are on; seven bare icons had no room to be 48 dp wide and no words.
         Row(
-            modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Tool(Icons.Close, stringResource(R.string.cd_close), onClick = tools.onClose)
+            Tool(Icons.Close, stringResource(R.string.cd_close), stringResource(R.string.player_tool_close), onClick = tools.onClose)
             Tool(
                 icon = if (playback.sleepArmed) Icons.SleepTimerOn else Icons.SleepTimerOff,
                 description = stringResource(R.string.player_cd_sleep_timer),
-                label = playback.sleepRemaining,
+                label = playback.sleepRemaining ?: stringResource(R.string.player_tool_sleep),
                 enabled = !locked,
                 onClick = tools.onSleepTimer,
             )
-            Tool(
-                icon = if (playback.volumeBoosted) Icons.VolumeBoosted else Icons.Volume,
-                description = stringResource(R.string.player_cd_volume_boost),
-                enabled = !locked,
-                onClick = tools.onVolume,
-            )
-            Tool(Icons.Speed, stringResource(R.string.player_cd_speed), enabled = !locked, onClick = tools.onSpeed)
-            Tool(
-                icon = if (playback.skipSilence) Icons.Compress else Icons.Expand,
-                description = stringResource(R.string.player_cd_skip_silence),
-                enabled = !locked,
-                onClick = tools.onSkipSilence,
-            )
-            Tool(Icons.Bookmarks, stringResource(R.string.player_cd_bookmarks), enabled = !locked, onClick = tools.onBookmarks)
+            Tool(Icons.Speed, stringResource(R.string.player_cd_speed), stringResource(R.string.player_tool_speed), enabled = !locked, onClick = tools.onSpeed)
+            Tool(Icons.Bookmarks, stringResource(R.string.player_cd_bookmarks), stringResource(R.string.player_tool_bookmarks), enabled = !locked, onClick = tools.onBookmarks)
             Tool(
                 icon = if (locked) Icons.Locked else Icons.Unlocked,
                 description = stringResource(if (locked) R.string.player_cd_unlock else R.string.player_cd_lock),
+                label = stringResource(if (locked) R.string.player_tool_unlock else R.string.player_tool_lock),
                 onClick = tools.onLock,
             )
+            Tool(Icons.More, stringResource(R.string.player_cd_more), stringResource(R.string.player_tool_more), enabled = !locked) { moreOpen = true }
         }
 
         // The line keeps its space whether or not it has anything to say, so that a press which
@@ -178,7 +176,7 @@ fun PlayerScreen(
                 // because the book it names is the one already open.
                 TextMMD(
                     text = playback.author,
-                    modifier = tools.onAuthor?.let { Modifier.clickable(enabled = !locked, onClick = it) } ?: Modifier,
+                    modifier = tools.onAuthor?.let { Modifier.heightIn(min = 48.dp).clickable(enabled = !locked, onClick = it) } ?: Modifier,
                     style = MaterialTheme.typography.titleLarge,
                     lineHeight = 29.5.sp,
                     fontWeight = FontWeight.Bold,
@@ -203,6 +201,7 @@ fun PlayerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .clickable(enabled = !locked, onClick = chapters.onOpen),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -280,6 +279,16 @@ fun PlayerScreen(
         Spacer(modifier = Modifier.height(42.dp))
     }
 
+    if (moreOpen) {
+        MoreDialog(
+            volumeBoosted = playback.volumeBoosted,
+            skipSilence = playback.skipSilence,
+            onVolume = { moreOpen = false; tools.onVolume() },
+            onSkipSilence = { moreOpen = false; tools.onSkipSilence() },
+            onDismiss = { moreOpen = false },
+        )
+    }
+
     if (chapters.open) {
         ChapterSheet(
             chapters = chapters.rows,
@@ -291,43 +300,77 @@ fun PlayerScreen(
   }
 }
 
+/** The two switches that are set once and left: each row says what it is and whether it is on. */
+@Composable
+private fun MoreDialog(
+    volumeBoosted: Boolean,
+    skipSilence: Boolean,
+    onVolume: () -> Unit,
+    onSkipSilence: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    EInkDialog(onDismiss = onDismiss) {
+        DialogTitle(stringResource(R.string.player_more_title))
+        Spacer(modifier = Modifier.height(8.dp))
+        MoreRow(stringResource(R.string.player_cd_volume_boost), volumeBoosted, onVolume)
+        MoreRow(stringResource(R.string.player_cd_skip_silence), skipSilence, onSkipSilence)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            DialogAction(stringResource(R.string.dialog_cancel), onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun MoreRow(name: String, on: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextMMD(text = name, style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp, color = Color.Black, modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.width(16.dp))
+        TextMMD(
+            text = stringResource(if (on) R.string.player_state_on else R.string.player_state_off),
+            style = MaterialTheme.typography.bodyLarge,
+            lineHeight = 24.sp,
+            color = Color.Black,
+            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+        )
+    }
+}
+
 /**
- * One button along the top, and under it whatever it has to say about itself.
- *
- * Only the sleep timer says anything, and only while it is running, which is exactly when the
- * reader wants to know how long is left without having to open it.
+ * One button along the top: a 48 dp target, and under it one word. While a sleep timer runs the
+ * word is the time left, which is exactly when the reader wants to know it.
  */
 @Composable
-private fun Tool(
+private fun RowScope.Tool(
     icon: ImageVector,
     description: String,
-    label: String? = null,
+    label: String,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    // Fixed to the icon's width, with the label allowed to spill past it: a countdown is wider
-    // than a moon, and without this the whole row would shuffle sideways the moment a timer
-    // started.
     Column(
-        modifier = Modifier.width(24.dp),
+        modifier = Modifier.weight(1f).clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = if (enabled) Color.Black else DimmedTool,
-            modifier = Modifier.size(24.dp).clickable(enabled = enabled, onClick = onClick),
-        )
-        if (label != null) {
-            TextMMD(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                lineHeight = 14.sp,
-                color = Color.Black,
-                softWrap = false,
-                modifier = Modifier.wrapContentWidth(unbounded = true),
+        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                tint = Color.Black,
+                modifier = Modifier.size(24.dp),
             )
         }
+        TextMMD(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            lineHeight = 16.sp,
+            color = Color.Black,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
     }
 }
 
@@ -347,7 +390,7 @@ private fun TransportButton(
     label: (() -> String)? = null,
 ) {
     Box(
-        modifier = Modifier.fillMaxHeight().clickable(enabled = !locked, onClick = onClick),
+        modifier = Modifier.fillMaxHeight().widthIn(min = 48.dp).clickable(enabled = !locked, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -450,9 +493,6 @@ private val TrackGrey = Color.Black
  * pressing is taken away, and the closed padlock says so.
  */
 private val Dimmed = Color.Black
-
-/** The toolbar while the screen is locked: black too, and not pressable. */
-private val DimmedTool = Color.Black
 
 private fun Long.hourDigits(): Int = ((this / 1000) / 3600).toString().length
 

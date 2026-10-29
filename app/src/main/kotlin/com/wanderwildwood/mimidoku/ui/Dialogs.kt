@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,7 +43,7 @@ import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
 
 @Composable
-private fun DialogTitle(text: String) {
+internal fun DialogTitle(text: String) {
     TextMMD(text = text, style = MaterialTheme.typography.titleLarge, lineHeight = 32.sp, color = Color.Black)
 }
 
@@ -292,14 +293,19 @@ private fun Radio(selected: Boolean) {
 }
 
 @Composable
-private fun DialogAction(text: String, onClick: () -> Unit) {
-    TextMMD(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        lineHeight = 22.sp,
-        color = Color.Black,
-        modifier = Modifier.clickable(onClick = onClick),
-    )
+internal fun DialogAction(text: String, onClick: () -> Unit) {
+    // A 48 dp target around the word; the word stays where it was.
+    Box(
+        modifier = Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp).clickable(onClick = onClick).padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TextMMD(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            lineHeight = 22.sp,
+            color = Color.Black,
+        )
+    }
 }
 
 /**
@@ -336,7 +342,9 @@ private fun Llama() {
                         Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
                     }
                 }
+                .heightIn(min = 48.dp)
                 .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             AboutText("wanderthe.dev", Modifier)
         }
@@ -358,6 +366,7 @@ private fun Llama() {
                         Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
                     }
                 }
+                .heightIn(min = 48.dp)
                 .padding(vertical = 4.dp),
         ) {
             Image(

@@ -97,6 +97,17 @@
     <string name="player_cd_volume_boost">Volume boost</string>
     <string name="player_cd_speed">Playback speed</string>
     <string name="player_cd_skip_silence">Skip silence</string>
+    <string name="player_cd_more">More</string>
+    <string name="player_tool_close">Back</string>
+    <string name="player_tool_sleep">Sleep</string>
+    <string name="player_tool_speed">Speed</string>
+    <string name="player_tool_bookmarks">Marks</string>
+    <string name="player_tool_lock">Lock</string>
+    <string name="player_tool_unlock">Unlock</string>
+    <string name="player_tool_more">More</string>
+    <string name="player_more_title">More</string>
+    <string name="player_state_on">On</string>
+    <string name="player_state_off">Off</string>
     <string name="player_cd_bookmarks">Bookmarks</string>
     <string name="player_cd_unlock">Unlock the controls</string>
     <string name="player_cd_lock">Lock the controls</string>
@@ -224,6 +235,8 @@
     <string name="folders_scan_now">Scan now</string>
     <!-- Adds a folder (verb) -->
     <string name="folders_add">Add</string>
+    <string name="folders_stop_confirm">Stop reading this folder — tap again</string>
+    <string name="folders_stop_note">Your files are not deleted.</string>
     <string name="folders_cd_stop_reading">Stop reading this folder</string>
     <!-- What a scan found a folder to be -->
     <string name="folders_shape_authors_then_books">Authors, then books</string>

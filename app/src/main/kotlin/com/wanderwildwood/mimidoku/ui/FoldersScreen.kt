@@ -19,6 +19,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -111,40 +117,69 @@ fun FoldersScreen(
  */
 @Composable
 private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> Unit) {
+    // Stopping is asked in the row itself, with the one fact a reader needs before agreeing: no
+    // file is touched. It gives up after six seconds, so a stray press leaves nothing live.
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (armed) {
+            delay(ARMED_MS)
+            armed = false
+        }
+    }
+    val ink = if (armed) Color.White else Color.Black
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 16.dp, end = 27.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .background(if (armed) Color.Black else Color.White)
+            .padding(start = 16.dp, end = 27.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = if (folder.byAuthor) Icons.Person else Icons.Folder,
-            contentDescription = stringResource(if (folder.byAuthor) R.string.folders_shape_authors_then_books else R.string.folders_shape_books),
-            tint = Color.Black,
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f).clickable(onClick = onChange).padding(vertical = 8.dp)) {
-            TextMMD(
-                text = folder.name,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.Black,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        if (armed) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { armed = false; onRemove() }
+                    .padding(vertical = 8.dp),
+            ) {
+                TextMMD(text = stringResource(R.string.folders_stop_confirm), style = MaterialTheme.typography.bodyLarge, color = ink)
+                TextMMD(text = stringResource(R.string.folders_stop_note), style = MaterialTheme.typography.bodyMedium, lineHeight = 22.sp, color = ink)
+            }
+        } else {
+            Icon(
+                imageVector = if (folder.byAuthor) Icons.Person else Icons.Folder,
+                contentDescription = stringResource(if (folder.byAuthor) R.string.folders_shape_authors_then_books else R.string.folders_shape_books),
+                tint = ink,
+                modifier = Modifier.size(24.dp),
             )
-            TextMMD(
-                text = folder.how,
-                style = MaterialTheme.typography.bodyMedium,
-                lineHeight = 22.sp,
-                color = Color.Black,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f).clickable(onClick = onChange).padding(vertical = 8.dp)) {
+                TextMMD(
+                    text = folder.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                TextMMD(
+                    text = folder.how,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 22.sp,
+                    color = ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         Spacer(modifier = Modifier.width(4.dp))
-        Box(modifier = Modifier.size(48.dp).clickable(onClick = onRemove), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.size(48.dp).clickable { if (armed) { armed = false; onRemove() } else armed = true },
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
-                imageVector = Icons.Delete,
+                imageVector = Icons.Close,
                 contentDescription = stringResource(R.string.folders_cd_stop_reading),
-                tint = Color.Black,
+                tint = ink,
                 modifier = Modifier.size(24.dp),
             )
         }
