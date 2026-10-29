@@ -141,13 +141,16 @@ private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: (
             }
             TextMMD(text = bookmark.position, style = MaterialTheme.typography.bodyMedium, lineHeight = 22.sp, color = Color.Black)
         }
-        Icon(
-            imageVector = Icons.More,
-            contentDescription = stringResource(if (armed) R.string.bookmarks_remove_confirm else R.string.bookmarks_cd_remove),
-            tint = Color.Black,
-            modifier = Modifier
-                .size(24.dp)
-                .clickable { if (armed) onDelete() else armed = true },
-        )
+        Box(
+            modifier = Modifier.size(48.dp).clickable { if (armed) onDelete() else armed = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.More,
+                contentDescription = stringResource(if (armed) R.string.bookmarks_remove_confirm else R.string.bookmarks_cd_remove),
+                tint = Color.Black,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }

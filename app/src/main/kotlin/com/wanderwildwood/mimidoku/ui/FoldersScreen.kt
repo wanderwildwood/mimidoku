@@ -139,12 +139,14 @@ private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> 
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Icon(
-            imageVector = Icons.Delete,
-            contentDescription = stringResource(R.string.folders_cd_stop_reading),
-            tint = Color.Black,
-            modifier = Modifier.size(24.dp).clickable(onClick = onRemove),
-        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Box(modifier = Modifier.size(48.dp).clickable(onClick = onRemove), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Delete,
+                contentDescription = stringResource(R.string.folders_cd_stop_reading),
+                tint = Color.Black,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
