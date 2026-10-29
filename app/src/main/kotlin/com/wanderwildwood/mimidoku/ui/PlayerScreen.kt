@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
+import com.wanderwildwood.mimidoku.library.Progress
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
@@ -61,6 +62,8 @@ data class Playback(
     val skipSeconds: Int,
     /** Whether the sleep timer is on at all, and how long is left on it when it is. */
     val sleepArmed: Boolean,
+    /** The length the timer is set to, for the button's spoken description. */
+    val sleepMinutes: Int = 0,
     val sleepRemaining: String?,
     val volumeBoosted: Boolean,
     val skipSilence: Boolean,
@@ -130,7 +133,11 @@ fun PlayerScreen(
             Tool(Icons.Close, stringResource(R.string.cd_close), stringResource(R.string.player_tool_close), onClick = tools.onClose)
             Tool(
                 icon = if (playback.sleepArmed) Icons.SleepTimerOn else Icons.SleepTimerOff,
-                description = stringResource(R.string.player_cd_sleep_timer),
+                description = if (playback.sleepArmed && playback.sleepMinutes > 0) {
+                    pluralStringResource(R.plurals.player_cd_sleep_timer_set, playback.sleepMinutes, playback.sleepMinutes)
+                } else {
+                    stringResource(R.string.player_cd_sleep_timer)
+                },
                 label = playback.sleepRemaining ?: stringResource(R.string.player_tool_sleep),
                 enabled = !locked,
                 onClick = tools.onSleepTimer,
@@ -248,7 +255,7 @@ fun PlayerScreen(
             // every time the hour rolls over on a book long enough to have two of them.
             val hours = playback.durationMs.hourDigits()
             Clock(playback.positionMs, hours, locked)
-            Clock(playback.durationMs, hours, locked)
+            Clock(playback.durationMs, hours, locked, unknown = playback.durationMs <= 0)
         }
 
         Spacer(modifier = Modifier.height(25.dp))
@@ -412,9 +419,10 @@ private fun TransportButton(
 }
 
 @Composable
-private fun Clock(ms: Long, hourDigits: Int, locked: Boolean) {
+private fun Clock(ms: Long, hourDigits: Int, locked: Boolean, unknown: Boolean = false) {
     TextMMD(
-        text = ms.asClock(hourDigits),
+        // A length nobody has read yet is not zero, and 0:00:00 would say the chapter is empty.
+        text = if (unknown) stringResource(R.string.player_length_unknown) else ms.asClock(hourDigits),
         style = MaterialTheme.typography.bodyLarge,
         lineHeight = 24.sp,
         color = if (locked) Dimmed else Color.Black,
@@ -432,7 +440,7 @@ private fun Clock(ms: Long, hourDigits: Int, locked: Boolean) {
 private fun SeekBar(positionMs: Long, durationMs: Long, enabled: Boolean, onSeekTo: (Long) -> Unit) {
     var width by remember { mutableIntStateOf(0) }
     val knob = with(LocalDensity.current) { KnobSize.toPx() }
-    val fraction = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    val fraction = Progress.seekFraction(positionMs, durationMs)
     val travel = (width - knob).coerceAtLeast(0f)
 
     fun seek(x: Float) {

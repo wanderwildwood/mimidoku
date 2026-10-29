@@ -99,6 +99,11 @@
     <string name="player_cd_skip_silence">Skip silence</string>
     <string name="player_cd_more">More</string>
     <string name="player_tool_close">Back</string>
+    <plurals name="player_cd_sleep_timer_set">
+        <item quantity="one">Sleep timer, %d minute set</item>
+        <item quantity="other">Sleep timer, %d minutes set</item>
+    </plurals>
+    <string name="player_length_unknown">--:--</string>
     <string name="player_tool_sleep">Sleep</string>
     <string name="player_tool_speed">Speed</string>
     <string name="player_tool_bookmarks">Marks</string>
