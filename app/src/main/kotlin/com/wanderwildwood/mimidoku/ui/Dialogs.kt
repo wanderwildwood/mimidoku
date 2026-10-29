@@ -79,23 +79,29 @@ fun StepperDialog(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Icon(
-                imageVector = Icons.Minus,
-                contentDescription = stringResource(R.string.dialog_cd_less),
-                tint = Color.Black,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable { change((value - range.step).coerceAtLeast(range.first)) },
-            )
+            Box(
+                modifier = Modifier.size(48.dp).clickable { change((value - range.step).coerceAtLeast(range.first)) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Minus,
+                    contentDescription = stringResource(R.string.dialog_cd_less),
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
             TextMMD(text = label(value), style = MaterialTheme.typography.headlineLarge, lineHeight = 36.sp, color = Color.Black)
-            Icon(
-                imageVector = Icons.Plus,
-                contentDescription = stringResource(R.string.dialog_cd_more),
-                tint = Color.Black,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable { change((value + range.step).coerceAtMost(range.last)) },
-            )
+            Box(
+                modifier = Modifier.size(48.dp).clickable { change((value + range.step).coerceAtMost(range.last)) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Plus,
+                    contentDescription = stringResource(R.string.dialog_cd_more),
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
         if (live) {
             // A dialog with no buttons still needs a floor under the number, or the card reads as

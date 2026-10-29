@@ -278,13 +278,15 @@ private fun KeptLine(book: KeptBook, onGiveBack: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Icon(
-            imageVector = Icons.Delete,
-            contentDescription = stringResource(R.string.server_cd_give_back),
-            tint = Color.Black,
-            modifier = Modifier.size(24.dp).clickable(onClick = onGiveBack),
-        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Box(modifier = Modifier.size(48.dp).clickable(onClick = onGiveBack), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Delete,
+                contentDescription = stringResource(R.string.server_cd_give_back),
+                tint = Color.Black,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

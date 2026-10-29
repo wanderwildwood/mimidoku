@@ -64,13 +64,16 @@ fun NowPlayingBar(
         TextMMD(text = nowPlaying.remaining, style = MaterialTheme.typography.bodySmall, color = Color.Black)
         Spacer(modifier = Modifier.width(12.dp))
         Box(
+            modifier = Modifier.size(48.dp).clickable(onClick = onPlayPauseClick),
+            contentAlignment = Alignment.Center,
+        ) {
+          Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.Black)
-                .clickable(onClick = onPlayPauseClick),
+                .background(Color.Black),
             contentAlignment = Alignment.Center,
-        ) {
+          ) {
             Icon(
                 imageVector = if (nowPlaying.isPlaying) Icons.Pause else Icons.Play,
                 contentDescription = stringResource(if (nowPlaying.isPlaying) R.string.cd_pause else R.string.cd_play),
@@ -80,6 +83,7 @@ fun NowPlayingBar(
                 modifier = Modifier.size(19.dp).offset(x = 1.dp),
             )
         }
-    }
+          }
+        }
 }
 
