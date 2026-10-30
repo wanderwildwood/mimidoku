@@ -37,6 +37,7 @@ import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.wanderwildwood.mimidoku.R
+import com.wanderwildwood.mimidoku.server.ServerAddress
 import kotlinx.coroutines.delay
 
 /** What the reader typed, on its way to being a server. */
@@ -79,6 +80,7 @@ fun ServerScreen(
     onBack: () -> Unit,
     onConnect: (ServerEntry) -> Unit,
     onSyncNow: () -> Unit,
+    onCancel: () -> Unit,
     onGiveBack: (KeptBook) -> Unit,
     onForget: () -> Unit,
 ) {
@@ -99,7 +101,10 @@ fun ServerScreen(
     var why by remember { mutableStateOf<String?>(null) }
     val busyWhy = stringResource(R.string.server_busy_why)
     val incompleteWhy = stringResource(R.string.server_incomplete_why)
+    var warned by remember { mutableStateOf(false) }
+    val plainWhy = stringResource(R.string.server_plain_http_why)
     LaunchedEffect(isBusy, typedAddress, typedKey) { why = null }
+    LaunchedEffect(typedAddress) { warned = false }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -107,7 +112,8 @@ fun ServerScreen(
                 title = stringResource(R.string.server_title),
                 onBack = onBack,
                 trailing = {
-                    if (connected && !isBusy) BarText(stringResource(R.string.server_sync_now), onSyncNow)
+                    if (isBusy) BarText(stringResource(R.string.server_cancel), onCancel)
+                    else if (connected) BarText(stringResource(R.string.server_sync_now), onSyncNow)
                 },
             )
 
@@ -153,6 +159,12 @@ fun ServerScreen(
                                 when {
                                     isBusy -> why = busyWhy
                                     !entered.isComplete -> why = incompleteWhy
+                                    // Plain http to a host outside the house: said once, plainly, and
+                                    // then the reader's choice stands.
+                                    ServerAddress.plainHttpOutsideHome(entered.address) && !warned -> {
+                                        warned = true
+                                        why = plainWhy
+                                    }
                                     else -> { why = null; onConnect(entered) }
                                 }
                             },

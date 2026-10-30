@@ -21,6 +21,9 @@ sealed interface AbsResult<out T> {
     data class Failure(val message: String) : AbsResult<Nothing>
 }
 
+/** What a library listing says: books that can be fetched, and books flagged missing. */
+data class AbsListing(val present: List<String>, val missing: List<String>)
+
 data class AbsLibrary(val id: String, val name: String, val mediaType: String)
 
 /** One audio file of a book, as the server has it. */
@@ -91,11 +94,20 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
      * to play. A third of this library is in that state at the time of writing, and a book that
      * cannot be fetched is worse than a book that was never offered.
      */
-    suspend fun bookIds(libraryId: String): AbsResult<List<String>> =
+    suspend fun bookIds(libraryId: String): AbsResult<List<String>> = listing(libraryId).map { it.present }
+
+    /**
+     * The same listing, with the books the server flags as missing kept apart rather than lost:
+     * they are still the server's books, only not fetchable right now, and a sync must not take
+     * them for gone.
+     */
+    suspend fun listing(libraryId: String): AbsResult<AbsListing> =
         get("/api/libraries/$libraryId/items?limit=10000").map { body ->
-            body.getJSONArray("results").objects()
-                .filterNot { it.optBoolean("isMissing", false) }
-                .map { it.getString("id") }
+            val items = body.getJSONArray("results").objects()
+            AbsListing(
+                present = items.filterNot { it.optBoolean("isMissing", false) }.map { it.getString("id") },
+                missing = items.filter { it.optBoolean("isMissing", false) }.map { it.getString("id") },
+            )
         }
 
     /** One book, with its files and the chapter list the server worked out. */

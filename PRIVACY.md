@@ -32,8 +32,14 @@ The book is remembered by that address, with your place in it, like any other.
 
 With Glance installed, the title of the book playing or paused, its chapter or time left, and
 whether it is paused, are handed to Glance - and only to Glance - to draw on the lock screen,
-where anyone holding the phone can read them. Settings → **Show the book being read in Glance**
-stops it.
+where anyone holding the phone can read them. This is off until you switch it on, under
+Settings → **Show the book being read in Glance**, and that switch turns it off again.
+
+## Android backup
+
+Android's own backup (to your Google account, or a phone-to-phone transfer) includes this app's
+library database, your places and bookmarks, and its settings. It leaves out the file that holds
+the server address and API key, so the key never goes with a backup.
 
 ## Shelf
 

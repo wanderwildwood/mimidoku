@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mudita.mmd.components.divider.HorizontalDividerMMD
 
 /** One book on a shelf, as the list needs it. */
 data class BookRow(
@@ -147,9 +146,6 @@ fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit, onRemove: 
         }
         if (onRemove != null) RemoveButton(onRemove)
     }
-    // A hairline, as Files has between its rows: MMD's default rule is the weight of a top bar's,
-    // and under every book it reads as a stack of headings.
-    HorizontalDividerMMD(thickness = 0.5.dp)
 }
 
 /** The word at the end of a row that has something to take off the phone; 48dp to press. */

@@ -23,6 +23,12 @@ import kotlinx.coroutines.withContext
  */
 object AbsSync {
 
+    /** Consecutive books the server fails to give before the sync stops. */
+    const val GIVE_UP_AFTER = 3
+
+    /** What a sync did: books read, out of books the server listed as fetchable. */
+    data class SyncOutcome(val read: Int, val listed: Int)
+
     /** A book that lives on a server. Namespaced, because a server id is short and plain. */
     const val SOURCE_ABS = "ABS"
 
@@ -44,50 +50,53 @@ object AbsSync {
         client: AbsClient,
         libraryId: String,
         dao: LibraryDao,
-        /** For removing the audio of books the server no longer has. */
+        /** Not used: a sync never removes audio. Kept so callers need not change. */
         context: android.content.Context? = null,
         onProgress: suspend (done: Int, total: Int) -> Unit = { _, _ -> },
-    ): AbsResult<Int> {
-        val ids = when (val r = client.bookIds(libraryId)) {
+    ): AbsResult<SyncOutcome> {
+        val listing = when (val r = client.listing(libraryId)) {
             is AbsResult.Failure -> return r
             is AbsResult.Success -> r.value
         }
+        val ids = listing.present
 
         val books = mutableListOf<BookEntity>()
         val chapters = mutableListOf<ChapterEntity>()
         val marks = mutableListOf<MarkEntity>()
 
-        ids.forEachIndexed { index, id ->
+        var failuresInARow = 0
+        var withoutFiles = 0
+        for ((index, id) in ids.withIndex()) {
             when (val r = client.book(id)) {
                 // One book the server stumbles over does not throw away the ninety-nine that
                 // worked. It simply is not in this sync, and the next one can pick it up.
-                is AbsResult.Failure -> Unit
+                is AbsResult.Failure -> {
+                    // But a server that is gone answers every request with a ten second wait.
+                    // After a few in a row it is stopped, and nothing is changed.
+                    if (++failuresInARow >= GIVE_UP_AFTER) return r
+                }
                 is AbsResult.Success -> {
+                    failuresInARow = 0
                     val book = r.value
-                    if (book.tracks.isNotEmpty()) collect(book, books, chapters, marks)
+                    if (book.tracks.isNotEmpty()) collect(book, books, chapters, marks) else withoutFiles++
                 }
             }
             onProgress(index + 1, ids.size)
         }
 
-        // ⚠ The listing, not the details, says what is on the server. A book whose details did
-        // not come back -- a timeout, a server having a moment -- was left out of this sync, and
-        // the merge deleted whatever it did not see: the book's row and with it the reader's
-        // place and every bookmark, while its downloaded audio stayed on disk with nothing
-        // pointing at it. One slow request cost somebody their place in a book. Listed books are
-        // kept as they are; only a book the server no longer lists is gone.
-        val listed = ids.map { bookUri(it) }.toSet()
+        // ⚠ A sync never deletes anything the reader has. A book the server flags missing (a NAS
+        // that is off, a library being rescanned), a book whose details timed out, and a book that
+        // is no longer listed at all all stay exactly as they are, with their downloaded audio,
+        // place and bookmarks: the server being wrong or away must not cost the only local copy.
+        // A book that really is gone is removed by the reader, through the Remove dialog, which
+        // asks first.
+        val fetched = books.map { it.uri }.toSet()
 
         withContext(Dispatchers.IO) {
-            // Its audio first, while the rows still say which files are its.
-            if (context != null) {
-                dao.bookUrisFrom(SOURCE_ABS).filter { it !in listed }.forEach { gone ->
-                    AbsDownloader.remove(context, dao, gone)
-                }
-            }
+            val keep = keepUris(dao.bookUrisFrom(SOURCE_ABS), fetched)
             dao.merge(
                 books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_ABS,
-                stillThere = listed - books.map { it.uri }.toSet()
+                stillThere = keep - fetched
             )
             // Written after the merge, which is what clears the old ones: marks hang off books,
             // and a book that survived the merge keeps the marks it had.
@@ -103,8 +112,14 @@ object AbsSync {
             books.forEach { dao.refreshBookDuration(it.uri) }
         }
 
-        return AbsResult.Success(books.size)
+        return AbsResult.Success(SyncOutcome(read = books.size, listed = ids.size - withoutFiles))
     }
+
+    /**
+     * Every server book the sync leaves on the shelf: all the ones already there, plus the ones it
+     * has just read. Nothing is dropped, whatever the listing said, even an empty one.
+     */
+    fun keepUris(local: Collection<String>, fetched: Set<String>): Set<String> = local.toSet() + fetched
 
     private fun collect(
         book: AbsBook,

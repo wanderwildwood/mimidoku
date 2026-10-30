@@ -107,6 +107,7 @@ import com.wanderwildwood.mimidoku.server.KeepService
 import com.wanderwildwood.mimidoku.server.AbsResult
 import com.wanderwildwood.mimidoku.server.AbsServer
 import com.wanderwildwood.mimidoku.server.AbsSync
+import com.wanderwildwood.mimidoku.server.ServerAddress
 import com.wanderwildwood.mimidoku.shelf.ShelfLookup
 import com.wanderwildwood.mimidoku.ui.StepperDialog
 import com.wanderwildwood.mimidoku.ui.Transport
@@ -279,6 +280,8 @@ private fun Mimidoku(
     // fetching a book both talk to the same server over the same wifi, and a reader who starts
     // both gets neither any sooner.
     var serverBusy by remember { mutableStateOf(false) }
+    // The Connect or Sync now that is running, so Cancel has something to stop.
+    var serverJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var serverStatus by remember { mutableStateOf<String?>(null) }
     // What a swipe down on the library set going, said in a line above the shelves: asking while
     // it asks, then how it went for a few seconds.
@@ -1176,11 +1179,13 @@ private fun Mimidoku(
                         isBusy = serverBusy,
                         status = serverStatus,
                         onBack = { screen = Screen.Settings },
+                        onCancel = { serverJob?.cancel() },
                         onConnect = { entered ->
-                            scope.launch {
+                            serverJob = scope.launch {
+                              try {
                                 serverBusy = true
                                 serverStatus = context.getString(R.string.server_asking)
-                                val server = AbsServer(entered.address.withScheme(), entered.key)
+                                val server = AbsServer(ServerAddress.withScheme(entered.address), entered.key)
                                 val client = AbsClient(server, context.resources)
                                 when (val found = client.libraries()) {
                                     is AbsResult.Failure -> serverStatus = found.message
@@ -1200,18 +1205,29 @@ private fun Mimidoku(
                                         }
                                     }
                                 }
+                              } catch (e: kotlinx.coroutines.CancellationException) {
+                                serverStatus = context.getString(R.string.server_stopped)
+                                throw e
+                              } finally {
                                 serverBusy = false
+                              }
                             }
                         },
                         onGiveBack = { givingBack = it },
                         onSyncNow = {
-                            scope.launch {
+                            serverJob = scope.launch {
+                              try {
                                 serverBusy = true
                                 val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
                                 serverStatus = syncServer(context, client, preferences.serverLibraryId, library.library) {
                                     serverStatus = it
                                 }
+                              } catch (e: kotlinx.coroutines.CancellationException) {
+                                serverStatus = context.getString(R.string.server_stopped)
+                                throw e
+                              } finally {
                                 serverBusy = false
+                              }
                             }
                         },
                         onForget = {
@@ -1967,16 +1983,6 @@ private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null, f
 )
 
 /**
- * An address a reader typed, made into one a request can be made to.
- *
- * Nobody types "http://". Assuming it is what the reader meant is right nearly always and wrong
- * only for a server on the open internet, which is the case where they will have typed the scheme
- * themselves because they had to get a certificate for it.
- */
-private fun String.withScheme(): String =
-    if (startsWith("http://") || startsWith("https://")) trim() else "http://" + trim()
-
-/**
  * Reads a whole catalogue, saying where it has got to.
  *
  * One request per book is the api's shape, so this is a minute rather than a moment on a library
@@ -1994,9 +2000,11 @@ private suspend fun syncServer(
     }
 ) {
     is AbsResult.Failure -> synced.message
-    is AbsResult.Success -> when (synced.value) {
-        0 -> context.resources.getString(R.string.server_library_empty)
-        else -> context.resources.getQuantityString(R.plurals.server_synced_books, synced.value, synced.value)
+    is AbsResult.Success -> when {
+        synced.value.listed == 0 -> context.resources.getString(R.string.server_library_empty)
+        synced.value.read < synced.value.listed ->
+            context.resources.getString(R.string.server_synced_some, synced.value.read, synced.value.listed)
+        else -> context.resources.getQuantityString(R.plurals.server_synced_books, synced.value.read, synced.value.read)
     }
 }
 
