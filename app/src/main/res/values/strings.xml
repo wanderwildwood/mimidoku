@@ -220,9 +220,6 @@
     <string name="about_title">About</string>
     <!-- %1$s is the version number -->
     <string name="about_version">Audiobooks %1$s</string>
-    <string name="about_licence">GNU General Public License v3</string>
-    <string name="about_font">Lato — SIL Open Font License 1.1</string>
-    <string name="about_icons">Material Symbols — Apache License 2.0</string>
     <!-- The donation link label, beside a drawing of a llama. A fixed phrase: a verb and an object -->
     <string name="about_feed_the_llamas">feed the llamas</string>
     <string name="about_no_browser">There is no browser on this phone to open that with.</string>
@@ -231,6 +228,7 @@
     <string name="about_privacy">Your books, bookmarks and place in each book stay on this phone. The app goes online only if you set up an Audiobookshelf server, and then only to that server, to list its books and download the ones you choose; it never tells the server where you are in a book. Its address and key are kept on this phone, sealed. A server on a home network uses plain http. Nothing is sent to the app\'s maker. There are no ads, no analytics and no tracking. Lock-screen controls, if you switch them on, use an accessibility service that reads only the lock screen. Glance, if you allow it, is handed the title of the book playing.</string>
     <string name="about_terms_heading">Terms</string>
     <string name="about_terms">This app is free software under the GNU General Public License v3. It comes with no warranty: use it at your own risk. Deleting audio files cannot be undone.</string>
+    <string name="about_licences">Licences</string>
     <string name="about_close">Close</string>
 
     <!-- ============================================================ -->
@@ -297,6 +295,10 @@
         <item quantity="one">%1$d book.</item>
         <item quantity="other">%1$d books.</item>
     </plurals>
+    <string name="server_synced_some">%1$d of %2$d books read; the rest could not be fetched this time and stay as they were.</string>
+    <string name="server_stopped">Stopped. Nothing was changed.</string>
+    <string name="server_cancel">Cancel</string>
+    <string name="server_plain_http_why">This address is plain http and is not on your home network. Anyone between you and the server can read the key and the audio. Use an https address, or press Connect again to go on anyway.</string>
     <!-- Dialog asking to delete a downloaded book. %1$s is the book's title -->
     <string name="server_give_back_title">Remove \"%1$s\" from this phone? It stays on the server, and so does your place in it.</string>
     <string name="server_give_back_action">Remove</string>
@@ -372,4 +374,15 @@
     <string name="folio_page">Page %1$d of %2$d</string>
     <string name="folio_go">Go</string>
     <string name="folio_cancel">Cancel</string>
+    <string name="licences_title">Licences</string>
+    <string name="licences_source_head">Source code</string>
+    <string name="licences_licence_head">Licence</string>
+    <string name="licences_licence">Audiobooks is free software under the GNU General Public License, version 3 only (GPL-3.0-only), copyright wander wildwood, for what is written here. The work it is built on keeps its own licence and its authors keep their copyright, as listed under Built with. The full text of each licence is at the end of this page.</string>
+    <string name="licences_built_head">Built with</string>
+    <string name="licences_back">Back</string>
+    <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
+    <string name="licences_gpl">GNU General Public License, version 3</string>
+    <string name="licences_apache">Apache License, version 2.0</string>
+    <string name="licences_mit">MIT License</string>
+    <string name="licences_ofl">SIL Open Font License, version 1.1</string>
 </resources>

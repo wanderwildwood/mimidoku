@@ -34,10 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.wanderwildwood.mimidoku.R
@@ -173,48 +174,48 @@ fun NoticeDialog(text: String, onDismiss: () -> Unit) {
  */
 @Composable
 fun AboutDialog(version: String, onDismiss: () -> Unit) {
-    // About, then Privacy and Terms each on a page of their own: all three on one card ran off
-    // the bottom of the panel, and a dialog cannot scroll.
-    var page by remember { mutableIntStateOf(0) }
+    // The text sits in a box that turns by the page: a dialog cannot scroll, and at a large
+    // font size the old single card pushed its button off the panel. Close stays under it.
+    val room = LocalConfiguration.current.screenHeightDp.dp * 0.62f
+    var licences by rememberSaveable { mutableStateOf(false) }
     EInkDialog(onDismiss = onDismiss) {
-        if (page == 0) {
-            DialogTitle(stringResource(R.string.about_title))
-            Spacer(modifier = Modifier.height(20.dp))
-
-            AboutText(stringResource(R.string.about_version, version))
-
-            Spacer(modifier = Modifier.height(12.dp))
-            AboutText(stringResource(R.string.about_licence))
-            AboutText(stringResource(R.string.about_font))
-            AboutText(stringResource(R.string.about_icons))
-
-            Spacer(modifier = Modifier.height(6.dp))
-            AboutLink(stringResource(R.string.about_privacy_heading)) { page = 1 }
-            AboutLink(stringResource(R.string.about_terms_heading)) { page = 2 }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Llama()
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                DialogAction(stringResource(R.string.about_close), onDismiss)
-            }
-        } else {
-            val privacy = page == 1
-            DialogTitle(stringResource(if (privacy) R.string.about_privacy_heading else R.string.about_terms_heading))
-            Spacer(modifier = Modifier.height(16.dp))
-            AboutText(stringResource(if (privacy) R.string.about_privacy else R.string.about_terms))
-            Spacer(modifier = Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                DialogAction(stringResource(R.string.dialog_back)) { page = 0 }
-            }
+        if (licences) {
+            LicencesPage(onBack = { licences = false }, room = room)
+            return@EInkDialog
         }
+        PagedColumn(modifier = Modifier.fillMaxWidth().height(room)) {
+            item(key = "title") {
+                Column {
+                    DialogTitle(stringResource(R.string.about_title))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    AboutText(stringResource(R.string.about_version, version), Modifier.padding(horizontal = 14.dp))
+                }
+            }
+            item(key = "privacy") { AboutPart(R.string.about_privacy_heading, R.string.about_privacy) }
+            item(key = "terms") { AboutPart(R.string.about_terms_heading, R.string.about_terms) }
+            item(key = "licences") { AboutLink(stringResource(R.string.about_licences)) { licences = true } }
+            item(key = "source") {
+                val context = LocalContext.current
+                val address = SOURCE_URL.removePrefix("https://")
+                AboutLink(address) { openLink(context, SOURCE_URL, context.getString(R.string.about_no_browser_address, address)) }
+            }
+            item(key = "llama") { Llama() }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            DialogAction(stringResource(R.string.about_close), onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun AboutPart(head: Int, body: Int) {
+    Column(Modifier.padding(top = 12.dp)) {
+        AboutText(stringResource(head), Modifier.padding(horizontal = 14.dp), bold = true)
+        AboutText(stringResource(body))
     }
 }
 
@@ -230,9 +231,10 @@ private fun AboutLink(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AboutText(text: String, modifier: Modifier = Modifier.padding(start = 14.dp, end = 14.dp)) {
+private fun AboutText(text: String, modifier: Modifier = Modifier.padding(start = 14.dp, end = 14.dp), bold: Boolean = false) {
     TextMMD(
         text = text,
+        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
         style = MaterialTheme.typography.titleSmall,
         lineHeight = 21.sp,
         color = Color.Black,
@@ -334,13 +336,7 @@ private fun Llama() {
             // The site's address opens the site, the way the llama beside it opens its page.
             modifier = Modifier
                 .clickable {
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://wanderthe.dev")),
-                        )
-                    }.onFailure {
-                        Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
-                    }
+                    openLink(context, "https://wanderthe.dev", context.getString(R.string.about_no_browser_address, "wanderthe.dev"))
                 }
                 .heightIn(min = 48.dp)
                 .padding(vertical = 4.dp),
@@ -358,13 +354,7 @@ private fun Llama() {
                     // The short square.link form, not the long checkout.square.site address it
                     // redirects to -- the short one is what the site itself links to, so a
                     // regenerated checkout follows it and a published app does not break.
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://square.link/u/AGu8oT10")),
-                        )
-                    }.onFailure {
-                        Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
-                    }
+                    openLink(context, "https://square.link/u/AGu8oT10", context.getString(R.string.about_no_browser_address, "square.link/u/AGu8oT10"))
                 }
                 .heightIn(min = 48.dp)
                 .padding(vertical = 4.dp),
