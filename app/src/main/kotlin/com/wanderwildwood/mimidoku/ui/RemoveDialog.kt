@@ -114,19 +114,5 @@ fun RemoveDialog(
 
 @Composable
 private fun Choice(label: String, note: String, solid: Boolean = false, onClick: () -> Unit) {
-    val ink = if (solid) Color.White else Color.Black
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(2.dp, Color.Black, RoundedCornerShape(8.dp))
-            .background(if (solid) Color.Black else Color.White, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-    ) {
-        TextMMD(text = label, style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp, color = ink)
-        TextMMD(text = note, style = MaterialTheme.typography.bodyMedium, lineHeight = 21.sp, color = ink)
-    }
+    HouseButton(label, onClick, Modifier.fillMaxWidth(), on = solid, note = note, maxLines = 2)
 }
-
