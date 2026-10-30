@@ -1,6 +1,6 @@
-# 耳読 mimidoku — Audiobooks
+# 耳読 mimidoku — Audio Reading
 
-An audiobook player for the Mudita Kompakt, written from scratch.
+Audio Reading is an audiobook player for the Mudita Kompakt, written from scratch. Choose a folder and that is the library; chapters are read from the files' own marks, with bookmarks, a sleep timer, playback speed and your place kept in every book. It can also read the library of an Audiobookshelf server you run. GPL-3.0-only.
 
 *Mimidoku* is 耳読, "ear reading" — a Japanese coinage for taking in books by ear rather than by
 eye. It names what the reader is doing rather than the machine doing it.
