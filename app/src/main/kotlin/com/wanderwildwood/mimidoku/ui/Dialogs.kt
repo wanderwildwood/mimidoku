@@ -176,7 +176,7 @@ fun NoticeDialog(text: String, onDismiss: () -> Unit) {
 fun AboutDialog(version: String, onDismiss: () -> Unit) {
     // The text sits in a box that turns by the page: a dialog cannot scroll, and at a large
     // font size the old single card pushed its button off the panel. Close stays under it.
-    val room = LocalConfiguration.current.screenHeightDp.dp * 0.62f
+    val room = LocalConfiguration.current.screenHeightDp.dp * 0.68f
     var licences by rememberSaveable { mutableStateOf(false) }
     EInkDialog(onDismiss = onDismiss) {
         if (licences) {
@@ -211,11 +211,23 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
     }
 }
 
+/** The About's running text: 14 sp, so a page holds a paragraph and not a line or two. */
+@Composable
+private fun AboutBody(text: String, bold: Boolean = false) {
+    TextMMD(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        color = Color.Black,
+        modifier = Modifier.padding(horizontal = 14.dp),
+    )
+}
+
 @Composable
 private fun AboutPart(head: Int, body: Int) {
     Column(Modifier.padding(top = 12.dp)) {
-        AboutText(stringResource(head), Modifier.padding(horizontal = 14.dp), bold = true)
-        AboutText(stringResource(body))
+        AboutBody(stringResource(head), bold = true)
+        AboutBody(stringResource(body))
     }
 }
 
