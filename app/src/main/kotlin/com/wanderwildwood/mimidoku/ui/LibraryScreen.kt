@@ -57,7 +57,6 @@ fun LibraryScreen(
     // With no books at all: where they come from. Null leaves that button out.
     onChooseFolder: (() -> Unit)? = null,
     onConnectServer: (() -> Unit)? = null,
-    onRemoveShelf: ((LibraryRow) -> Unit)? = null,
     // Held by the caller, so the list is where it was left when a shelf is closed again.
     listState: LazyListState = rememberLazyListState(),
     // Only with a server: a swipe down on the first page reads its catalogue again. A library
@@ -110,7 +109,6 @@ fun LibraryScreen(
                 ShelfRow(
                     row = row,
                     onClick = { onRowClick(row) },
-                    onRemove = onRemoveShelf?.takeIf { row.removable }?.let { { it(row) } },
                 )
             }
         }
@@ -130,7 +128,6 @@ private fun ShelfRow(
     row: LibraryRow,
     icon: ImageVector = Icons.Folder,
     onClick: () -> Unit,
-    onRemove: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().height(63.dp),
@@ -157,11 +154,6 @@ private fun ShelfRow(
                 color = Color.Black,
                 maxLines = 1,
             )
-        }
-        // An author's shelf with books on the phone can be taken off it, by name, in words.
-        if (onRemove != null) {
-            RemoveButton(onRemove)
-            Spacer(Modifier.width(8.dp))
         }
     }
 }

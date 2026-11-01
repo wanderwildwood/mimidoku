@@ -1,6 +1,6 @@
 <resources>
     <!-- The launcher label. Internally the project is mimidoku, 耳読 - reading by ear. -->
-    <string name="app_name">Audiobooks</string>
+    <string name="app_name">Audio Reader</string>
 
     <!-- ============================================================ -->
     <!-- Shared: icon descriptions read aloud by a screen reader, used on several screens -->
@@ -219,7 +219,7 @@
     <!-- About dialog. Keep the names of the app, typeface, icon set and licences as they are -->
     <string name="about_title">About</string>
     <!-- %1$s is the version number -->
-    <string name="about_version">Audiobooks %1$s</string>
+    <string name="about_version">Audio Reader %1$s</string>
     <!-- The donation link label, beside a drawing of a llama. A fixed phrase: a verb and an object -->
     <string name="about_feed_the_llamas">feed the llamas</string>
     <string name="about_no_browser">There is no browser on this phone to open that with.</string>
@@ -342,15 +342,15 @@
     <!-- Settings switch: the book being read is handed to the Glance app for its lock-screen panel -->
     <string name="settings_reading_on_lock_screen">Show the book being read in Glance</string>
     <!-- The controls drawn on the lock screen -->
-    <string name="lockscreen_nothing_named">Audiobooks</string>
-    <string name="lockscreen_open_app">Open Audiobooks</string>
+    <string name="lockscreen_nothing_named">Audio Reader</string>
+    <string name="lockscreen_open_app">Open Audio Reader</string>
     <string name="lockscreen_previous">Previous chapter</string>
     <string name="lockscreen_play_pause">Play or pause</string>
     <string name="lockscreen_next">Next chapter</string>
     <string name="lockscreen_stop">Stop</string>
     <!-- Shown in Android's Accessibility settings under this service -->
-    <string name="lockscreen_service_label">Audiobooks lock-screen controls</string>
-    <string name="lockscreen_service_description">Shows Audiobooks\' controls on the lock screen while a book plays. Only an accessibility service may draw above the lock screen, which is why this is one. It listens only to the system lock screen, and reads one thing there: whether the PIN field is showing, so the controls can make way for it. It reads no other app, and nothing leaves the phone.</string>
+    <string name="lockscreen_service_label">Audio Reader lock-screen controls</string>
+    <string name="lockscreen_service_description">Shows Audio Reader\' controls on the lock screen while a book plays. Only an accessibility service may draw above the lock screen, which is why this is one. It listens only to the system lock screen, and reads one thing there: whether the PIN field is showing, so the controls can make way for it. It reads no other app, and nothing leaves the phone.</string>
 
     <!-- On Glance's lock-screen panel, beside the book -->
     <string name="glance_playing">Playing</string>
@@ -362,27 +362,21 @@
 
     <!-- An audiobook file opened from another app, such as a file manager -->
     <string name="opened_file_unreadable">Could not open that file</string>
-    <string name="opened_file_needs_access">Audiobooks needs access to audio files to open that one</string>
+    <string name="opened_file_needs_access">Audio Reader needs access to audio files to open that one</string>
 
     <!-- Android 13+ keeps an app installed from a file out of Accessibility, notification access
          and the default phone/texting roles until App info, then ⋮, then Allow restricted settings. -->
     <string name="restricted_hint">Android blocks this for apps installed from a file. Open App info, tap ⋮, then Allow restricted settings, and try again.</string>
     <string name="restricted_app_info">App info</string>
-    <!-- The folio at the foot of a paged list, "2 / 6"; a tap on it asks for a page -->
-    <string name="folio_of">%1$d / %2$d</string>
-    <string name="folio_go_title">Go to page</string>
-    <string name="folio_page">Page %1$d of %2$d</string>
-    <string name="folio_go">Go</string>
-    <string name="folio_cancel">Cancel</string>
     <string name="licences_title">Licences</string>
     <string name="licences_source_head">Source code</string>
     <string name="licences_licence_head">Licence</string>
-    <string name="licences_licence">Audiobooks is free software under the GNU General Public License, version 3 only (GPL-3.0-only), copyright wander wildwood, for what is written here. The work it is built on keeps its own licence and its authors keep their copyright, as listed under Built with. The full text of each licence is at the end of this page.</string>
+    <string name="licences_licence">Audio Reader is free software: GPL-3.0-only, copyright wander wildwood. What it is built on keeps its own licences, listed below.</string>
     <string name="licences_built_head">Built with</string>
     <string name="licences_back">Back</string>
     <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
-    <string name="licences_gpl">GNU General Public License, version 3</string>
-    <string name="licences_apache">Apache License, version 2.0</string>
-    <string name="licences_mit">MIT License</string>
-    <string name="licences_ofl">SIL Open Font License, version 1.1</string>
+    <string name="licences_full_head">Full texts</string>
+    <string name="licences_full_gpl">GNU General Public License v3 (full text)</string>
+    <string name="licences_full_apache">Apache License 2.0 (full text)</string>
+    <string name="licences_full_ofl">SIL Open Font Licence 1.1 (full text)</string>
 </resources>

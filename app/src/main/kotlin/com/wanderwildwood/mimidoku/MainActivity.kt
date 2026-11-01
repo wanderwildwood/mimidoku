@@ -773,8 +773,9 @@ private fun Mimidoku(
         }
     }
 
-    // Books off the phone, from a held and pressed-again row. The player lets go of a book being
-    // taken away, as it does when one is given back to the server.
+    // Books off the phone. No row calls this now: the Remove word beside the items was taken away
+    // (David, 31 Oct), and the question, the dialog and the deleting below wait for a place of their
+    // own. The player lets go of a book being taken away, as it does when one is given back.
     val removeFromPhone: (String, List<BookEntity>) -> Unit = { name, targets ->
         // Asked first, in words: taking a book off the shelf and deleting the reader's files are
         // different answers, and which one is wanted is not for the app to guess.
@@ -879,13 +880,6 @@ private fun Mimidoku(
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
                         onChooseFolder = { pickFolder.launch(null) },
                         onConnectServer = { screen = Screen.Server }.takeIf { !preferences.hasServer },
-                        onRemoveShelf = { row ->
-                            removeFromPhone(
-                                row.title,
-                                shelvedBooks.filter { it.kept && it.isOnShelf(row.id, Shelving.Author) }
-                                    .flatMap { listOf(it) + copiesOf[it.uri].orEmpty() },
-                            )
-                        },
                     )
                 }
 
@@ -910,7 +904,6 @@ private fun Mimidoku(
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
                         showAuthor = true,
-                        onRemove = { row -> removeFromPhone(row.title, books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                         listState = recentList,
                     )
                 }
@@ -943,7 +936,6 @@ private fun Mimidoku(
                         },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
-                        onRemove = { row -> removeFromPhone(row.title, books.filter { it.uri == row.id } + copiesOf[row.id].orEmpty()) },
                         listState = shelfLists.getOrPut("$shelving\u0000${current.name ?: UNNAMED}") { LazyListState() },
                     )
                 }
