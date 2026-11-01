@@ -65,7 +65,6 @@ fun BooksScreen(
     onNowPlayingClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     showAuthor: Boolean = false,
-    onRemove: ((BookRow) -> Unit)? = null,
     // Held by the caller, so the shelf is where it was left when a book is closed again.
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -84,7 +83,6 @@ fun BooksScreen(
                     book = book,
                     showAuthor = showAuthor,
                     onClick = { onBookClick(book) },
-                    onRemove = onRemove?.takeIf { book.removable }?.let { { it(book) } },
                 )
             }
         }
@@ -111,7 +109,7 @@ fun BooksScreen(
  * opens a question that says exactly what each answer does.
  */
 @Composable
-fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit, onRemove: (() -> Unit)? = null) {
+fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit) {
     val details = listOfNotNull(
         book.author?.takeIf { showAuthor },
         book.duration,
@@ -125,7 +123,7 @@ fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit, onRemove: 
             modifier = Modifier
                 .weight(1f)
                 .clickable(onClick = onClick)
-                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = if (onRemove == null) 16.dp else 4.dp),
+                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 16.dp),
         ) {
             TextMMD(
                 text = book.title,
@@ -144,26 +142,6 @@ fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit, onRemove: 
                 )
             }
         }
-        if (onRemove != null) RemoveButton(onRemove)
-    }
-}
-
-/** The word at the end of a row that has something to take off the phone; 48dp to press. */
-@Composable
-fun RemoveButton(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .heightIn(min = 48.dp)
-            .widthIn(min = 48.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        TextMMD(
-            text = stringResource(R.string.remove_button),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Black,
-        )
     }
 }
 

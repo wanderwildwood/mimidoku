@@ -180,7 +180,7 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
     var licences by rememberSaveable { mutableStateOf(false) }
     EInkDialog(onDismiss = onDismiss) {
         if (licences) {
-            LicencesPage(onBack = { licences = false }, room = room)
+            LicencesScreen(rememberLicencesData(), rememberLicencesLabels(), onBack = { licences = false }, modifier = Modifier.fillMaxWidth().height(room))
             return@EInkDialog
         }
         PagedColumn(modifier = Modifier.fillMaxWidth().height(room)) {
@@ -188,7 +188,7 @@ fun AboutDialog(version: String, onDismiss: () -> Unit) {
                 Column {
                     DialogTitle(stringResource(R.string.about_title))
                     Spacer(modifier = Modifier.height(6.dp))
-                    AboutText(stringResource(R.string.about_version, version), Modifier.padding(horizontal = 14.dp))
+                    AboutText(stringResource(R.string.about_version, version))
                 }
             }
             item(key = "privacy") { AboutPart(R.string.about_privacy_heading, R.string.about_privacy) }
@@ -219,7 +219,6 @@ private fun AboutBody(text: String, bold: Boolean = false) {
         style = MaterialTheme.typography.labelSmall,
         fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
         color = Color.Black,
-        modifier = Modifier.padding(horizontal = 14.dp),
     )
 }
 
@@ -235,7 +234,7 @@ private fun AboutPart(head: Int, body: Int) {
 @Composable
 private fun AboutLink(text: String, onClick: () -> Unit) {
     Box(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick),
         contentAlignment = Alignment.CenterStart,
     ) {
         TextMMD(text = text, style = MaterialTheme.typography.titleSmall, lineHeight = 21.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -243,7 +242,7 @@ private fun AboutLink(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AboutText(text: String, modifier: Modifier = Modifier.padding(start = 14.dp, end = 14.dp), bold: Boolean = false) {
+private fun AboutText(text: String, modifier: Modifier = Modifier, bold: Boolean = false) {
     TextMMD(
         text = text,
         fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
@@ -338,11 +337,8 @@ private fun Llama() {
     val context = LocalContext.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        // One margin for the whole line rather than AboutText's own on each piece: padded
-        // both sides, the address and the words did not fit on one line.
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp),
+        // Level with the title and the text above, with no margin of its own.
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             // The site's address opens the site, the way the llama beside it opens its page.
