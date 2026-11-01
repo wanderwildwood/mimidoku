@@ -746,9 +746,13 @@ private fun Mimidoku(
         } else if (c != null) {
             if (c.isPlaying) {
                 c.pause()
-            } else if (c.playbackState == Player.STATE_ENDED) {
-                // The book has been played to its end: play begins it again, from the first
-                // chapter, rather than seeking back from the end and ending at once.
+            } else if (c.playbackState == Player.STATE_ENDED ||
+                (c.mediaItemCount > 0 && c.currentMediaItemIndex == c.mediaItemCount - 1 &&
+                    c.duration > 0 && c.currentPosition >= c.duration - 1_000)
+            ) {
+                // The book has been played to its end (or paused within its last second): play
+                // begins it again, from the first chapter, rather than seeking back from the
+                // end and ending at once.
                 c.seekTo(0, 0L)
                 c.play()
             } else {
