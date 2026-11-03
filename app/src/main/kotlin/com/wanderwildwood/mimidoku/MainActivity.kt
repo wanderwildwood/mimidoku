@@ -817,7 +817,7 @@ private fun Mimidoku(
     }
 
     // Books off the phone. No row calls this now: the Remove word beside the items was taken away
-    // (David, 31 Oct), and the question, the dialog and the deleting below wait for a place of their
+    // (decided 31 Oct), and the question, the dialog and the deleting below wait for a place of their
     // own. The player lets go of a book being taken away, as it does when one is given back.
     val removeFromPhone: (String, List<BookEntity>) -> Unit = { name, targets ->
         // Asked first, in words: taking a book off the shelf and deleting the reader's files are
