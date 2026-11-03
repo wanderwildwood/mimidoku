@@ -57,6 +57,7 @@ fun LibraryScreen(
     // With no books at all: where they come from. Null leaves that button out.
     onChooseFolder: (() -> Unit)? = null,
     onConnectServer: (() -> Unit)? = null,
+    onConnectNextcloud: (() -> Unit)? = null,
     // Held by the caller, so the list is where it was left when a shelf is closed again.
     listState: LazyListState = rememberLazyListState(),
     // Only with a server: a swipe down on the first page reads its catalogue again. A library
@@ -86,10 +87,17 @@ fun LibraryScreen(
         if (rows.isEmpty() && status == null) {
             EmptyHelp(
                 message = stringResource(R.string.library_empty),
-                actions = listOfNotNull(
-                    onChooseFolder?.let { stringResource(R.string.library_empty_folder) to it },
-                    onConnectServer?.let { stringResource(R.string.library_empty_server) to it },
-                ),
+                actions = emptyLibraryActions(
+                    canChooseFolder = onChooseFolder != null,
+                    canConnectServer = onConnectServer != null,
+                    canConnectNextcloud = onConnectNextcloud != null,
+                ).map {
+                    when (it) {
+                        EmptyAction.FOLDER -> stringResource(R.string.library_empty_folder) to onChooseFolder!!
+                        EmptyAction.SERVER -> stringResource(R.string.library_empty_server) to onConnectServer!!
+                        EmptyAction.NEXTCLOUD -> stringResource(R.string.library_empty_nextcloud) to onConnectNextcloud!!
+                    }
+                },
                 modifier = Modifier.weight(1f),
             )
         } else PagedColumn(state = listState, onPullAtTop = onPullAtTop, modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -160,3 +168,17 @@ private fun ShelfRow(
 
 /** The Recent row's key, kept clear of every shelf name: no author is called this. */
 private const val RECENT = "\u0000recent"
+
+/** The ways into an empty library, in the order they are offered. */
+enum class EmptyAction { FOLDER, SERVER, NEXTCLOUD }
+
+/**
+ * What an empty library offers: a folder on the phone first, then an Audiobookshelf server and a
+ * Nextcloud folder side by side, each only while it is not set up yet.
+ */
+fun emptyLibraryActions(canChooseFolder: Boolean, canConnectServer: Boolean, canConnectNextcloud: Boolean): List<EmptyAction> =
+    listOfNotNull(
+        EmptyAction.FOLDER.takeIf { canChooseFolder },
+        EmptyAction.SERVER.takeIf { canConnectServer },
+        EmptyAction.NEXTCLOUD.takeIf { canConnectNextcloud },
+    )

@@ -52,6 +52,7 @@
     <string name="library_empty">There are no books here yet. Choose the folder your audiobooks are in, or connect an Audiobookshelf server you run, and they will be listed here.</string>
     <string name="library_empty_folder">Choose a folder</string>
     <string name="library_empty_server">Connect a server</string>
+    <string name="library_empty_nextcloud">Connect a Nextcloud folder</string>
     <string name="shelf_empty">There are no books on this shelf. They may all have been removed.</string>
     <string name="shelf_empty_back">Back to the library</string>
     <string name="bookmarks_empty">No bookmarks in this book yet. A bookmark keeps a place so you can come back to it.</string>
