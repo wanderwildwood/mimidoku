@@ -50,7 +50,7 @@ entry or nothing. No other app is answered, and the library is never listed for 
 ## What leaves the phone
 
 Nothing, until you add a server. Then: requests to that server, and nowhere else. Not for
-cover art, not for metadata, not for a catalogue lookup, not for crash reports. There is no
+cover art, not for metadata, not for a catalog lookup, not for crash reports. There is no
 analytics code here and no third party to send anything to. A book you are reading is not
 something anyone else needs to know about.
 

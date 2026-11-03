@@ -46,7 +46,7 @@ An author is one shelf however the files spell the name: the folder you filed th
 the shelf, whatever the files' tags say, and "Basil Moor", "basil moor " and a server's
 "Basil Moor," are one person. The same book twice -- one title by one author at one
 length -- is listed once. **Recent**, above the shelves, lists the books lately played.
-With an Audiobookshelf server, a swipe down at the top of the library reads its catalogue again.
+With an Audiobookshelf server, a swipe down at the top of the library reads its catalog again.
 
 Each book (and each author's shelf) has a plain "Remove" at the end of its row. It asks, and the
 two answers are different things. "Remove from the shelf" takes the book off the list and leaves
@@ -90,7 +90,7 @@ For updates without doing this by hand, add this repository to
 It will offer each new release as it appears. **The application id is settled** — updates
 install over what you have, keeping your settings and anything the app has stored.
 
-## Licence
+## License
 
 GPL-3.0-only. See [LICENSE](LICENSE).
 
@@ -103,12 +103,12 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 General Public License for more details.
 
-Version 3 only, not "or later": nothing here can be moved onto a licence that has not been written
+Version 3 only, not "or later": nothing here can be moved onto a license that has not been written
 yet.
 
-The first of these apps whose licence was a decision rather than an inheritance, and now the
+The first of these apps whose license was a decision rather than an inheritance, and now the
 default for the rest. Nothing forced it — not a fork, and every dependency is permissive: AndroidX,
 Compose, Media3 and Room are all Apache-2.0. Copyleft anyway, because the alternative lets someone
 ship this code closed with whatever they care to add to it, and nothing has to come back.
 
-Lato keeps its own licence — SIL Open Font License 1.1, `LICENSES/OFL-1.1.txt`.
+Lato keeps its own license — SIL Open Font License 1.1, `LICENSES/OFL-1.1.txt`.
