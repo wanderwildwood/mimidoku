@@ -41,6 +41,13 @@ Android's own backup (to your Google account, or a phone-to-phone transfer) incl
 library database, your places and bookmarks, and its settings. It leaves out the file that holds
 the server address and API key, so the key never goes with a backup.
 
+**Save places and bookmarks** (Settings) writes where you are in each book you have started,
+when you last listened, and your bookmarks, with each book's title, author and chapter names so
+they can be found again, to one JSON file you choose through the phone's own file picker, and
+only when you ask. **Restore places and bookmarks** reads such a file the same way, checks all of
+it first, and only then replaces the places and bookmarks of the books it names; a wrong file
+changes nothing.
+
 ## Shelf
 
 Shelf (com.wanderwildwood.shoka), when installed, can ask whether the library has one book, by

@@ -97,6 +97,8 @@ import com.wanderwildwood.mimidoku.ui.FoldersScreen
 import com.wanderwildwood.mimidoku.ui.BookmarksScreen
 import com.wanderwildwood.mimidoku.ui.SearchScreen
 import com.wanderwildwood.mimidoku.ui.SettingRow
+import com.wanderwildwood.mimidoku.data.PlacesFiles
+import com.wanderwildwood.mimidoku.library.PlacesBackup
 import com.wanderwildwood.mimidoku.ui.SettingsScreen
 import com.wanderwildwood.mimidoku.ui.ServerScreen
 import com.wanderwildwood.mimidoku.ui.ServerEntry
@@ -448,6 +450,43 @@ private fun Mimidoku(
         if (announcement == null) return@LaunchedEffect
         delay(ANNOUNCEMENT_MS)
         announcement = null
+    }
+
+    // Places and bookmarks, to and from a file the reader picks. The restore row is armed: the
+    // first press says what a second will do, and gives up after [ARMED_MS].
+    var restoreArmed by remember { mutableStateOf(false) }
+    LaunchedEffect(restoreArmed) {
+        if (restoreArmed) { delay(com.wanderwildwood.mimidoku.ui.ARMED_MS); restoreArmed = false }
+    }
+    val savePlaces = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = PlacesFiles.save(context, uri)
+            Toast.makeText(context, context.getString(if (ok) R.string.places_saved else R.string.places_not_saved), Toast.LENGTH_LONG).show()
+        }
+    }
+    val restorePlaces = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        // Paused first, or the player would write its own place over the restored one a few seconds later.
+        controller?.pause()
+        scope.launch {
+            val r = context.resources
+            val message = when (val result = PlacesFiles.restore(context, uri)) {
+                is PlacesFiles.Result.Done -> buildString {
+                    append(r.getQuantityString(R.plurals.places_restored, result.books, result.books))
+                    if (result.notFound > 0) append(' ').append(r.getQuantityString(R.plurals.places_not_found, result.notFound, result.notFound))
+                }
+                is PlacesFiles.Result.Refused -> context.getString(
+                    when (result.kind) {
+                        PlacesBackup.BackupException.Kind.NOT_A_BACKUP -> R.string.places_not_ours
+                        PlacesBackup.BackupException.Kind.NEWER -> R.string.places_newer
+                        PlacesBackup.BackupException.Kind.DAMAGED -> R.string.places_damaged
+                    },
+                )
+                PlacesFiles.Result.Unreadable -> context.getString(R.string.places_unreadable)
+            }
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
     }
 
     val pickFolder = rememberLauncherForActivityResult(
@@ -1385,6 +1424,14 @@ private fun Mimidoku(
                                     )
                                 )
                             }
+                            add(SettingRow("saveplaces", stringResource(R.string.settings_save_places), stringResource(R.string.settings_save_places_note)))
+                            add(
+                                SettingRow(
+                                    "restoreplaces",
+                                    stringResource(R.string.settings_restore_places),
+                                    stringResource(if (restoreArmed) R.string.settings_restore_places_armed else R.string.settings_restore_places_note),
+                                ),
+                            )
                         },
                         onClose = { screen = Screen.Library },
                         onAbout = { showAbout = true },
@@ -1411,6 +1458,13 @@ private fun Mimidoku(
                                 "autosleepstart" -> editing = Editing.AutoSleepStart
                                 "autosleepend" -> editing = Editing.AutoSleepEnd
                                 "shake" -> editing = Editing.Shake
+                                "saveplaces" -> runCatching { savePlaces.launch("audio-reader-places-${java.time.LocalDate.now()}.json") }
+                                "restoreplaces" -> if (!restoreArmed) {
+                                    restoreArmed = true
+                                } else {
+                                    restoreArmed = false
+                                    runCatching { restorePlaces.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                                }
                                 "lockscreen" -> {
                                     lockScreenAsked = true
                                     runCatching {

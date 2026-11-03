@@ -109,4 +109,6 @@ dependencies {
   ksp(libs.room.compiler)
 
   testImplementation(libs.junit)
+  // Android's org.json is a stub under unit tests; the places backup is JSON.
+  testImplementation("org.json:json:20240303")
 }

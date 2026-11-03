@@ -187,6 +187,27 @@
     <string name="settings_starts_at">Starts at</string>
     <string name="settings_ends_at">Ends at</string>
     <string name="settings_playback_speed">Playback speed</string>
+    <string name="settings_save_places">Save places and bookmarks</string>
+    <string name="settings_save_places_note">Saves where you are in every book you have started, and your bookmarks, to one file you pick. Not saved: the books themselves and the settings on this page.</string>
+    <string name="settings_restore_places">Restore places and bookmarks</string>
+    <string name="settings_restore_places_note">Books are found by their folder, or by title and author. Add your audiobook folders first.</string>
+    <string name="settings_restore_places_armed">Restore — the place and bookmarks of each book in the file are replaced by the file\'s; tap again to choose it</string>
+    <string name="places_saved">Places and bookmarks saved.</string>
+    <string name="places_not_saved">The backup could not be written.</string>
+    <!-- %1$d books whose place or bookmarks were restored -->
+    <plurals name="places_restored">
+        <item quantity="one">Restored. %1$d book.</item>
+        <item quantity="other">Restored. %1$d books.</item>
+    </plurals>
+    <!-- Added after places_restored: %1$d books in the file that are not in the library -->
+    <plurals name="places_not_found">
+        <item quantity="one">%1$d book in the file is not in your library, so it was left out. Add its folder and restore again.</item>
+        <item quantity="other">%1$d books in the file are not in your library, so they were left out. Add their folders and restore again.</item>
+    </plurals>
+    <string name="places_not_ours">That file is not a backup from this app. Nothing was changed.</string>
+    <string name="places_newer">That backup was made by a newer version of this app. Update the app and try again. Nothing was changed.</string>
+    <string name="places_damaged">That backup is damaged, so it was not used. Nothing was changed.</string>
+    <string name="places_unreadable">That file could not be read. Nothing was changed.</string>
     <!-- A speed such as 1.5x: %1$d is the whole part, %2$d the tenths -->
     <string name="settings_speed_value">%1$d.%2$dx</string>
     <!-- The English says "seconds" and "minutes" even for one, as the app always has -->
