@@ -298,7 +298,7 @@
     <string name="server_no_book_library">That server has no book library.</string>
     <string name="server_forgotten">Forgotten.</string>
     <!-- While the server's list of books is read. %1$d books read out of %2$d -->
-    <string name="server_reading_catalogue">Reading the catalogue — %1$d of %2$d</string>
+    <string name="server_reading_catalogue">Reading the catalog — %1$d of %2$d</string>
     <string name="server_library_empty">That library has nothing in it.</string>
     <!-- Shown as the server's status when asking it something fails -->
     <string name="server_key_refused">The server did not accept that key.</string>
@@ -386,14 +386,14 @@
          and the default phone/texting roles until App info, then ⋮, then Allow restricted settings. -->
     <string name="restricted_hint">Android blocks this for apps installed from a file. Open App info, tap ⋮, then Allow restricted settings, and try again.</string>
     <string name="restricted_app_info">App info</string>
-    <string name="licences_title">Licences</string>
+    <string name="licences_title">Licenses</string>
     <string name="licences_source_head">Source code</string>
-    <string name="licences_no_text">%s needs no licence text here.</string>
-    <string name="licences_licence">Audio Reader is free software: GPL-3.0-only, copyright wander wildwood. What it is built on keeps its own licences, each on its own page.</string>
+    <string name="licences_no_text">%s needs no license text here.</string>
+    <string name="licences_licence">Audio Reader is free software: GPL-3.0-only, copyright wander wildwood. What it is built on keeps its own licenses, each on its own page.</string>
     <string name="licences_back">Back</string>
     <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
     <string name="licences_full_head">Full texts</string>
     <string name="licences_full_gpl">GNU General Public License v3 (full text)</string>
     <string name="licences_full_apache">Apache License 2.0 (full text)</string>
-    <string name="licences_full_ofl">SIL Open Font Licence 1.1 (full text)</string>
+    <string name="licences_full_ofl">SIL Open Font License 1.1 (full text)</string>
 </resources>
