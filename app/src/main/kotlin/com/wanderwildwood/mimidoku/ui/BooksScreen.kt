@@ -79,11 +79,14 @@ fun BooksScreen(
             )
         } else PagedColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
             items(books, key = { it.id }) { book ->
-                BookLine(
-                    book = book,
-                    showAuthor = showAuthor,
-                    onClick = { onBookClick(book) },
-                )
+                Column {
+                    BookLine(
+                        book = book,
+                        showAuthor = showAuthor,
+                        onClick = { onBookClick(book) },
+                    )
+                    DottedRule()
+                }
             }
         }
 

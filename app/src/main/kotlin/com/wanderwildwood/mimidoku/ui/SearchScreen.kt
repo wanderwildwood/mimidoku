@@ -100,6 +100,7 @@ fun SearchScreen(
                 state = shelfListState,
             ) {
                 items(shelves, key = { it.id }) { shelf ->
+                    Column {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -116,6 +117,8 @@ fun SearchScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    DottedRule()
+                    }
                 }
             }
         } else {
@@ -129,7 +132,10 @@ fun SearchScreen(
             } else {
                 PagedColumn(modifier = Modifier.weight(1f), state = foundListState) {
                     items(found, key = { it.id }) { book ->
-                        BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
+                        Column {
+                            BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })
+                            DottedRule()
+                        }
                     }
                 }
             }
