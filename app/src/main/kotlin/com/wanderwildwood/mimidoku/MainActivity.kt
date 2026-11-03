@@ -109,6 +109,11 @@ import com.wanderwildwood.mimidoku.server.KeepService
 import com.wanderwildwood.mimidoku.server.AbsResult
 import com.wanderwildwood.mimidoku.server.AbsServer
 import com.wanderwildwood.mimidoku.server.AbsSync
+import com.wanderwildwood.mimidoku.server.NextcloudAccount
+import com.wanderwildwood.mimidoku.server.NextcloudClient
+import com.wanderwildwood.mimidoku.server.NextcloudSync
+import com.wanderwildwood.mimidoku.server.isServerSource
+import com.wanderwildwood.mimidoku.ui.NextcloudScreen
 import com.wanderwildwood.mimidoku.server.ServerAddress
 import com.wanderwildwood.mimidoku.shelf.ShelfLookup
 import com.wanderwildwood.mimidoku.ui.StepperDialog
@@ -197,6 +202,7 @@ private sealed interface Screen {
     data object Bookmarks : Screen
     data object Folders : Screen
     data object Server : Screen
+    data object Nextcloud : Screen
 }
 
 /** A preference the reader has opened, and is about to change or leave alone. */
@@ -750,8 +756,9 @@ private fun Mimidoku(
         }
     }
 
+    // Every book downloaded from a server or a Nextcloud folder; each screen shows its own.
     val keptBooks = remember(books, keptSizes) {
-        books.filter { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
+        books.filter { isServerSource(it.sourceType) && it.kept }
             .map {
                 KeptBook(
                     id = it.uri,
@@ -812,12 +819,13 @@ private fun Mimidoku(
             is Screen.Shelf -> leaving.back
             Screen.Folders -> Screen.Settings
             Screen.Server -> Screen.Settings
+            Screen.Nextcloud -> Screen.Settings
             else -> Screen.Library
         }
     }
 
     // Books off the phone. No row calls this now: the Remove word beside the items was taken away
-    // (David, 31 Oct), and the question, the dialog and the deleting below wait for a place of their
+    // (decided 31 Oct), and the question, the dialog and the deleting below wait for a place of their
     // own. The player lets go of a book being taken away, as it does when one is given back.
     val removeFromPhone: (String, List<BookEntity>) -> Unit = { name, targets ->
         // Asked first, in words: taking a book off the shelf and deleting the reader's files are
@@ -825,7 +833,7 @@ private fun Mimidoku(
         val asked = targets.distinctBy { it.uri }
         scope.launch {
             val (cardFiles, cardBytes) = Removal.weigh(context, library.library, asked)
-            val fetched = asked.filter { it.sourceType == AbsSync.SOURCE_ABS && it.kept }
+            val fetched = asked.filter { isServerSource(it.sourceType) && it.kept }
             removeAsk = RemoveAsk(
                 title = name,
                 books = asked,
@@ -911,15 +919,22 @@ private fun Mimidoku(
                             if (!serverBusy) scope.launch {
                                 serverBusy = true
                                 pullSaid = context.getString(R.string.library_pull_checking)
-                                val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
-                                pullSaid = when (val synced = AbsSync.sync(client, preferences.serverLibraryId, library.library, context)) {
-                                    is AbsResult.Failure -> synced.message
-                                    is AbsResult.Success -> context.getString(R.string.library_pull_done)
+                                var failed: String? = null
+                                if (preferences.hasServer && preferences.serverLibraryId.isNotBlank()) {
+                                    val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), context.resources)
+                                    (AbsSync.sync(client, preferences.serverLibraryId, library.library, context) as? AbsResult.Failure)
+                                        ?.let { failed = it.message }
                                 }
+                                if (preferences.hasNextcloud) {
+                                    val client = NextcloudClient(preferences.nextcloudAccount(), context.resources)
+                                    (NextcloudSync.sync(client, library.library) as? AbsResult.Failure)
+                                        ?.let { failed = failed ?: it.message }
+                                }
+                                pullSaid = failed ?: context.getString(R.string.library_pull_done)
                                 serverBusy = false
                                 pullDone++
                             }
-                        }.takeIf { preferences.hasServer && preferences.serverLibraryId.isNotBlank() },
+                        }.takeIf { (preferences.hasServer && preferences.serverLibraryId.isNotBlank()) || preferences.hasNextcloud },
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
                         onChooseFolder = { pickFolder.launch(null) },
                         onConnectServer = { screen = Screen.Server }.takeIf { !preferences.hasServer },
@@ -1210,7 +1225,7 @@ private fun Mimidoku(
                         address = preferences.serverUrl,
                         key = preferences.serverToken,
                         bookCount = books.count { it.sourceType == AbsSync.SOURCE_ABS },
-                        kept = keptBooks,
+                        kept = keptBooks.filter { it.id.startsWith(AbsSync.SOURCE_ABS + ":") },
                         isBusy = serverBusy,
                         status = serverStatus,
                         onBack = { screen = Screen.Settings },
@@ -1289,6 +1304,95 @@ private fun Mimidoku(
                     )
                 }
 
+                Screen.Nextcloud -> {
+                    // One job at a time on the network, shared with the Audiobookshelf screen.
+                    val readFolder: suspend (NextcloudClient) -> Unit = { client ->
+                        serverStatus = context.getString(R.string.nextcloud_reading)
+                        serverStatus = when (val synced = NextcloudSync.sync(client, library.library)) {
+                            is AbsResult.Failure -> synced.message
+                            is AbsResult.Success -> context.resources.getQuantityString(
+                                R.plurals.nextcloud_books_in_folder, synced.value.read, synced.value.read,
+                            )
+                        }
+                    }
+                    NextcloudScreen(
+                        address = preferences.nextcloudUrl,
+                        login = preferences.nextcloudLogin,
+                        folder = preferences.nextcloudFolder,
+                        connected = preferences.hasNextcloud,
+                        bookCount = books.count { it.sourceType == NextcloudSync.SOURCE_NC },
+                        kept = keptBooks.filter { it.id.startsWith(NextcloudSync.SOURCE_NC + ":") },
+                        isBusy = serverBusy,
+                        status = serverStatus,
+                        onBack = { screen = Screen.Settings },
+                        onCancel = { serverJob?.cancel() },
+                        onConnect = { entered ->
+                            serverJob = scope.launch {
+                              try {
+                                serverBusy = true
+                                serverStatus = context.getString(R.string.nextcloud_reading)
+                                val account = NextcloudAccount(
+                                    server = ServerAddress.withScheme(entered.address).trimEnd('/'),
+                                    login = entered.login.trim(),
+                                    password = entered.password,
+                                    folder = entered.folder.trim().trim('/'),
+                                )
+                                val client = NextcloudClient(account, context.resources)
+                                when (val found = client.check()) {
+                                    is AbsResult.Failure -> serverStatus = found.message
+                                    is AbsResult.Success -> {
+                                        // Kept only once it has answered: a typing mistake is
+                                        // not saved as the reader's Nextcloud.
+                                        preferences.nextcloudUrl = account.server
+                                        preferences.nextcloudLogin = account.login
+                                        preferences.nextcloudPassword = account.password
+                                        preferences.nextcloudFolder = account.folder
+                                        readFolder(client)
+                                    }
+                                }
+                              } catch (e: kotlinx.coroutines.CancellationException) {
+                                serverStatus = context.getString(R.string.server_stopped)
+                                throw e
+                              } finally {
+                                serverBusy = false
+                              }
+                            }
+                        },
+                        onGiveBack = { givingBack = it },
+                        onSyncNow = {
+                            serverJob = scope.launch {
+                              try {
+                                serverBusy = true
+                                readFolder(NextcloudClient(preferences.nextcloudAccount(), context.resources))
+                              } catch (e: kotlinx.coroutines.CancellationException) {
+                                serverStatus = context.getString(R.string.server_stopped)
+                                throw e
+                              } finally {
+                                serverBusy = false
+                              }
+                            }
+                        },
+                        onForget = {
+                            scope.launch {
+                                serverBusy = true
+                                if (KeepService.now.value != null) {
+                                    KeepService.stop(context)
+                                    withTimeoutOrNull(10_000) { KeepService.now.first { it == null } }
+                                }
+                                books.filter { it.sourceType == NextcloudSync.SOURCE_NC }
+                                    .forEach { AbsDownloader.remove(context, library.library, it.uri) }
+                                library.library.forgetSource(NextcloudSync.SOURCE_NC)
+                                preferences.nextcloudUrl = ""
+                                preferences.nextcloudLogin = ""
+                                preferences.nextcloudPassword = ""
+                                preferences.nextcloudFolder = ""
+                                serverStatus = context.getString(R.string.server_forgotten)
+                                serverBusy = false
+                            }
+                        },
+                    )
+                }
+
                 Screen.Settings -> {
                     // Read again whenever the app comes back, which is how the reader returns from
                     // turning the service on in Android's settings.
@@ -1337,9 +1441,22 @@ private fun Mimidoku(
                                     },
                                 ),
                             )
+                            add(
+                                SettingRow(
+                                    key = "nextcloud",
+                                    title = stringResource(R.string.settings_nextcloud),
+                                    value = if (preferences.hasNextcloud) {
+                                        val inFolder = books.count { it.sourceType == NextcloudSync.SOURCE_NC }
+                                        val here = books.count { it.sourceType == NextcloudSync.SOURCE_NC && it.kept }
+                                        stringResource(R.string.settings_server_kept, here, inFolder)
+                                    } else {
+                                        stringResource(R.string.settings_server_none)
+                                    },
+                                ),
+                            )
                             // Only where there is a card to choose, and only with a server to fetch
                             // from: it is a question about where fetched books go and nothing else.
-                            if (preferences.hasServer && AbsDownloader.card(context) != null) {
+                            if ((preferences.hasServer || preferences.hasNextcloud) && AbsDownloader.card(context) != null) {
                                 add(
                                     SettingRow(
                                         key = "keepon",
@@ -1438,7 +1555,9 @@ private fun Mimidoku(
                         onRowClick = { row ->
                             when (row.key) {
                                 "folders" -> screen = Screen.Folders
-                                "server" -> screen = Screen.Server
+                                // What one screen last said is not news on the other.
+                                "server" -> { if (!serverBusy) serverStatus = null; screen = Screen.Server }
+                                "nextcloud" -> { if (!serverBusy) serverStatus = null; screen = Screen.Nextcloud }
                                 "shelving" -> editing = Editing.Shelving
                                 "unhide" -> {
                                     preferences.hiddenBooks = emptySet()
@@ -1540,10 +1659,10 @@ private fun Mimidoku(
             files = ask.files,
             bytes = ask.bytes,
             onCard = ask.books.any { it.sourceType == SOURCE_LOCAL },
-            downloaded = ask.books.any { it.sourceType == AbsSync.SOURCE_ABS && it.kept },
+            downloaded = ask.books.any { isServerSource(it.sourceType) && it.kept },
             onShelf = {
                 scope.launch {
-                    if (ask.books.any { it.uri == playing?.uri && it.sourceType != AbsSync.SOURCE_ABS }) {
+                    if (ask.books.any { it.uri == playing?.uri && !isServerSource(it.sourceType) }) {
                         controller?.stop()
                         controller?.clearMediaItems()
                         playing = null
@@ -2023,7 +2142,7 @@ private fun BookEntity.toRow(resources: Resources, keepingNow: String? = null, f
         null
     },
     removable = kept && sourceType != SOURCE_OPENED,
-    fromServer = sourceType == AbsSync.SOURCE_ABS,
+    fromServer = isServerSource(sourceType),
     state = when {
         kept -> null
         keepingNow != null -> keepingNow

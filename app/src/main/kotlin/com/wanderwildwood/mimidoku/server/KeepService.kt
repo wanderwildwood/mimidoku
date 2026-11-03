@@ -123,7 +123,12 @@ class KeepService : Service() {
 
     private suspend fun keep(uri: String, title: String): String {
         val preferences = Preferences.of(this)
-        val client = AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), resources)
+        val client: BookFiles =
+            if (uri.startsWith(NextcloudSync.bookUri(""))) {
+                NextcloudClient(preferences.nextcloudAccount(), resources)
+            } else {
+                AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), resources)
+            }
         val dao = LibraryDatabase.get(this).dao()
         var said: String? = null
         preferences.failedDownloads -= uri

@@ -273,6 +273,30 @@
     <!-- ============================================================ -->
     <!-- Audiobook server (Audiobookshelf) -->
     <string name="server_title">Audiobookshelf server</string>
+    <string name="settings_nextcloud">Nextcloud folder</string>
+    <string name="nextcloud_title">Nextcloud folder</string>
+    <string name="nextcloud_intro">Lists the audiobooks in a folder of your Nextcloud beside the ones on this phone. The app signs in with an app password, reads the folder, and downloads only the books you choose, each one whole before it plays. Nothing else is sent, and Nextcloud is never told where you are in a book.</string>
+    <string name="nextcloud_login">Login name</string>
+    <string name="nextcloud_password">App password</string>
+    <string name="nextcloud_password_again">App password (type it again to connect again)</string>
+    <string name="nextcloud_show">Show</string>
+    <string name="nextcloud_hide">Hide</string>
+    <string name="nextcloud_folder">Folder</string>
+    <string name="nextcloud_folder_example">Audiobooks</string>
+    <string name="nextcloud_incomplete_why">Fill in the address, the login name and the app password first.</string>
+    <string name="nextcloud_plain_http_why">This address is plain http and is not on your home network. Anyone between you and Nextcloud can read the password and the audio. Use an https address, or press Connect again to go on anyway.</string>
+    <string name="nextcloud_password_note">An app password is made in Nextcloud under Personal settings, Security, Devices and sessions, and can be taken back there at any time. It is kept on this phone, sealed with a key that never leaves it.</string>
+    <string name="nextcloud_folder_note">Each folder with audio files in it is a book, named after the folder and filed under the folder above it as the author (Audiobooks/Author/Title). An audio file on its own in the folder is a book of one file. Leave the folder empty to look through all your files.</string>
+    <string name="nextcloud_forget">Forget this Nextcloud folder</string>
+    <string name="nextcloud_forget_confirm">Forget this Nextcloud folder — its books and downloads go; tap again</string>
+    <string name="nextcloud_refused">Nextcloud did not accept that login name and app password.</string>
+    <string name="nextcloud_no_folder">There is no folder called \"%1$s\" in your files.</string>
+    <string name="nextcloud_not_nextcloud">That address answered with something that is not Nextcloud.</string>
+    <string name="nextcloud_reading">Reading the folder…</string>
+    <plurals name="nextcloud_books_in_folder">
+        <item quantity="one">%d book in the folder.</item>
+        <item quantity="other">%d books in the folder.</item>
+    </plurals>
     <string name="server_intro">Connects to an Audiobookshelf server that you run, at the address below. The app sends it the key you paste in and asks for its list of books; it downloads only the books you choose. Nothing else is sent, and the server is never told where you are in a book.</string>
     <string name="server_busy_why">Wait: the server is being read just now.</string>
     <string name="server_incomplete_why">Fill in both the address and the key first.</string>

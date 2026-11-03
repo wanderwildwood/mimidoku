@@ -268,7 +268,7 @@ fun ServerScreen(
  * fact the decision turns on.
  */
 @Composable
-private fun KeptLine(book: KeptBook, onGiveBack: () -> Unit) {
+internal fun KeptLine(book: KeptBook, onGiveBack: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 16.dp, end = 27.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -307,7 +307,7 @@ private fun KeptLine(book: KeptBook, onGiveBack: () -> Unit) {
  * so does anything downloaded from it.
  */
 @Composable
-private fun ForgetRow(onForget: () -> Unit) {
+internal fun ForgetRow(onForget: () -> Unit, words: Int = R.string.server_forget, armedWords: Int = R.string.server_forget_confirm) {
     var armed by remember { mutableStateOf(false) }
     // Long enough to mean it, short enough that a row left armed does not stay dangerous.
     LaunchedEffect(armed) {
@@ -325,9 +325,9 @@ private fun ForgetRow(onForget: () -> Unit) {
     ) {
         TextMMD(
             text = if (armed) {
-                stringResource(R.string.server_forget_confirm)
+                stringResource(armedWords)
             } else {
-                stringResource(R.string.server_forget)
+                stringResource(words)
             },
             style = MaterialTheme.typography.bodyLarge,
             lineHeight = 24.sp,

@@ -68,7 +68,7 @@ data class AbsBook(
  *
  * [resources] words a failure, which the reader sees as the server's status.
  */
-class AbsClient(private val server: AbsServer, private val resources: Resources) {
+class AbsClient(private val server: AbsServer, private val resources: Resources) : BookFiles {
 
     /** Whether the server is there and the key is good. Answers with its version. */
     suspend fun ping(): AbsResult<String> = get("/api/libraries").map { "reachable" }
@@ -163,8 +163,11 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
 
     fun coverUrl(itemId: String): String = "${server.base}/api/items/$itemId/cover"
 
+    override fun chapterUrl(bookUri: String, chapterUri: String): String? =
+        AbsSync.itemIdOf(bookUri)?.let { fileUrl(it, chapterUri.substringAfterLast(':')) }
+
     /** The one header every request carries. Shared with the downloader, which is not a client. */
-    fun authHeader(): Pair<String, String> = "Authorization" to "Bearer ${server.token}"
+    override fun authHeader(): Pair<String, String> = "Authorization" to "Bearer ${server.token}"
 
     private suspend fun get(path: String): AbsResult<JSONObject> = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
