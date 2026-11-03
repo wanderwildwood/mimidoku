@@ -150,6 +150,7 @@ class Preferences private constructor(context: Context) {
     var nextcloudLogin: String by text("nextcloudLogin", "")
     var nextcloudPassword: String by secret("nextcloudPassword")
     var nextcloudFolder: String by text("nextcloudFolder", "")
+    var nextcloudUserId: String by text("nextcloudUserId", "")
 
     val hasNextcloud: Boolean get() = nextcloudUrl.isNotBlank() && nextcloudLogin.isNotBlank() && nextcloudPassword.isNotBlank()
 
@@ -158,6 +159,7 @@ class Preferences private constructor(context: Context) {
         login = nextcloudLogin,
         password = nextcloudPassword,
         folder = nextcloudFolder,
+        userId = nextcloudUserId,
     )
 
     /**

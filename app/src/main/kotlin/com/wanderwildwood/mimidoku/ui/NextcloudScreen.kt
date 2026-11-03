@@ -41,6 +41,7 @@ data class NextcloudEntry(val address: String, val login: String, val password: 
 /**
  * Books from a folder in a Nextcloud, beside the card's and Audiobookshelf's.
  *
+ * Each field is a row of its own, so the list pages to every one of them on a short panel.
  * Four fields, typed: the address the reader opens Nextcloud at, their login name, an app
  * password made in Nextcloud, and the folder the books are in. No browser and nothing to
  * register, the same sign-in as the other apps that use a Nextcloud. Connecting reads the
@@ -104,6 +105,10 @@ fun NextcloudScreen(
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         Said(stringResource(R.string.nextcloud_intro))
                         Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedAddress,
@@ -115,6 +120,10 @@ fun NextcloudScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedLogin,
@@ -125,6 +134,10 @@ fun NextcloudScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedPassword,
@@ -145,6 +158,10 @@ fun NextcloudScreen(
                             },
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
                             modifier = Modifier.fillMaxWidth(),
                             value = typedFolder,
@@ -156,7 +173,10 @@ fun NextcloudScreen(
                             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
                         )
                         Spacer(modifier = Modifier.height(20.dp))
-
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         val entered = NextcloudEntry(typedAddress, typedLogin, typedPassword, typedFolder)
                         ButtonMMD(
                             // Never greyed out: pressed too soon, it says what is missing.
@@ -218,8 +238,16 @@ fun NextcloudScreen(
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Said(stringResource(R.string.nextcloud_password_note))
                         Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Said(stringResource(R.string.nextcloud_folder_note))
                         Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Said(stringResource(R.string.server_privacy_note))
                         if (connected) {
                             Spacer(modifier = Modifier.height(32.dp))
