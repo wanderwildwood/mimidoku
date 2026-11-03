@@ -24,6 +24,8 @@ data class NextcloudAccount(
     val password: String,
     /** The folder the books are in, inside the person's files ("Audiobooks"); blank for all of them. */
     val folder: String,
+    /** The user id the files live under, once a listing has found it; blank until then. */
+    val userId: String = "",
 )
 
 /** One file or folder a PROPFIND listed, its path relative to the books folder. */
@@ -67,7 +69,8 @@ class NextcloudClient(
     private val base: HttpUrl? = ServerAddress.withScheme(account.server).trimEnd('/').plus("/").toHttpUrlOrNull()
 
     /** The person's own id, which is not always the login name (an email address logs in too). */
-    private var userId: String? = null
+    var userId: String? = account.userId.ifBlank { null }
+        private set
 
     /** The books folder's address, once the user id is known. */
     private fun folderUrl(user: String): HttpUrl.Builder =
@@ -121,11 +124,10 @@ class NextcloudClient(
 
     override fun chapterUrl(bookUri: String, chapterUri: String): String? {
         val path = NextcloudSync.filePathOf(chapterUri) ?: return null
-        val user = userId ?: try {
-            whoAmI().also { userId = it }
-        } catch (e: IOException) {
-            return null
-        }
+        if (base == null) return null
+        // No network here: this is asked on the download's own thread before anything is
+        // fetched. The id was found by the listing and kept; the login name is the fallback.
+        val user = userId ?: account.login
         return folderUrl(user).apply {
             path.split('/').filter { it.isNotEmpty() }.forEach { addPathSegment(it) }
         }.build().toString()

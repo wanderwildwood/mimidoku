@@ -929,6 +929,7 @@ private fun Mimidoku(
                                     val client = NextcloudClient(preferences.nextcloudAccount(), context.resources)
                                     (NextcloudSync.sync(client, library.library) as? AbsResult.Failure)
                                         ?.let { failed = failed ?: it.message }
+                                    client.userId?.let { preferences.nextcloudUserId = it }
                                 }
                                 pullSaid = failed ?: context.getString(R.string.library_pull_done)
                                 serverBusy = false
@@ -1308,7 +1309,9 @@ private fun Mimidoku(
                     // One job at a time on the network, shared with the Audiobookshelf screen.
                     val readFolder: suspend (NextcloudClient) -> Unit = { client ->
                         serverStatus = context.getString(R.string.nextcloud_reading)
-                        serverStatus = when (val synced = NextcloudSync.sync(client, library.library)) {
+                        val synced = NextcloudSync.sync(client, library.library)
+                        client.userId?.let { preferences.nextcloudUserId = it }
+                        serverStatus = when (synced) {
                             is AbsResult.Failure -> synced.message
                             is AbsResult.Success -> context.resources.getQuantityString(
                                 R.plurals.nextcloud_books_in_folder, synced.value.read, synced.value.read,
@@ -1347,6 +1350,7 @@ private fun Mimidoku(
                                         preferences.nextcloudLogin = account.login
                                         preferences.nextcloudPassword = account.password
                                         preferences.nextcloudFolder = account.folder
+                                        client.userId?.let { preferences.nextcloudUserId = it }
                                         readFolder(client)
                                     }
                                 }
@@ -1386,6 +1390,7 @@ private fun Mimidoku(
                                 preferences.nextcloudLogin = ""
                                 preferences.nextcloudPassword = ""
                                 preferences.nextcloudFolder = ""
+                                preferences.nextcloudUserId = ""
                                 serverStatus = context.getString(R.string.server_forgotten)
                                 serverBusy = false
                             }
