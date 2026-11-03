@@ -15,6 +15,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import com.wanderwildwood.mimidoku.library.PlacesBackup
 
 /** A book that is on the card, which until there was anywhere else to be was every book. */
 const val SOURCE_LOCAL = "LOCAL"
@@ -362,6 +363,36 @@ interface LibraryDao {
 
     @Query("DELETE FROM bookmarks WHERE bookUri NOT IN (SELECT uri FROM books)")
     suspend fun deleteOrphanedBookmarks()
+
+    /** Everything a places backup is written from. */
+    @Query("SELECT * FROM books")
+    suspend fun allBooks(): List<BookEntity>
+
+    @Query("SELECT * FROM chapters ORDER BY bookUri, sortIndex")
+    suspend fun allChapters(): List<ChapterEntity>
+
+    @Query("SELECT * FROM bookmarks")
+    suspend fun allBookmarks(): List<BookmarkEntity>
+
+    @Query("DELETE FROM bookmarks WHERE bookUri = :bookUri")
+    suspend fun deleteBookmarksOf(bookUri: String)
+
+    @Insert
+    suspend fun addBookmarks(bookmarks: List<BookmarkEntity>)
+
+    /**
+     * A restore, all or nothing: each place in the file replaces the book's, and each book the
+     * file has bookmarks for has its bookmarks replaced by the file's. Books the file does not
+     * name are left as they are.
+     */
+    @Transaction
+    suspend fun restorePlaces(places: List<PlacesBackup.Place>, bookmarks: Map<String, List<PlacesBackup.Mark>>) {
+        places.forEach { rememberPosition(it.bookUri, it.chapterUri, it.positionMs, it.lastPlayedAt) }
+        bookmarks.forEach { (bookUri, marks) ->
+            deleteBookmarksOf(bookUri)
+            addBookmarks(marks.map { BookmarkEntity(bookUri = bookUri, chapterUri = it.chapterUri, positionMs = it.positionMs, createdAt = it.createdAt, automatic = it.automatic) })
+        }
+    }
 
     /**
      * Folds a scan into what is already known.
