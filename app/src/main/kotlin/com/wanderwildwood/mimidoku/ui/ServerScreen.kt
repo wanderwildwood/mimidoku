@@ -223,7 +223,10 @@ fun ServerScreen(
                         )
                     }
                     items(kept, key = { it.id }) { book ->
-                        KeptLine(book = book, onGiveBack = { onGiveBack(book) })
+                        Column {
+                            KeptLine(book = book, onGiveBack = { onGiveBack(book) })
+                            DottedRule()
+                        }
                     }
                     item { Spacer(modifier = Modifier.height(28.dp)) }
                 }

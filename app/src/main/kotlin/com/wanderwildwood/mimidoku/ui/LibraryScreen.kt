@@ -98,18 +98,24 @@ fun LibraryScreen(
             // remembering whose shelf it sits on.
             if (onRecentClick != null) {
                 item(key = RECENT) {
-                    ShelfRow(
-                        row = LibraryRow(title = stringResource(R.string.library_recent), id = RECENT),
-                        icon = Icons.Recent,
-                        onClick = onRecentClick,
-                    )
+                    Column {
+                        ShelfRow(
+                            row = LibraryRow(title = stringResource(R.string.library_recent), id = RECENT),
+                            icon = Icons.Recent,
+                            onClick = onRecentClick,
+                        )
+                        DottedRule()
+                    }
                 }
             }
             items(rows, key = { it.id }) { row ->
-                ShelfRow(
-                    row = row,
-                    onClick = { onRowClick(row) },
-                )
+                Column {
+                    ShelfRow(
+                        row = row,
+                        onClick = { onRowClick(row) },
+                    )
+                    DottedRule()
+                }
             }
         }
 
