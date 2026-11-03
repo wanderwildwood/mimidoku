@@ -108,7 +108,10 @@ dependencies {
   implementation(libs.room.ktx)
   ksp(libs.room.compiler)
 
+  implementation(libs.okhttp)
+
   testImplementation(libs.junit)
   // Android's org.json is a stub under unit tests; the places backup is JSON.
   testImplementation("org.json:json:20240303")
+  testImplementation(libs.okhttp.mockwebserver)
 }

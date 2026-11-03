@@ -10,6 +10,7 @@ const val SOURCE_URL = "https://github.com/wanderwildwood/mimidoku"
 /** What the APK carries that is not this app's own code, and the licence each project declares. */
 val LICENCE_COMPONENTS: List<LicenceComponent> = listOf(
     LicenceComponent("Media3 (ExoPlayer, session, common)", "Google", "Apache-2.0", "https://developer.android.com/media/media3"),
+    LicenceComponent("OkHttp and Okio (books in a Nextcloud folder)", "Square", "Apache-2.0", "https://square.github.io/okhttp/"),
     LicenceComponent("Room", "Google", "Apache-2.0", "https://developer.android.com/jetpack/androidx/releases/room"),
     LicenceComponent("Mudita Mindful Design (MMD)", "Mudita", "Apache-2.0", "https://github.com/mudita/MMD"),
     LicenceComponent("Lato typeface, supplied with MMD", "\u0141ukasz Dziedzic", "OFL-1.1", "https://www.latofonts.com"),

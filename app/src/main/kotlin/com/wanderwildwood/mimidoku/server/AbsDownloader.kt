@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Environment
 import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.data.ChapterEntity
+import com.wanderwildwood.mimidoku.data.DurationReader
 import com.wanderwildwood.mimidoku.data.LibraryDao
 import com.wanderwildwood.mimidoku.data.Preferences
 import kotlinx.coroutines.Dispatchers
@@ -92,15 +93,16 @@ object AbsDownloader {
      */
     suspend fun downloadBook(
         context: Context,
-        client: AbsClient,
+        client: BookFiles,
         dao: LibraryDao,
         bookUri: String,
         onProgress: suspend (done: Int, total: Int, fraction: Float) -> Unit = { _, _, _ -> },
     ): AbsResult<Int> {
-        val itemId = AbsSync.itemIdOf(bookUri)
-            ?: return AbsResult.Failure(context.getString(R.string.download_not_on_server))
         val chapters = dao.chaptersOf(bookUri)
         if (chapters.isEmpty()) return AbsResult.Failure(context.getString(R.string.download_empty))
+        if (chapters.any { client.chapterUrl(bookUri, it.uri) == null }) {
+            return AbsResult.Failure(context.getString(R.string.download_not_on_server))
+        }
 
         var done = 0
         for (chapter in chapters) {
@@ -110,11 +112,11 @@ object AbsDownloader {
                 onProgress(done, chapters.size, 1f)
                 continue
             }
-            val ino = chapter.uri.substringAfterLast(':')
+            val url = client.chapterUrl(bookUri, chapter.uri)!!
             var tries = 0
             var r: AbsResult<File>
             while (true) {
-                r = download(context, client, itemId, ino, chapter.uri) { fraction ->
+                r = download(context, client, url, chapter.uri) { fraction ->
                     onProgress(done, chapters.size, fraction)
                 }
                 // Only a transfer that broke is worth repeating. A server that says no, or a
@@ -128,7 +130,11 @@ object AbsDownloader {
                 is AbsResult.Success -> {
                     // Written only once the file is whole and in place. A row that says a file is
                     // here when it is not would be a book that plays silence.
-                    dao.setChapterAudio(chapter.uri, Uri.fromFile(r.value).toString())
+                    val audio = Uri.fromFile(r.value).toString()
+                    dao.setChapterAudio(chapter.uri, audio)
+                    // A Nextcloud folder does not say how long its files are, so a chapter
+                    // arrives without a length; it is read from the file now that it is here.
+                    if (chapter.durationMs <= 0L) DurationReader(context).now(chapter.copy(audioUri = audio))
                     done++
                     onProgress(done, chapters.size, 1f)
                 }
@@ -142,9 +148,8 @@ object AbsDownloader {
 
     private suspend fun download(
         context: Context,
-        client: AbsClient,
-        itemId: String,
-        ino: String,
+        client: BookFiles,
+        url: String,
         chapterUri: String,
         onProgress: suspend (Float) -> Unit,
     ): AbsResult<File> = withContext(Dispatchers.IO) {
@@ -155,7 +160,7 @@ object AbsDownloader {
         val partial = File(target.absolutePath + ".part")
         var connection: HttpURLConnection? = null
         try {
-            connection = (URL(client.fileUrl(itemId, ino)).openConnection() as HttpURLConnection)
+            connection = (URL(url).openConnection() as HttpURLConnection)
                 .apply {
                     requestMethod = "GET"
                     connectTimeout = 15_000

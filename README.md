@@ -1,6 +1,6 @@
 # 耳読 mimidoku — Audio Reader
 
-Audio Reader is an audiobook player for the Mudita Kompakt, written from scratch. Choose a folder and that is the library; chapters are read from the files' own marks, with bookmarks, a sleep timer, playback speed and your place kept in every book. It can also read the library of an Audiobookshelf server you run. GPL-3.0-only.
+Audio Reader is an audiobook player for the Mudita Kompakt, written from scratch. Choose a folder and that is the library; chapters are read from the files' own marks, with bookmarks, a sleep timer, playback speed and your place kept in every book. It can also read the library of an Audiobookshelf server you run, or the audiobooks in a folder of your Nextcloud. GPL-3.0-only.
 
 *Mimidoku* is 耳読, "ear reading" — a Japanese coinage for taking in books by ear rather than by
 eye. It names what the reader is doing rather than the machine doing it.
@@ -46,7 +46,7 @@ An author is one shelf however the files spell the name: the folder you filed th
 the shelf, whatever the files' tags say, and "Basil Moor", "basil moor " and a server's
 "Basil Moor," are one person. The same book twice -- one title by one author at one
 length -- is listed once. **Recent**, above the shelves, lists the books lately played.
-With an Audiobookshelf server, a swipe down at the top of the library reads its catalog again.
+With an Audiobookshelf server or a Nextcloud folder, a swipe down at the top of the library reads its catalog again.
 
 Each book (and each author's shelf) has a plain "Remove" at the end of its row. It asks, and the
 two answers are different things. "Remove from the shelf" takes the book off the list and leaves

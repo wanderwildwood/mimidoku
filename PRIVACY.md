@@ -81,6 +81,16 @@ in, and what it does is narrow on purpose:
   readable by anyone else on that network. On a home wifi that is a fair trade. If your server
   is reachable from outside your house, give it an https address and use that one.
 
+## Your Nextcloud
+
+The app can also list the audiobooks in a folder of your Nextcloud (Settings, Nextcloud folder).
+It is off until you fill it in, and it works the same narrow way as the server above: it reads
+the folder's listing, downloads only the books you ask for (each one whole, before it plays), and
+never tells Nextcloud where you are in a book. It signs in with your login name and an app
+password you make in Nextcloud (Personal settings, Security), which you can take back there at
+any time. The app password is sealed the same way as the server key, in the app's private
+settings. The same http rule applies: plain http only on your home network, https otherwise.
+
 Books you download are kept in the app's own folder — on the phone, or on a memory card if
 you choose that in Settings — which means uninstalling the app takes them with it. No other
 app on the phone can read them, but a memory card can be taken out and read in a computer.

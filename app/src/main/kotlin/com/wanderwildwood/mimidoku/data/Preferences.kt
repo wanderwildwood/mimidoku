@@ -143,6 +143,24 @@ class Preferences private constructor(context: Context) {
     val hasServer: Boolean get() = serverUrl.isNotBlank() && serverToken.isNotBlank()
 
     /**
+     * A Nextcloud folder of books, if the reader has one: the address, the login name, an app
+     * password (sealed, as the Audiobookshelf key is; see [Secrets]) and the folder.
+     */
+    var nextcloudUrl: String by text("nextcloudUrl", "")
+    var nextcloudLogin: String by text("nextcloudLogin", "")
+    var nextcloudPassword: String by secret("nextcloudPassword")
+    var nextcloudFolder: String by text("nextcloudFolder", "")
+
+    val hasNextcloud: Boolean get() = nextcloudUrl.isNotBlank() && nextcloudLogin.isNotBlank() && nextcloudPassword.isNotBlank()
+
+    fun nextcloudAccount() = com.wanderwildwood.mimidoku.server.NextcloudAccount(
+        server = nextcloudUrl,
+        login = nextcloudLogin,
+        password = nextcloudPassword,
+        folder = nextcloudFolder,
+    )
+
+    /**
      * What the reader said one granted folder holds, or null where they have not been asked.
      *
      * Kept beside the settings rather than in the library database, because it is an answer about
