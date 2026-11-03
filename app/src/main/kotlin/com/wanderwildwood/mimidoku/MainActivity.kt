@@ -939,6 +939,7 @@ private fun Mimidoku(
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
                         onChooseFolder = { pickFolder.launch(null) },
                         onConnectServer = { screen = Screen.Server }.takeIf { !preferences.hasServer },
+                        onConnectNextcloud = { serverStatus = null; screen = Screen.Nextcloud }.takeIf { !preferences.hasNextcloud },
                     )
                 }
 
