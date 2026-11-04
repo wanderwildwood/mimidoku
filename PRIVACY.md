@@ -133,7 +133,7 @@ reads no other app, and nothing it sees leaves the phone.
 <!-- shared-about privacy section -->
 ## Who we are
 
-Audio Reader is made by wander wildwood, an independent developer: one person, not a company. wander wildwood is the data controller for anything the app itself handles, and that is very little. Audio Reader keeps what you put in it on your phone and sends nothing to the developer, so the developer holds no data about you.
+Audio Reader is made by wander wildwood, an independent developer: one person, not a company. wander wildwood is the data controller for anything the app itself handles, and that is very little. What you put in Audio Reader stays on your phone. The only things that go out are the requests to your own Audiobookshelf server or Nextcloud, if you add one, described above: requests for the list of books there and their chapters, and the download of each book you choose. They carry your API key or app password, and never your place in a book. Nothing goes to the developer, so the developer holds no data about you.
 
 ## How to contact us
 
