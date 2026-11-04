@@ -38,7 +38,6 @@ import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.server.ServerAddress
-import kotlinx.coroutines.delay
 
 /** What the reader typed, on its way to being a server. */
 data class ServerEntry(val address: String, val key: String) {
@@ -311,14 +310,8 @@ internal fun KeptLine(book: KeptBook, onGiveBack: () -> Unit) {
  */
 @Composable
 internal fun ForgetRow(onForget: () -> Unit, words: Int = R.string.server_forget, armedWords: Int = R.string.server_forget_confirm) {
-    var armed by remember { mutableStateOf(false) }
-    // Long enough to mean it, short enough that a row left armed does not stay dangerous.
-    LaunchedEffect(armed) {
-        if (armed) {
-            delay(ARMED_MS)
-            armed = false
-        }
-    }
+    var armed by rememberArmedFlag()
+    // No timer: it stays armed until the next other touch, Back or leaving.
 
     Row(
         modifier = Modifier
