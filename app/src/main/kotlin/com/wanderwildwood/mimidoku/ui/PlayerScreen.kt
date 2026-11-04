@@ -163,7 +163,7 @@ fun PlayerScreen(
                 TextMMD(
                     text = playback.announcement,
                     style = MaterialTheme.typography.labelSmall,
-                    lineHeight = 18.sp,
+                    lineHeight = 20.sp,
                     color = Color.Black,
                 )
             }
@@ -372,7 +372,7 @@ private fun RowScope.Tool(
         TextMMD(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            lineHeight = 16.sp,
+            lineHeight = 20.sp,
             color = Color.Black,
             maxLines = 1,
             softWrap = false,
@@ -410,7 +410,7 @@ private fun TransportButton(
             TextMMD(
                 text = label(),
                 style = MaterialTheme.typography.labelSmall,
-                lineHeight = 14.sp,
+                lineHeight = 20.sp,
                 color = if (locked) Dimmed else Color.Black,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
