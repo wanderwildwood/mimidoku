@@ -148,5 +148,3 @@ fun BookLine(book: BookRow, showAuthor: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** How long an armed row waits for its second press, six seconds, because the panel needs a moment just to show the question. */
-const val ARMED_MS = 6_000L

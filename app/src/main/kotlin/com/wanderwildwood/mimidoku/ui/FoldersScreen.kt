@@ -19,12 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,14 +114,8 @@ fun FoldersScreen(
 @Composable
 private fun FolderLine(folder: FolderRow, onRemove: () -> Unit, onChange: () -> Unit) {
     // Stopping is asked in the row itself, with the one fact a reader needs before agreeing: no
-    // file is touched. It gives up after six seconds, so a stray press leaves nothing live.
-    var armed by remember { mutableStateOf(false) }
-    LaunchedEffect(armed) {
-        if (armed) {
-            delay(ARMED_MS)
-            armed = false
-        }
-    }
+    // file is touched. It stays armed until the next other touch, Back or leaving.
+    var armed by rememberArmedFlag()
     val ink = if (armed) Color.White else Color.Black
     Row(
         modifier = Modifier

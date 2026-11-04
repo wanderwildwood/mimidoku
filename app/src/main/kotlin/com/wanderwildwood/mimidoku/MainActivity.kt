@@ -129,6 +129,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.Date
+import com.wanderwildwood.mimidoku.ui.rememberArmedFlag
 
 class MainActivity : ComponentActivity() {
 
@@ -458,12 +459,8 @@ private fun Mimidoku(
         announcement = null
     }
 
-    // Places and bookmarks, to and from a file the reader picks. The restore row is armed: the
-    // first press says what a second will do, and gives up after [ARMED_MS].
-    var restoreArmed by remember { mutableStateOf(false) }
-    LaunchedEffect(restoreArmed) {
-        if (restoreArmed) { delay(com.wanderwildwood.mimidoku.ui.ARMED_MS); restoreArmed = false }
-    }
+    // Places and bookmarks, to and from a file the reader picks. The restore row is armed (see
+    // restoreArmed under Screen.Settings).
     val savePlaces = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
@@ -1400,6 +1397,10 @@ private fun Mimidoku(
                 }
 
                 Screen.Settings -> {
+                    // The restore row is armed: the first press says what a second will do, and it
+                    // stays armed until the next other touch, Back or leaving. Declared here, after
+                    // the screen's own BackHandler, so Back disarms it before it closes Settings.
+                    var restoreArmed by rememberArmedFlag()
                     // Read again whenever the app comes back, which is how the reader returns from
                     // turning the service on in Android's settings.
                     var lockScreenControlsOn by remember { mutableStateOf(LockScreenControls.isEnabled(context)) }

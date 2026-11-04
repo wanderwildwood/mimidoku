@@ -15,10 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,14 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudita.mmd.components.text.TextMMD
 import com.wanderwildwood.mimidoku.R
-import kotlinx.coroutines.delay
 
 /**
  * What taking a book (or every book of an author) off the phone means, said in full.
  *
  * Taking a book off the shelf and deleting the reader's audio files are two different things
  * and are two different buttons. The delete is an armed one: it changes to say what a second
- * press will do and gives up after [ARMED_MS], so a stray press leaves nothing live.
+ * press will do and stays armed until the next other touch, Back or leaving.
  *
  * @param onCard whether any of the books is a folder of the reader's own files
  * @param downloaded whether any is a copy this app fetched from the server
@@ -53,15 +49,11 @@ fun RemoveDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var armed by remember { mutableStateOf(false) }
-    LaunchedEffect(armed) {
-        if (armed) {
-            delay(ARMED_MS)
-            armed = false
-        }
-    }
     val context = LocalContext.current
-    EInkDialog(onDismiss = onDismiss) {
+    // The dialog is its own window, so it has its own ArmedScope: a tap anywhere else in it
+    // disarms the delete.
+    EInkDialog(onDismiss = onDismiss) { ArmedScope(Modifier.fillMaxWidth()) { Column(Modifier.fillMaxWidth()) {
+        var armed by rememberArmedFlag()
         TextMMD(text = title, style = MaterialTheme.typography.titleLarge, lineHeight = 32.sp, color = Color.Black)
         if (files > 0) {
             Spacer(Modifier.height(8.dp))
@@ -109,7 +101,7 @@ fun RemoveDialog(
                 )
             }
         }
-    }
+    } } }
 }
 
 @Composable

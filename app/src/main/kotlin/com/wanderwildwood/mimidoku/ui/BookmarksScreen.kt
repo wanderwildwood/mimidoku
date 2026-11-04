@@ -18,10 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +29,6 @@ import com.wanderwildwood.mimidoku.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
 /** One marked place, as the list needs it. */
 data class BookmarkRow(
@@ -103,15 +99,9 @@ fun BookmarksScreen(
 @Composable
 private fun BookmarkLine(bookmark: BookmarkRow, onClick: () -> Unit, onDelete: () -> Unit) {
     // The row asks, rather than a dialog: one repaint instead of two, and the question is put
-    // in the place the answer belongs. It disarms itself, so a stray tap leaves nothing live
-    // for whoever picks the phone up next.
-    var armed by remember { mutableStateOf(false) }
-    LaunchedEffect(armed) {
-        if (armed) {
-            delay(ARMED_MS)
-            armed = false
-        }
-    }
+    // in the place the answer belongs. It stays armed until the next other touch, Back or
+    // leaving, so nothing is left live for whoever picks the phone up next.
+    var armed by rememberArmedFlag()
 
     Row(
         modifier = Modifier
