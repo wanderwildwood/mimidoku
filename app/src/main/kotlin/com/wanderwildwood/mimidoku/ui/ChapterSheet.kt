@@ -84,11 +84,14 @@ fun ChapterSheet(
                 contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
             ) {
                 items(chapters, key = { it.id }) { chapter ->
-                    ChapterLine(
-                        chapter = chapter,
-                        playing = chapter.id == playingIndex,
-                        onClick = { onPick(chapter) },
-                    )
+                    Column {
+                        ChapterLine(
+                            chapter = chapter,
+                            playing = chapter.id == playingIndex,
+                            onClick = { onPick(chapter) },
+                        )
+                        DottedRule(start = 18.dp)
+                    }
                 }
             }
         }
