@@ -68,11 +68,14 @@ fun BookmarksScreen(
                 )
             } else PagedColumn(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
                 items(bookmarks, key = { it.id }) { bookmark ->
-                    BookmarkLine(
-                        bookmark = bookmark,
-                        onClick = { onGoTo(bookmark) },
-                        onDelete = { onDelete(bookmark) },
-                    )
+                    Column {
+                        BookmarkLine(
+                            bookmark = bookmark,
+                            onClick = { onGoTo(bookmark) },
+                            onDelete = { onDelete(bookmark) },
+                        )
+                        DottedRule()
+                    }
                 }
             }
         }
