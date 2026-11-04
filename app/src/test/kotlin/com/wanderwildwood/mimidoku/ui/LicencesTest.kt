@@ -36,6 +36,7 @@ class LicencesTest {
         "com.mudita:MMD",
         "Lato typeface",
         "Material Symbols icons",
+        "Public Suffix List", // inside OkHttp (publicsuffixes.gz), MPL 2.0
     )
 
     @Test fun theBuildListedTheLibraries() {
@@ -50,6 +51,11 @@ class LicencesTest {
     @Test fun everyExpectedComponentIsListed() {
         val missing = EXPECTED.filterNot { id -> generated.any { it.note?.startsWith("$id ") == true || it.name == id } }
         assertEquals(emptyList<String>(), missing)
+    }
+
+    @Test fun mmdIsShownAsMudita() {
+        val mmd = generated.single { it.note?.startsWith("com.mudita:MMD ") == true }
+        assertEquals("Mudita", mmd.author)
     }
 
     @Test fun theSourceLinkIsTheRepo() {
