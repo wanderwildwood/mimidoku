@@ -1,0 +1,14 @@
+{
+  "uniqueId": "public-suffix-list",
+  "name": "Public Suffix List",
+  "description": "The list of internet domain suffixes inside OkHttp (publicsuffixes.gz), compiled from publicsuffix.org's public_suffix_list.dat.",
+  "developers": [
+    {
+      "name": "Mozilla Foundation and the list's contributors"
+    }
+  ],
+  "website": "https://publicsuffix.org",
+  "licenses": [
+    "mpl-2.0-text"
+  ]
+}

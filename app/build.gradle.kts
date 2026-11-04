@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.util.regex.Pattern
 
 plugins {
   alias(libs.plugins.android.application)
@@ -136,6 +137,14 @@ aboutLibraries {
   }
   library {
     mergePlatformArtifacts.set(true)
+    // The page lists what the release APK carries. These come in only through
+    // debugImplementation (Compose ui-tooling) and are not in the release runtime classpath.
+    exclusionPatterns.addAll(
+      listOf(
+        "androidx.compose.ui:ui-tooling", "androidx.compose.ui:ui-tooling-data",
+        "androidx.compose.material:material",
+      ).map { Pattern.compile("^" + Regex.escape(it) + "$") },
+    )
   }
 }
 
@@ -159,8 +168,21 @@ tasks.matching { it.name.startsWith("prepareLibraryDefinitions") }.configureEach
     val bad = mutableListOf<String>()
     outputs.files.asFileTree.matching { include("**/aboutlibraries.json") }.forEach { f ->
       @Suppress("UNCHECKED_CAST")
-      val root = groovy.json.JsonSlurper().parse(f) as Map<String, Any?>
+      val root = groovy.json.JsonSlurper().parse(f) as MutableMap<String, Any?>
       val lics = (root["licenses"] as? Map<String, Map<String, Any?>>).orEmpty()
+      // A library's own license file (config/licenses, with its copyright line) stands in for
+      // the bare family entry its POM names: the plugin merges config entries in, it never
+      // takes one out, so a library would otherwise list "MIT" twice, once with no text.
+      var changed = false
+      (root["libraries"] as? List<MutableMap<String, Any?>>).orEmpty().forEach { lib ->
+        val keys = (lib["licenses"] as? List<String>).orEmpty()
+        fun fam(k: String) = family((lics[k]?.get("spdxId") ?: lics[k]?.get("name") ?: k).toString())
+        fun hasText(k: String) = !(lics[k]?.get("content") as? String).isNullOrBlank()
+        val own = keys.filter { hasText(it) }.mapNotNull { fam(it) }.toSet()
+        val kept = keys.filterNot { !hasText(it) && fam(it) in own }
+        if (kept != keys) { lib["licenses"] = kept; changed = true }
+      }
+      if (changed) f.writeText(groovy.json.JsonOutput.toJson(root))
       (root["libraries"] as? List<Map<String, Any?>>).orEmpty().forEach { lib ->
         val keys = (lib["licenses"] as? List<String>).orEmpty()
         if (keys.isEmpty()) bad += "${lib["uniqueId"]}: no license"
