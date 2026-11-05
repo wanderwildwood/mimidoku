@@ -244,6 +244,7 @@
     <!-- The donation link label, beside a drawing of a llama. A fixed phrase: a verb and an object -->
     <string name="about_feed_the_llamas">Feed the llamas</string>
     <!-- Button that closes the About dialog -->
+    <string name="about_what">An audiobook player that keeps your place in every book, with chapters, bookmarks, a sleep timer and playback speed. It reads a folder on the phone, an Audiobookshelf server or a Nextcloud folder of your own.</string>
     <string name="about_privacy_heading">Privacy</string>
     <string name="about_privacy">Your books, bookmarks and place in each book stay on this phone. The app goes online only if you set up an Audiobookshelf server or a Nextcloud folder of your own, and then only to that, to list its books and download the ones you choose; it never tells the server where you are in a book. The address and key or app password are kept on this phone, sealed. A server on a home network uses plain http. Nothing is sent to the app\'s maker. There are no ads, no analytics and no tracking. Lock-screen controls, if you switch them on, use an accessibility service that reads only the lock screen. Glance, if you allow it, is handed the title of the book playing.</string>
     <string name="about_terms_heading">Terms</string>
@@ -414,7 +415,7 @@
     <string name="licences_title">Licenses</string>
     <string name="licences_source_head">Source code</string>
     <string name="licences_no_text">%s needs no license text here.</string>
-    <string name="licences_licence">Audio Reader is free software: GPL-3.0-only, copyright wander wildwood. What it is built on keeps its own licenses, each on its own page.</string>
+    <string name="licences_licence">Audio Reader is free software: GPL-3.0-only, copyright wander wildwood. What it is built on keeps its own licenses, listed below.</string>
     <string name="licences_back">Back</string>
     <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
     <string name="licences_full_head">Full texts</string>
@@ -423,6 +424,10 @@
     <string name="licences_full_ofl">SIL Open Font License 1.1 (full text)</string>
     <!-- shared-about: contact row + privacy section (edit in /opt/projects/shared-about) -->
     <string name="about_write_to">Write to %1$s</string>
+    <string name="about_open_drawer">Open %1$s</string>
+    <string name="about_close_drawer">Close %1$s</string>
+    <string name="about_contact_head">Contact</string>
+    <string name="about_links_head">Links</string>
     <string name="about_no_mail_app">No email app is installed. The address is %1$s.</string>
     <string name="privacy_who_title">Who we are</string>
     <string name="privacy_who">This app is made by wander wildwood, an independent developer: one person, not a company. That makes wander wildwood the data controller for anything the app itself handles, and that is very little. What you put in stays on this phone. The only things that go out are the requests to your own Audiobookshelf server or Nextcloud, if you add one: requests for the list of books there and their chapters, and the download of each book you choose. They carry your API key or app password, never your place in a book. Nothing comes to the developer.</string>
