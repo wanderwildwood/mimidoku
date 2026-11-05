@@ -77,7 +77,13 @@ fun BooksScreen(
                 actions = listOf(stringResource(R.string.shelf_empty_back) to onClose),
                 modifier = Modifier.weight(1f),
             )
-        } else PagedColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
+        } else PagedColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            // A list of tall rows: the book the foot cuts through shows there, and the next page
+            // opens on it whole, rather than a blank band at the foot (5 Nov 2026).
+            showCutRow = true,
+        ) {
             items(books, key = { it.id }) { book ->
                 Column {
                     BookLine(
