@@ -461,14 +461,14 @@ private fun Mimidoku(
 
     // Places and bookmarks, to and from a file the reader picks. The restore row is armed (see
     // restoreArmed under Screen.Settings).
-    val savePlaces = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val savePlaces = rememberLauncherForActivityResult(FilesCreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val ok = PlacesFiles.save(context, uri)
             Toast.makeText(context, context.getString(if (ok) R.string.places_saved else R.string.places_not_saved), Toast.LENGTH_LONG).show()
         }
     }
-    val restorePlaces = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val restorePlaces = rememberLauncherForActivityResult(FilesOpenDocument(writable = false)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         // Paused first, or the player would write its own place over the restored one a few seconds later.
         controller?.pause()
@@ -493,7 +493,7 @@ private fun Mimidoku(
     }
 
     val pickFolder = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree(),
+        FilesOpenTree(),
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         // Without taking the permission, the grant dies with this activity.
