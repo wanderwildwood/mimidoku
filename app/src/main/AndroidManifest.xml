@@ -29,6 +29,8 @@
         </intent>
         <!-- Files (Cabinet), so open, save and folder requests go to its e-ink screens. -->
         <package android:name="com.wanderwildwood.tana" />
+        <!-- Glance, so the lock-screen line can check who is asking (its signing certificate). -->
+        <package android:name="com.wanderwildwood.hitome" />
     </queries>
 
     <application
