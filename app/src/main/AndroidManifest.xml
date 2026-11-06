@@ -27,6 +27,8 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
         </intent>
+        <!-- Files (Cabinet), so open, save and folder requests go to its e-ink screens. -->
+        <package android:name="com.wanderwildwood.tana" />
     </queries>
 
     <application
