@@ -71,7 +71,7 @@ fun FoldersScreen(
                 trailing = { BarText(stringResource(R.string.folders_scan_now), onScanNow) },
             )
 
-            PagedColumn(modifier = Modifier.weight(1f).padding(top = 12.dp)) {
+            PagedColumn(modifier = Modifier.weight(1f).padding(top = 12.dp), showCutRow = true) {
                 items(folders, key = { it.id }) { folder ->
                     FolderLine(
                         folder = folder,

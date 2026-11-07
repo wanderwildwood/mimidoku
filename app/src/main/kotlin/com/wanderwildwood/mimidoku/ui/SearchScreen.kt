@@ -98,6 +98,7 @@ fun SearchScreen(
             PagedColumn(
                 modifier = Modifier.weight(1f),
                 state = shelfListState,
+                showCutRow = true,
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     Column {
@@ -130,7 +131,7 @@ fun SearchScreen(
                     modifier = Modifier.weight(1f).padding(start = 16.dp, end = 16.dp, top = 24.dp),
                 )
             } else {
-                PagedColumn(modifier = Modifier.weight(1f), state = foundListState) {
+                PagedColumn(modifier = Modifier.weight(1f), state = foundListState, showCutRow = true) {
                     items(found, key = { it.id }) { book ->
                         Column {
                             BookLine(book = book, showAuthor = true, onClick = { onBookClick(book) })

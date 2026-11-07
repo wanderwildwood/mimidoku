@@ -62,7 +62,7 @@ fun BookmarksScreen(
                     message = stringResource(R.string.bookmarks_empty),
                     actions = listOf(stringResource(R.string.bookmarks_empty_add) to onAdd),
                 )
-            } else PagedColumn(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp)) {
+            } else PagedColumn(contentPadding = PaddingValues(top = 15.dp, bottom = 96.dp), showCutRow = true) {
                 items(bookmarks, key = { it.id }) { bookmark ->
                     Column {
                         BookmarkLine(
