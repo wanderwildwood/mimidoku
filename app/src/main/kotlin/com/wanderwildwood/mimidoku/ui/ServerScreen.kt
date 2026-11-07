@@ -116,7 +116,7 @@ fun ServerScreen(
                 },
             )
 
-            PagedColumn(modifier = Modifier.weight(1f)) {
+            PagedColumn(modifier = Modifier.weight(1f), showCutRow = true) {
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         TextMMD(

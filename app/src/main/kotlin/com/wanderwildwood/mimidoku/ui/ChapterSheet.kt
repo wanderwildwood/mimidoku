@@ -82,6 +82,7 @@ fun ChapterSheet(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 3.dp, bottom = 8.dp),
+                showCutRow = true,
             ) {
                 items(chapters, key = { it.id }) { chapter ->
                     Column {

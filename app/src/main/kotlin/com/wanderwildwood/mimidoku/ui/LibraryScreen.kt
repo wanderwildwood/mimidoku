@@ -100,7 +100,7 @@ fun LibraryScreen(
                 },
                 modifier = Modifier.weight(1f),
             )
-        } else PagedColumn(state = listState, onPullAtTop = onPullAtTop, modifier = Modifier.weight(1f).fillMaxWidth()) {
+        } else PagedColumn(state = listState, onPullAtTop = onPullAtTop, modifier = Modifier.weight(1f).fillMaxWidth(), showCutRow = true) {
             // The books lately read, above the shelves, once there are any: the way back to a
             // book is usually the book that was being read, and that should not mean
             // remembering whose shelf it sits on.
