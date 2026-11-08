@@ -37,9 +37,9 @@ Settings → **Show the book being read in Glance**, and that switch turns it of
 
 ## Android backup
 
-Android's own backup (to your Google account, or a phone-to-phone transfer) includes this app's
-library database, your places and bookmarks, and its settings. It leaves out the file that holds
-the server address and API key, so the key never goes with a backup.
+Nothing of this app goes into Android's own backup (to your Google account) or a phone-to-phone
+transfer (`allowBackup="false"`, and data-extraction rules that leave out everything). The app's
+own file, below, is the way to move your places and bookmarks.
 
 **Save places and bookmarks** (Settings) writes where you are in each book you have started,
 when you last listened, and your bookmarks, with each book's title, author and chapter names so
