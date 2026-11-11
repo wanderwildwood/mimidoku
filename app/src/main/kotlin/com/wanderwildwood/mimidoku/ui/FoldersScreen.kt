@@ -71,7 +71,8 @@ fun FoldersScreen(
                 trailing = { BarText(stringResource(R.string.folders_scan_now), onScanNow) },
             )
 
-            PagedColumn(modifier = Modifier.weight(1f).padding(top = 12.dp), showCutRow = true) {
+            // The scrollbar ends above the add button, so its lower arrow is not under the button.
+            PagedColumn(modifier = Modifier.weight(1f).padding(top = 12.dp), showCutRow = true, barClearBelow = 72.dp) {
                 items(folders, key = { it.id }) { folder ->
                     FolderLine(
                         folder = folder,
