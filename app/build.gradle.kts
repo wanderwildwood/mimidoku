@@ -55,10 +55,11 @@ android {
         include = false
       }
 
-      // Off on purpose. R8 cannot be signed off from this desk - a release APK that
-      // assembles proves nothing about one that runs. Turn it on when there is a
-      // Kompakt to install the result on and hear it play a book.
-      isMinifyEnabled = false
+      // Shrunk: unshrunk, the code alone was 28 MB of a 30 MB APK. A release APK that
+      // assembles proves nothing about one that runs, so a shrunk build is heard playing a
+      // book on a Kompakt before it is released.
+      isMinifyEnabled = true
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       realSigningConfig?.let { signingConfig = it }
     }
   }
