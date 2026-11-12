@@ -78,10 +78,10 @@ The screen-by-screen audit was worth more than everything before it. In order of
   spaced (the reference's spacing is irregular); bookmark times follow the device's 24-hour setting
   where the reference hardcodes 12-hour; removing a bookmark asks first; About credits Lato and
   Material Symbols instead of linking source. On the preferences screen, the first row's icon is
-  centred on the row where the reference aligns it to the title.
+  centered on the row where the reference aligns it to the title.
 - **m4b chapter atoms are not parsed — and do not need to be.** The reference does not read them
   either: Dune shows no chapter line in both apps.
-- The licence for mimidoku is still deliberately undecided.
+- The license for mimidoku is still deliberately undecided.
 
 ## The repository itself
 
