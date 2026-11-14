@@ -75,6 +75,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.wanderwildwood.mimidoku.MainActivity
 import com.wanderwildwood.mimidoku.playback.PlaybackService
 import com.wanderwildwood.mimidoku.R
+import com.wanderwildwood.mimidoku.ui.keepColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -442,7 +443,7 @@ private fun ControlsPanel(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = label,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(36.dp).clip(shape),
+                    modifier = Modifier.size(36.dp).clip(shape).keepColors(),
                 )
             } else {
                 Box(

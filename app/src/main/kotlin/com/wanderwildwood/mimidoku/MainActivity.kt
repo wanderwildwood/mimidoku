@@ -59,6 +59,7 @@ import com.wanderwildwood.mimidoku.glance.GlanceProvider
 import com.wanderwildwood.mimidoku.library.OpenedBook
 import com.wanderwildwood.mimidoku.library.Progress
 import com.wanderwildwood.mimidoku.library.Removal
+import com.wanderwildwood.mimidoku.ui.DarkMode
 import com.wanderwildwood.mimidoku.ui.RemoveDialog
 import com.wanderwildwood.mimidoku.library.Sameness
 import com.wanderwildwood.mimidoku.data.Preferences
@@ -1495,6 +1496,14 @@ private fun Mimidoku(
                             // how long the timer runs, and how hard you have to shake to keep it
                             // running when it is about to stop on you and you are still awake.
                             add(SettingRow("shake", stringResource(R.string.settings_shake), stringResource(preferences.shake.labelRes)))
+                            add(
+                                SettingRow(
+                                    key = "dark",
+                                    title = stringResource(R.string.settings_dark),
+                                    value = null,
+                                    toggle = DarkMode.on,
+                                ),
+                            )
                             // Off until turned on in Android's own settings, the only place it can be;
                             // the row says which it is and goes there.
                             add(
@@ -1584,6 +1593,7 @@ private fun Mimidoku(
                                 "autosleepstart" -> editing = Editing.AutoSleepStart
                                 "autosleepend" -> editing = Editing.AutoSleepEnd
                                 "shake" -> editing = Editing.Shake
+                                "dark" -> DarkMode.set(context, !DarkMode.on)
                                 "saveplaces" -> runCatching { savePlaces.launch("audio-reader-places-${java.time.LocalDate.now()}.json") }
                                 "restoreplaces" -> if (!restoreArmed) {
                                     restoreArmed = true
