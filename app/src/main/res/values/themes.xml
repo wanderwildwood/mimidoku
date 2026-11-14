@@ -2,6 +2,8 @@
     <style name="Theme.Mimidoku" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>
+        <!-- No start-up window: in dark mode it would flash white before the first frame. -->
+        <item name="android:windowDisablePreview">true</item>
     </style>
 
     <!-- The lock-screen strip's window: no animation in or out. The system otherwise animated it
