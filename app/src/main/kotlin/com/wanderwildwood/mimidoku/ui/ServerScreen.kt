@@ -10,6 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -105,7 +112,28 @@ fun ServerScreen(
     LaunchedEffect(isBusy, typedAddress, typedKey) { why = null }
     LaunchedEffect(typedAddress) { warned = false }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    // The rows of the list: the words at 0, then the two fields, then Connect.
+    val list = rememberLazyListState()
+    val form = rememberFormFields(list, firstRow = 1, count = 2)
+    val focus = LocalFocusManager.current
+    val entered = ServerEntry(typedAddress, typedKey)
+    // Connect, and Done on the keyboard in the last field. Never greyed out: a button that will
+    // not press does not say why. Pressed too soon, it says what is missing, in words.
+    val connect = {
+        when {
+            isBusy -> why = busyWhy
+            !entered.isComplete -> why = incompleteWhy
+            // Plain http to a host outside the house: said once, plainly, and then the reader's
+            // choice stands.
+            ServerAddress.plainHttpOutsideHome(entered.address) && !warned -> {
+                warned = true
+                why = plainWhy
+            }
+            else -> { why = null; onConnect(entered) }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.White).imePadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenTopBar(
                 title = stringResource(R.string.server_title),
@@ -116,7 +144,7 @@ fun ServerScreen(
                 },
             )
 
-            PagedColumn(modifier = Modifier.weight(1f), showCutRow = true) {
+            PagedColumn(modifier = Modifier.weight(1f).then(form.listModifier()), state = list, showCutRow = true) {
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         TextMMD(
@@ -126,47 +154,47 @@ fun ServerScreen(
                             color = Color.Black,
                         )
                         Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+                // Each field is a row of its own, so the list can bring the one being typed in to
+                // the top of what the keyboard leaves.
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(form.fieldModifier(0)),
                             value = typedAddress,
                             onValueChange = { typedAddress = it },
                             label = { TextMMD(text = stringResource(R.string.server_address)) },
                             placeholder = { TextMMD(text = "192.168.0.10:13378") },
                             singleLine = true,
                             enabled = !isBusy,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { form.next(0) }),
                         )
-
                         Spacer(modifier = Modifier.height(12.dp))
-
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(form.fieldModifier(1)),
                             value = typedKey,
                             onValueChange = { typedKey = it },
                             label = { TextMMD(text = stringResource(R.string.server_api_key)) },
                             singleLine = true,
                             enabled = !isBusy,
                             visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false, imeAction = ImeAction.Done),
+                            // Done is Connect; the keyboard goes, so the answer under the button shows.
+                            keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); connect() }),
                         )
-
                         Spacer(modifier = Modifier.height(20.dp))
-
-                        val entered = ServerEntry(typedAddress, typedKey)
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         ButtonMMD(
-                            // Never greyed out: a button that will not press does not say why.
-                            // Pressed too soon, it says what is missing, in words.
-                            onClick = {
-                                when {
-                                    isBusy -> why = busyWhy
-                                    !entered.isComplete -> why = incompleteWhy
-                                    // Plain http to a host outside the house: said once, plainly, and
-                                    // then the reader's choice stands.
-                                    ServerAddress.plainHttpOutsideHome(entered.address) && !warned -> {
-                                        warned = true
-                                        why = plainWhy
-                                    }
-                                    else -> { why = null; onConnect(entered) }
-                                }
-                            },
+                            onClick = connect,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             TextMMD(

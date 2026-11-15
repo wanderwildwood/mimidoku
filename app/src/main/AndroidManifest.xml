@@ -56,6 +56,7 @@
             android:name=".MainActivity"
             android:icon="@drawable/ic_launcher_mudita"
             android:roundIcon="@drawable/ic_launcher_mudita"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

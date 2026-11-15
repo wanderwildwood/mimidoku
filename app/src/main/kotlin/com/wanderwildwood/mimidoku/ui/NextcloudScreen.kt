@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -89,7 +94,30 @@ fun NextcloudScreen(
     LaunchedEffect(isBusy, typedAddress, typedLogin, typedPassword, typedFolder) { why = null }
     LaunchedEffect(typedAddress) { warned = false }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    // The rows of the list: the words at 0, then the four fields, then Connect.
+    val list = rememberLazyListState()
+    val form = rememberFormFields(list, firstRow = 1, count = 4)
+    val focus = LocalFocusManager.current
+    val entered = NextcloudEntry(typedAddress, typedLogin, typedPassword, typedFolder)
+    // Connect, and Done on the keyboard in the last field. Never greyed out: pressed too soon,
+    // it says what is missing.
+    val connect = {
+        when {
+            isBusy -> why = busyWhy
+            !entered.isComplete -> why = incompleteWhy
+            ServerAddress.plainHttpOutsideHome(entered.address) && !warned -> {
+                warned = true
+                why = plainWhy
+            }
+            else -> {
+                why = null
+                onConnect(entered)
+                typedPassword = ""
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.White).imePadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenTopBar(
                 title = stringResource(R.string.nextcloud_title),
@@ -100,7 +128,7 @@ fun NextcloudScreen(
                 },
             )
 
-            PagedColumn(modifier = Modifier.weight(1f), showCutRow = true) {
+            PagedColumn(modifier = Modifier.weight(1f).then(form.listModifier()), state = list, showCutRow = true) {
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         Said(stringResource(R.string.nextcloud_intro))
@@ -110,14 +138,15 @@ fun NextcloudScreen(
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(form.fieldModifier(0)),
                             value = typedAddress,
                             onValueChange = { typedAddress = it },
                             label = { TextMMD(text = stringResource(R.string.server_address)) },
                             placeholder = { TextMMD(text = "cloud.example.org") },
                             singleLine = true,
                             enabled = !isBusy,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { form.next(0) }),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -125,13 +154,14 @@ fun NextcloudScreen(
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(form.fieldModifier(1)),
                             value = typedLogin,
                             onValueChange = { typedLogin = it },
                             label = { TextMMD(text = stringResource(R.string.nextcloud_login)) },
                             singleLine = true,
                             enabled = !isBusy,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { form.next(1) }),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -139,7 +169,7 @@ fun NextcloudScreen(
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(form.fieldModifier(2)),
                             value = typedPassword,
                             onValueChange = { typedPassword = it },
                             label = {
@@ -152,7 +182,8 @@ fun NextcloudScreen(
                             singleLine = true,
                             enabled = !isBusy,
                             visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { form.next(2) }),
                             trailingIcon = {
                                 BarText(stringResource(if (shown) R.string.nextcloud_hide else R.string.nextcloud_show)) { shown = !shown }
                             },
@@ -163,38 +194,24 @@ fun NextcloudScreen(
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                         TextFieldMMD(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(form.fieldModifier(3)),
                             value = typedFolder,
                             onValueChange = { typedFolder = it },
                             label = { TextMMD(text = stringResource(R.string.nextcloud_folder)) },
                             placeholder = { TextMMD(text = stringResource(R.string.nextcloud_folder_example)) },
                             singleLine = true,
                             enabled = !isBusy,
-                            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
+                            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Done),
+                            // Done is Connect; the keyboard goes, so the answer under the button shows.
+                            keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); connect() }),
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
                 item {
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
-                        val entered = NextcloudEntry(typedAddress, typedLogin, typedPassword, typedFolder)
                         ButtonMMD(
-                            // Never greyed out: pressed too soon, it says what is missing.
-                            onClick = {
-                                when {
-                                    isBusy -> why = busyWhy
-                                    !entered.isComplete -> why = incompleteWhy
-                                    ServerAddress.plainHttpOutsideHome(entered.address) && !warned -> {
-                                        warned = true
-                                        why = plainWhy
-                                    }
-                                    else -> {
-                                        why = null
-                                        onConnect(entered)
-                                        typedPassword = ""
-                                    }
-                                }
-                            },
+                            onClick = connect,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             TextMMD(
