@@ -426,7 +426,6 @@ private fun ControlsPanel(
         modifier = Modifier
             .fillMaxWidth()
             .background(surface, shape)
-            .border(2.dp, ink, shape)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
