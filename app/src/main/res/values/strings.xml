@@ -406,6 +406,8 @@
 
     <!-- An audiobook file opened from another app, such as a file manager -->
     <string name="opened_file_unreadable">Could not open that file</string>
+    <!-- Play pressed on a book whose audio files can no longer be read -->
+    <string name="player_cannot_open">This book could not be opened. Its files may have been moved or deleted.</string>
     <string name="opened_file_needs_access">Audio Reader needs access to audio files to open that one</string>
 
     <!-- Android 13+ keeps an app installed from a file out of Accessibility, notification access

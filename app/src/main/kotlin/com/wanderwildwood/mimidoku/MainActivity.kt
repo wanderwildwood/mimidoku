@@ -54,6 +54,7 @@ import com.wanderwildwood.mimidoku.data.MarkEntity
 import com.wanderwildwood.mimidoku.data.DurationReader
 import com.wanderwildwood.mimidoku.data.LibraryRepository
 import com.wanderwildwood.mimidoku.data.SOURCE_LOCAL
+import com.wanderwildwood.mimidoku.library.Folders
 import com.wanderwildwood.mimidoku.data.SOURCE_OPENED
 import com.wanderwildwood.mimidoku.glance.GlanceProvider
 import com.wanderwildwood.mimidoku.library.OpenedBook
@@ -357,9 +358,19 @@ private fun Mimidoku(
     // and there is no callback that fires per second.
     LaunchedEffect(controller) {
         var sinceSaved = 0
+        var failureSaidAt = 0L
         while (true) {
             controller?.let {
                 isPlaying = it.isPlaying
+
+                // A book whose files will not open is said once for each try, in words that stay
+                // until they are dismissed: Play going back to Play with nothing on the screen
+                // reads as a missed press. The failure's own time tells one try from the next.
+                val failedAt = it.playerError?.timestampMs
+                if (failedAt != null && failedAt != failureSaidAt) {
+                    failureSaidAt = failedAt
+                    notice = context.getString(R.string.player_cannot_open)
+                }
                 // Whole seconds, assigned only when they change: every other half-second the
                 // screen would be told about a position it draws no differently, and the panel
                 // was redrawn twice a second for nothing.
@@ -518,8 +529,9 @@ private fun Mimidoku(
     // A folder the reader granted stays granted, so the card is re-read every time the app opens:
     // books get added and removed while the app is not running, and the reader should not have to
     // ask for a scan they never asked to skip.
+    // With no folder left there is still something to read off: books a folder left behind.
     LaunchedEffect(Unit) {
-        if (grants.isNotEmpty()) scanning = true
+        if (Folders.scanOnOpen(folders = grants.size, cardBooks = library.cardBooks())) scanning = true
     }
 
     // The server's catalogue is read again, once, when this app has learnt to keep something
@@ -535,11 +547,19 @@ private fun Mimidoku(
     // Reading a tree over SAF is disk work and belongs off the main thread.
     LaunchedEffect(scanning) {
         if (!scanning) return@LaunchedEffect
-        if (grants.isEmpty()) {
-            scanning = false
-            return@LaunchedEffect
-        }
+        // With no folder left the scan still runs, over nothing: that is what takes the books of
+        // the last folder off the shelves when the reader stops reading it. Skipping it left them
+        // listed, and after the next start Play could not open them and said nothing.
         shapes = withContext(Dispatchers.IO) { library.rescan(grants) }
+        // The book in the player may be one the scan has just dropped. It goes from the strip too.
+        val held = playing
+        if (held != null && held.sourceType == SOURCE_LOCAL && library.book(held.uri) == null) {
+            controller?.stop()
+            controller?.clearMediaItems()
+            playing = null
+            chapters = emptyList()
+            marks = emptyList()
+        }
         scanning = false
         newlyGranted?.let {
             asking = it
@@ -800,6 +820,9 @@ private fun Mimidoku(
                 c.seekTo(0, 0L)
                 c.play()
             } else {
+                // A player that could not open the book stands idle until it is asked to open it
+                // again; without that a second press of Play did nothing and said nothing.
+                if (c.playerError != null) c.prepare()
                 val back = preferences.autoRewindSeconds * 1_000L
                 if (back > 0) c.seekTo((c.currentPosition - back).coerceAtLeast(0))
                 c.play()

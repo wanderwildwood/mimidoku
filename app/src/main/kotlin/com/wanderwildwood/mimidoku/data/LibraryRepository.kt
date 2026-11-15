@@ -26,6 +26,9 @@ class LibraryRepository(private val context: Context) {
 
     suspend fun known(): Int = dao.count()
 
+    /** How many books are listed as read off the card, from a granted folder. */
+    suspend fun cardBooks(): Int = dao.bookUrisFrom(SOURCE_LOCAL).size
+
     /**
      * Reads the card and folds the result into what is already known.
      *
