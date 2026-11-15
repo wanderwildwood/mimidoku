@@ -267,6 +267,8 @@ private fun Mimidoku(
     var marks by remember { mutableStateOf<List<MarkEntity>>(emptyList()) }
     var editing by remember { mutableStateOf<Editing?>(null) }
     var query by remember { mutableStateOf("") }
+    // Set when Search is opened from the library, cleared once the field has taken focus.
+    var searchFocusPending by remember { mutableStateOf(false) }
 
     // Where each list was scrolled to, kept here rather than in the screen so that opening a shelf
     // or a book and coming back lands on the rows that were on screen, not at the top. The
@@ -941,7 +943,7 @@ private fun Mimidoku(
                         },
                         nowPlaying = nowPlaying,
                         onRowClick = { screen = Screen.Shelf(it.id.takeIf { id -> id != UNNAMED }) },
-                        onSearchClick = { query = ""; screen = Screen.Search },
+                        onSearchClick = { query = ""; searchFocusPending = true; screen = Screen.Search },
                         onSettingsClick = { screen = Screen.Settings },
                         onNowPlayingClick = { screen = Screen.Player },
                         onPlayPauseClick = playPause,
@@ -1170,6 +1172,8 @@ private fun Mimidoku(
                         onPlayPauseClick = playPause,
                         shelfListState = searchShelfList,
                         foundListState = searchFoundList,
+                        focusOnArrival = searchFocusPending,
+                        onArrivalFocused = { searchFocusPending = false },
                     )
                 }
 

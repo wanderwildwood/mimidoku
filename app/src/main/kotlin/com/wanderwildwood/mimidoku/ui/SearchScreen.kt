@@ -21,6 +21,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.mudita.mmd.components.text.TextMMD
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,9 +43,11 @@ import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
  *
  * Everything is listed before anything is typed, because on a library of a few hundred books
  * scrolling is often faster than spelling, and a screen that starts empty makes the reader prove
- * they know what they are looking for before it will help. For the same reason the field is not
- * focused on arrival: raising the keyboard costs a full-screen redraw and covers the list that
- * the reader may well have come here to scroll.
+ * they know what they are looking for before it will help.
+ *
+ * Opened from the library, the field takes focus and the keyboard comes up at once, so the first
+ * letter typed lands in the field rather than nowhere. Coming back from a shelf or a book does not
+ * raise it again ([focusOnArrival] is false then): the reader was scrolling, not spelling.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +65,19 @@ fun SearchScreen(
     // Held by the caller, so both lists are where they were left when a book is closed again.
     shelfListState: LazyListState = rememberLazyListState(),
     foundListState: LazyListState = rememberLazyListState(),
+    // True only on a fresh visit from the library; [onArrivalFocused] tells the caller it was used.
+    focusOnArrival: Boolean = false,
+    onArrivalFocused: () -> Unit = {},
 ) {
+    val fieldFocus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    if (focusOnArrival) {
+        LaunchedEffect(Unit) {
+            fieldFocus.requestFocus()
+            keyboard?.show()
+            onArrivalFocused()
+        }
+    }
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         // The field sits where a title would, in the same bar every other screen has.
         TopAppBarMMD(
@@ -71,7 +90,7 @@ fun SearchScreen(
                     //  drift away from every other piece of text in the app.
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
                     cursorBrush = SolidColor(Color.Black),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(fieldFocus),
                     decorationBox = { field ->
                         // Said in words while the field is empty; black and italic, never grey.
                         if (query.isEmpty()) {
