@@ -29,6 +29,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 
 /** One preference: what it is called, what it is set to, and what it looks like. */
 data class SettingRow(
@@ -105,6 +110,7 @@ private fun SettingLine(row: SettingRow, onClick: (SettingRow) -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .semantics { role = Role.Switch; toggleableState = ToggleableState(row.toggle) }
                 .clickable { onClick(row) }
                 .padding(start = indent(row), end = 16.dp, bottom = if (row.restricted) 4.dp else 25.5.dp),
             verticalAlignment = Alignment.CenterVertically,
