@@ -718,7 +718,12 @@ private fun Mimidoku(
         // that changes every second makes the panel redraw every second to say nothing new.
         NowPlaying(
             title = it.shownTitle(),
-            remaining = if (screen == Screen.Player) remaining.asClock() else remaining.asMinutesLeft(context.resources),
+            remaining = when {
+                screen == Screen.Player -> remaining.asClock()
+                // A book read to its end says so, not "0 min left".
+                it.isFinished() -> context.getString(R.string.library_finished)
+                else -> remaining.asMinutesLeft(context.resources)
+            },
             isPlaying = isPlaying,
         )
     }
