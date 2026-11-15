@@ -11,7 +11,6 @@ import android.content.ComponentName
 import android.content.res.Resources
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import android.os.Bundle
@@ -21,6 +20,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -299,8 +302,6 @@ private fun Mimidoku(
     // What a swipe down on the library set going, said in a line above the shelves: asking while
     // it asks, then how it went for a few seconds.
     var pullSaid by remember { mutableStateOf<String?>(null) }
-    var pullDone by remember { mutableStateOf(0) }
-    LaunchedEffect(pullDone) { if (pullDone > 0) { delay(3000); pullSaid = null } }
     // The book a reader has asked about keeping, waiting on the question being answered.
     var keeping by remember { mutableStateOf<BookEntity?>(null) }
     // Asked from the download line or the row of the book being fetched.
@@ -472,19 +473,15 @@ private fun Mimidoku(
         marks = library.marksOf(book.uri)
     }
 
-    // Longer than an announcement: the reader may have looked away for the minutes it took.
-    LaunchedEffect(downloadSaid) {
-        if (downloadSaid == null) return@LaunchedEffect
-        delay(DOWNLOAD_SAID_MS)
-        downloadSaid = null
-    }
-
-    // An announcement is a thing the app said, not a thing it is saying. It goes away on its own.
-    LaunchedEffect(announcement) {
-        if (announcement == null) return@LaunchedEffect
-        delay(ANNOUNCEMENT_MS)
+    // What the app last said - an announcement in the player, how a download or a pull went - stays
+    // until the next press or the next screen: on this panel words on a timer could be gone before
+    // they were read. A pull still asking keeps its line until it has an answer.
+    fun clearSaid() {
         announcement = null
+        downloadSaid = null
+        if (!serverBusy) pullSaid = null
     }
+    LaunchedEffect(screen) { clearSaid() }
 
     // Places and bookmarks, to and from a file the reader picks. The restore row is armed (see
     // restoreArmed under Screen.Settings).
@@ -492,7 +489,7 @@ private fun Mimidoku(
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val ok = PlacesFiles.save(context, uri)
-            Toast.makeText(context, context.getString(if (ok) R.string.places_saved else R.string.places_not_saved), Toast.LENGTH_LONG).show()
+            notice = context.getString(if (ok) R.string.places_saved else R.string.places_not_saved)
         }
     }
     val restorePlaces = rememberLauncherForActivityResult(FilesOpenDocument(writable = false)) { uri ->
@@ -515,7 +512,7 @@ private fun Mimidoku(
                 )
                 PlacesFiles.Result.Unreadable -> context.getString(R.string.places_unreadable)
             }
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            notice = message
         }
     }
 
@@ -756,7 +753,7 @@ private fun Mimidoku(
         if (granted) {
             fileToOpen = uri
         } else {
-            Toast.makeText(context, context.getString(R.string.opened_file_needs_access), Toast.LENGTH_LONG).show()
+            notice = context.getString(R.string.opened_file_needs_access)
         }
     }
     LaunchedEffect(fileToOpen, controller) {
@@ -784,7 +781,7 @@ private fun Mimidoku(
                 fileWaitingForAccess = uri
                 askForAudioAccess.launch(permission)
             } else {
-                Toast.makeText(context, context.getString(R.string.opened_file_unreadable), Toast.LENGTH_LONG).show()
+                notice = context.getString(R.string.opened_file_unreadable)
             }
         }
     }
@@ -903,7 +900,18 @@ private fun Mimidoku(
     }
 
     // Every screen sits above the download line, so a book being fetched is never out of sight.
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            // Any press anywhere takes down what was said, seen before the press does its own work
+            // and never taking the press from it.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    clearSaid()
+                }
+            },
+    ) {
         Box(modifier = Modifier.weight(1f)) {
             when (val current = screen) {
                 Screen.Library -> {
@@ -939,6 +947,9 @@ private fun Mimidoku(
                         status = when {
                             pullSaid != null -> pullSaid
                             scanning -> stringResource(R.string.library_scanning)
+                            // Lasting, for as long as a folder cannot be read: its books are still
+                            // on the shelves and will not play until it can.
+                            TreeShape.Unreadable in shapes.values -> stringResource(R.string.library_folder_unreadable)
                             else -> null
                         },
                         nowPlaying = nowPlaying,
@@ -968,7 +979,6 @@ private fun Mimidoku(
                                 }
                                 pullSaid = failed ?: context.getString(R.string.library_pull_done)
                                 serverBusy = false
-                                pullDone++
                             }
                         }.takeIf { (preferences.hasServer && preferences.serverLibraryId.isNotBlank()) || preferences.hasNextcloud },
                         onRecentClick = { screen = Screen.Recent }.takeIf { recentBooks.isNotEmpty() },
@@ -1234,6 +1244,7 @@ private fun Mimidoku(
                                     TreeShape.BooksInFolders -> stringResource(R.string.folders_shape_books)
                                     TreeShape.SingleBook -> stringResource(R.string.folders_shape_one_book)
                                     TreeShape.Empty -> stringResource(R.string.folders_shape_none)
+                                    TreeShape.Unreadable -> stringResource(R.string.folders_shape_unreadable)
                                     null -> preferences.reading(uri.toString())?.let { stringResource(it.labelRes) }.orEmpty()
                                 },
                             )
@@ -2293,8 +2304,6 @@ private suspend fun MediaController.load(
 }
 
 /** Long enough to read a three-word sentence, short enough not to become part of the screen. */
-private const val ANNOUNCEMENT_MS = 2_500L
-private const val DOWNLOAD_SAID_MS = 8_000L
 
 /** The sleep timer is shown the way a kitchen timer is: minutes and seconds, never hours. */
 private fun Long.asMinutes(): String {

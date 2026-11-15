@@ -18,6 +18,8 @@
     <string name="library_cd_search">What are you looking for?</string>
     <string name="library_cd_settings">Settings</string>
     <string name="library_scanning">Scanning library…</string>
+    <!-- Above the shelves while a chosen audiobook folder cannot be opened -->
+    <string name="library_folder_unreadable">An audiobook folder cannot be read. Choose the folder again in Settings, Audiobook folders.</string>
     <!-- One line above the shelves after a swipe down on the library's first page, with a server -->
     <string name="library_pull_checking">Checking the server…</string>
     <string name="library_pull_done">Up to date</string>
@@ -266,6 +268,8 @@
     <string name="folders_shape_books">Books</string>
     <string name="folders_shape_one_book">One book</string>
     <string name="folders_shape_none">No books found</string>
+    <!-- A chosen folder that cannot be opened now (memory card out, folder moved or deleted); one short line, its books are kept -->
+    <string name="folders_shape_unreadable">Not found. Add it again</string>
     <!-- Dialog asking what a folder holds; the answers follow it -->
     <string name="folders_holds_title">This folder holds</string>
     <string name="reading_authors">Authors</string>

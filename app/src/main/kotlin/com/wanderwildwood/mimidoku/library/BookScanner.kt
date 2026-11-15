@@ -63,6 +63,13 @@ enum class TreeShape {
 
     /** Nothing readable was found. Says so rather than guessing. */
     Empty,
+
+    /**
+     * The folder itself could not be opened: a card taken out, the folder moved or deleted. Not
+     * the same as empty - its books are kept until the reader chooses the folder again or stops
+     * reading it.
+     */
+    Unreadable,
 }
 
 data class ScanResult(
@@ -93,6 +100,7 @@ class BookScanner(private val resolver: ContentResolver) {
      */
     suspend fun scan(treeUri: Uri, reading: Reading? = null): ScanResult = coroutineScope {
         val root = DocumentsContract.getTreeDocumentId(treeUri)
+        if (!readable(treeUri, root)) return@coroutineScope ScanResult(TreeShape.Unreadable, emptyList())
         val entries = children(treeUri, root)
 
         val audioHere = entries.filter { it.isAudio }
@@ -261,6 +269,18 @@ class BookScanner(private val resolver: ContentResolver) {
                 }
             }.orEmpty()
         }.getOrDefault(emptyList())
+    }
+
+    /**
+     * Whether the chosen folder can be listed at all. An empty folder answers with no rows; one
+     * that is gone or out of reach answers with nothing, or with an error.
+     */
+    private suspend fun readable(treeUri: Uri, documentId: String): Boolean = withContext(Dispatchers.IO) {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+        runCatching {
+            resolver.query(childrenUri, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)
+                ?.use { true } ?: false
+        }.getOrDefault(false)
     }
 
     private fun nameOf(treeUri: Uri, documentId: String): String =

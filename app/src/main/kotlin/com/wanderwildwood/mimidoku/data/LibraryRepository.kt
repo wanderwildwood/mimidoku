@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import com.wanderwildwood.mimidoku.library.Book
 import com.wanderwildwood.mimidoku.library.OpenedBook
 import com.wanderwildwood.mimidoku.library.BookScanner
+import com.wanderwildwood.mimidoku.library.Folders
 import com.wanderwildwood.mimidoku.library.TreeShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -63,7 +64,10 @@ class LibraryRepository(private val context: Context) {
                 )
             }
         }
-        dao.merge(books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_LOCAL)
+        // A folder that could not be read is not a folder that is empty: its books stay listed.
+        val unreadable = results.filterValues { it.shape == TreeShape.Unreadable }.keys
+        val kept = if (unreadable.isEmpty()) emptyList() else Folders.keptFrom(unreadable, dao.bookUrisFrom(SOURCE_LOCAL))
+        dao.merge(books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_LOCAL, stillThere = kept)
         return results.mapValues { it.value.shape }
     }
 

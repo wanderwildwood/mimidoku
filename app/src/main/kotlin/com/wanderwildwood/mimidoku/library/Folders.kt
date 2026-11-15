@@ -12,4 +12,12 @@ object Folders {
      * takes them off the shelves.
      */
     fun scanOnOpen(folders: Int, cardBooks: Int): Boolean = folders > 0 || cardBooks > 0
+
+    /**
+     * The listed books that came from a folder which could not be read this time. They are kept
+     * as they are, places and bookmarks with them, rather than taken off the shelves: the card
+     * may be back tomorrow, or the reader may choose the folder again.
+     */
+    fun keptFrom(unreadableTrees: Collection<String>, bookUris: Collection<String>): List<String> =
+        bookUris.filter { book -> unreadableTrees.any { tree -> book.startsWith("$tree/document/") } }
 }
