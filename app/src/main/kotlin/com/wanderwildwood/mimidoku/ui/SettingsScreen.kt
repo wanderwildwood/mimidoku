@@ -110,7 +110,7 @@ private fun SettingLine(row: SettingRow, onClick: (SettingRow) -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics { role = Role.Switch; toggleableState = ToggleableState(row.toggle) }
+                .then(row.toggle?.let { on -> Modifier.semantics { role = Role.Switch; toggleableState = ToggleableState(on) } } ?: Modifier)
                 .clickable { onClick(row) }
                 .padding(start = indent(row), end = 16.dp, bottom = if (row.restricted) 4.dp else 25.5.dp),
             verticalAlignment = Alignment.CenterVertically,
