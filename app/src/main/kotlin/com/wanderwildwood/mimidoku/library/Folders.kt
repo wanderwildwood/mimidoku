@@ -20,4 +20,24 @@ object Folders {
      */
     fun keptFrom(unreadableTrees: Collection<String>, bookUris: Collection<String>): List<String> =
         bookUris.filter { book -> unreadableTrees.any { tree -> book.startsWith("$tree/document/") } }
+
+    /**
+     * Whether a folder just chosen is the one that can no longer be read, now somewhere else: a
+     * folder moved, or a card that comes back under another name. Then the old row goes, and its
+     * books' places and bookmarks go to the same books in the new one, rather than the old row
+     * staying unreadable forever next to a second copy of every book.
+     *
+     * With books kept from the old folder, every one of them must be found again in the new one
+     * (by title and author): a folder that merely shares a few books is a different folder. With
+     * none kept there is nothing to compare, and the folder's own name has to match.
+     */
+    fun replaces(oldTree: String, newTree: String, oldBooks: Int, notFound: Int): Boolean =
+        if (oldBooks > 0) notFound == 0 else folderName(oldTree).equals(folderName(newTree), ignoreCase = true)
+
+    /** The folder's own name out of a tree uri, the way the Audiobook folders row shows it. */
+    fun folderName(tree: String): String {
+        val id = tree.substringAfter("/tree/", "").substringBefore('/')
+        val decoded = runCatching { java.net.URLDecoder.decode(id.replace("+", "%2B"), "UTF-8") }.getOrDefault(id)
+        return decoded.substringAfterLast('/').substringAfterLast(':')
+    }
 }

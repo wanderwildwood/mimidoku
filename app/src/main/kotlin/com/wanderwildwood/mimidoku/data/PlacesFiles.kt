@@ -19,11 +19,45 @@ object PlacesFiles {
     /** Writes the backup to [uri]; false, with the file removed if it was left empty, when that fails. */
     suspend fun save(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
         val dao = LibraryDatabase.get(context).dao()
-        val chapters = dao.allChapters()
-        val chapterOf = chapters.associateBy { it.uri }
         val marksOf = dao.allBookmarks().groupBy { it.bookUri }
-        val saved = dao.allBooks()
-            .filter { it.lastPlayedAt != null || marksOf[it.uri].orEmpty().isNotEmpty() }
+        val saved = savedOf(dao, dao.allBooks().filter { it.lastPlayedAt != null || marksOf[it.uri].orEmpty().isNotEmpty() })
+        val text = PlacesBackup.write(saved)
+        val ok = runCatching {
+            context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("no stream")
+        }.isSuccess
+        if (!ok) runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
+        ok
+    }
+
+    /**
+     * What carrying [from]'s places and bookmarks over to [to] would write, matched the way a
+     * restore matches (title and author, then chapter): for a folder chosen again at a new address.
+     * Every book of [from] is in it, read or not, so [PlacesBackup.Plan.notFound] says how many of
+     * them [to] does not have.
+     */
+    suspend fun carryPlan(context: Context, from: Collection<String>, to: Collection<String>): PlacesBackup.Plan =
+        withContext(Dispatchers.IO) {
+            val dao = LibraryDatabase.get(context).dao()
+            val books = dao.allBooks()
+            val chaptersOf = dao.allChapters().groupBy { it.bookUri }
+            val target = to.toSet()
+            val library = books.filter { it.uri in target }.map { b ->
+                PlacesBackup.LibraryBook(
+                    uri = b.uri,
+                    title = titleOf(b),
+                    author = authorOf(b),
+                    chapters = chaptersOf[b.uri].orEmpty().map { PlacesBackup.LibraryChapter(it.uri, it.sortIndex, it.name) },
+                )
+            }
+            val source = from.toSet()
+            PlacesBackup.plan(savedOf(dao, books.filter { it.uri in source }), library)
+        }
+
+    /** [books] as a backup writes them: where each was, and its bookmarks. */
+    private suspend fun savedOf(dao: LibraryDao, books: List<BookEntity>): List<PlacesBackup.SavedBook> {
+        val chapterOf = dao.allChapters().associateBy { it.uri }
+        val marksOf = dao.allBookmarks().groupBy { it.bookUri }
+        return books
             .map { b ->
                 val current = b.currentChapterUri?.let { chapterOf[it] }
                 PlacesBackup.SavedBook(
@@ -41,12 +75,6 @@ object PlacesFiles {
                     },
                 )
             }
-        val text = PlacesBackup.write(saved)
-        val ok = runCatching {
-            context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("no stream")
-        }.isSuccess
-        if (!ok) runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
-        ok
     }
 
     /**

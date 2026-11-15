@@ -71,6 +71,23 @@ class LibraryRepository(private val context: Context) {
         return results.mapValues { it.value.shape }
     }
 
+    /**
+     * After a scan with [newTree] just chosen: which of the [unreadable] folders it replaces (see
+     * [Folders.replaces]). The places and bookmarks of each one it replaces are written onto the
+     * same books in [newTree]; giving the old folder up, which takes its books off, is the caller's.
+     */
+    suspend fun carryOver(newTree: String, unreadable: Collection<String>): List<String> {
+        val listed = dao.bookUrisFrom(SOURCE_LOCAL)
+        val fresh = Folders.keptFrom(listOf(newTree), listed)
+        return unreadable.filter { old ->
+            val stale = Folders.keptFrom(listOf(old), listed)
+            val plan = PlacesFiles.carryPlan(context, stale, fresh)
+            Folders.replaces(old, newTree, stale.size, plan.notFound).also { replaced ->
+                if (replaced) dao.restorePlaces(plan.places, plan.bookmarks)
+            }
+        }
+    }
+
     suspend fun rememberPosition(bookUri: String, chapterUri: String, positionMs: Long) {
         dao.rememberPosition(bookUri, chapterUri, positionMs, System.currentTimeMillis())
     }

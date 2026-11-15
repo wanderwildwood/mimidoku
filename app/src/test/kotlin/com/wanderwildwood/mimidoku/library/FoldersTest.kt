@@ -42,6 +42,33 @@ class FoldersTest {
     }
 
     @Test
+    fun aMovedFolderWithEveryBookFoundAgainReplacesTheOldRow() {
+        val old = "content://com.android.externalstorage.documents/tree/1A2B-3C4D%3AAudiobooks"
+        val new = "content://com.android.externalstorage.documents/tree/primary%3AListening"
+        assertTrue(Folders.replaces(old, new, oldBooks = 3, notFound = 0))
+    }
+
+    @Test
+    fun aFolderMissingSomeOfTheOldBooksIsADifferentFolder() {
+        val old = "content://com.android.externalstorage.documents/tree/1A2B-3C4D%3AAudiobooks"
+        val new = "content://com.android.externalstorage.documents/tree/primary%3AAudiobooks"
+        assertFalse(Folders.replaces(old, new, oldBooks = 3, notFound = 1))
+    }
+
+    @Test
+    fun withNoBooksKeptTheFolderNameDecides() {
+        val old = "content://com.android.externalstorage.documents/tree/1A2B-3C4D%3AAudio%20books"
+        assertTrue(Folders.replaces(old, "content://com.android.externalstorage.documents/tree/primary%3AMusic%2Faudio%20Books", 0, 0))
+        assertFalse(Folders.replaces(old, "content://com.android.externalstorage.documents/tree/primary%3APodcasts", 0, 0))
+    }
+
+    @Test
+    fun theFolderNameIsTheLastPartOfTheTree() {
+        assertEquals("Ada Whitlock", Folders.folderName("content://com.android.externalstorage.documents/tree/primary%3ABooks%2FAda%20Whitlock"))
+        assertEquals("Books", Folders.folderName("content://com.android.externalstorage.documents/tree/primary%3ABooks/document/primary%3ABooks%2F01.mp3"))
+    }
+
+    @Test
     fun withEveryFolderReadableNothingIsHeldBack() {
         assertEquals(emptyList<String>(), Folders.keptFrom(emptyList(), listOf("content://x/tree/a/document/b")))
     }

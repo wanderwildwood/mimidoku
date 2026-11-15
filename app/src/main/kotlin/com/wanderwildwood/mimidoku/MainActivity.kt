@@ -563,6 +563,27 @@ private fun Mimidoku(
         // the last folder off the shelves when the reader stops reading it. Skipping it left them
         // listed, and after the next start Play could not open them and said nothing.
         shapes = withContext(Dispatchers.IO) { library.rescan(grants) }
+        // A folder chosen while another cannot be read may be that same folder at a new address.
+        // Then the old row is given up, its places and bookmarks carried over first, so the reader
+        // is not left with a row that never reads and every book listed twice.
+        val picked = newlyGranted?.toString()
+        val gone = shapes.filterValues { it == TreeShape.Unreadable }.keys - setOfNotNull(picked)
+        if (picked != null && shapes[picked] != TreeShape.Unreadable && gone.isNotEmpty()) {
+            val replaced = withContext(Dispatchers.IO) { library.carryOver(picked, gone) }
+            if (replaced.isNotEmpty()) {
+                replaced.forEach { old ->
+                    runCatching {
+                        context.contentResolver.releasePersistableUriPermission(
+                            old.toUri(),
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                        )
+                    }
+                    preferences.forgetReading(old)
+                }
+                grants = context.contentResolver.persistedUriPermissions.map { it.uri }
+                shapes = withContext(Dispatchers.IO) { library.rescan(grants) }
+            }
+        }
         // The book in the player may be one the scan has just dropped. It goes from the strip too.
         val held = playing
         if (held != null && held.sourceType == SOURCE_LOCAL && library.book(held.uri) == null) {
