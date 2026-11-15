@@ -359,6 +359,7 @@ private fun Mimidoku(
     LaunchedEffect(controller) {
         var sinceSaved = 0
         var failureSaidAt = 0L
+        var countdownWaited = 0
         while (true) {
             controller?.let {
                 isPlaying = it.isPlaying
@@ -374,7 +375,8 @@ private fun Mimidoku(
                 // Whole seconds, assigned only when they change: every other half-second the
                 // screen would be told about a position it draws no differently, and the panel
                 // was redrawn twice a second for nothing.
-                (it.currentPosition / 1000 * 1000).let { whole -> if (whole != position) position = whole }
+                val placeMoved = (it.currentPosition / 1000 * 1000) != position
+                if (placeMoved) position = it.currentPosition / 1000 * 1000
 
                 // A book played to its end is written down as finished, once.
                 val over = it.playbackState == Player.STATE_ENDED
@@ -391,9 +393,20 @@ private fun Mimidoku(
                 // The timer's own state, kept by the service. A controller holds a copy of the
                 // session's extras, so reading them here costs nothing across the binder.
                 val extras = it.sessionExtras
-                sleepArmed = extras.getBoolean(PlaybackService.SLEEP_ARMED)
+                val armedNow = extras.getBoolean(PlaybackService.SLEEP_ARMED)
+                val armedChanged = armedNow != sleepArmed
+                sleepArmed = armedNow
+                // The countdown is drawn in the same frame as the place in the book, not half a
+                // second after it: see [Progress.drawCountdown].
                 (extras.getLong(PlaybackService.SLEEP_REMAINING) / 1000 * 1000).let { whole ->
-                    if (whole != sleepRemainingMs) sleepRemainingMs = whole
+                    if (whole == sleepRemainingMs) {
+                        countdownWaited = 0
+                    } else if (armedChanged || Progress.drawCountdown(placeMoved, it.isPlaying, countdownWaited)) {
+                        sleepRemainingMs = whole
+                        countdownWaited = 0
+                    } else {
+                        countdownWaited++
+                    }
                 }
                 val said = extras.getInt(PlaybackService.SLEEP_EVENT_ID)
                 if (said != sleepEventId) {
@@ -899,7 +912,6 @@ private fun Mimidoku(
                     // something is on it, so a tidy library never sees it.
                     val shelves = remember(shelvedBooks, preferences.shelving) {
                         val named = shelvedBooks.shelfHeadings(preferences.shelving)
-                            .sortedWith(String.CASE_INSENSITIVE_ORDER)
                             .map { name ->
                                 // Only an author's shelf can be removed, and only when some of it is
                                 // on the phone: a genre is not a thing anyone meant to delete.
@@ -1141,7 +1153,6 @@ private fun Mimidoku(
                     }
                     val searchShelves = remember(shelvedBooks, preferences.shelving) {
                         shelvedBooks.shelfHeadings(preferences.shelving)
-                            .sortedWith(String.CASE_INSENSITIVE_ORDER)
                             .map { LibraryRow(title = preferences.shelving.shown(it, context.resources), id = it) }
                     }
                     SearchScreen(
@@ -1965,6 +1976,11 @@ private const val UNNAMED = "\u0000unnamed"
  */
 private fun List<BookEntity>.shelfHeadings(shelving: Shelving): List<String> =
     Sameness.headings(mapNotNull { book -> book.shelf(shelving)?.let { Sameness.Spelling(it, book.sourceType == SOURCE_LOCAL) } })
+        .let { headings ->
+            // Names by the alphabet; the status shelves in their own order, finished last.
+            if (shelving == Shelving.Status) headings.sortedBy { STATUS_KEYS.values.indexOf(it) }
+            else headings.sortedWith(String.CASE_INSENSITIVE_ORDER)
+        }
 
 /** Whether a book sits on the shelf headed [name], matched the way the headings were made. */
 private fun BookEntity.isOnShelf(name: String, shelving: Shelving): Boolean =
@@ -2062,23 +2078,29 @@ private class Shelves(
 private fun BookEntity.shelf(shelving: Shelving): String? = when (shelving) {
     Shelving.Author -> shownAuthor()
     Shelving.Genre -> genre
-    Shelving.Status -> when {
-        lastPlayedAt == null -> NOT_STARTED
-        else -> STARTED
-    }
+    Shelving.Status -> STATUS_KEYS.getValue(Progress.status(lastPlayedAt != null, durationMs, progressMs))
 }
 
 /**
- * The keys of the two status shelves. English only because they always were; they are compared,
+ * The keys of the status shelves. English only because they always were; they are compared,
  * never shown, and [shown] gives the heading in the reader's language.
  */
 private const val NOT_STARTED = "Not started"
 private const val STARTED = "Started"
+private const val FINISHED = "Finished"
+
+/** Each standing's shelf, in the order the shelves are listed. */
+private val STATUS_KEYS = linkedMapOf(
+    Progress.Status.NotStarted to NOT_STARTED,
+    Progress.Status.Started to STARTED,
+    Progress.Status.Finished to FINISHED,
+)
 
 /** The heading for a shelf whose key is [key]. A name out of the files is shown as it is. */
 private fun Shelving.shown(key: String, resources: Resources): String = when {
     this == Shelving.Status && key == NOT_STARTED -> resources.getString(R.string.library_not_started)
     this == Shelving.Status && key == STARTED -> resources.getString(R.string.library_started)
+    this == Shelving.Status && key == FINISHED -> resources.getString(R.string.library_finished)
     else -> key
 }
 
@@ -2302,7 +2324,7 @@ private fun Long.asMinutesLeft(resources: Resources): String {
 }
 
 /** Whether the reader has been through the whole book: its last few seconds count as the end. */
-private fun BookEntity.isFinished(): Boolean = durationMs > 0 && progressMs >= durationMs - 3_000
+private fun BookEntity.isFinished(): Boolean = Progress.isFinished(durationMs, progressMs)
 
 private fun Long.asClock(): String {
     if (this <= 0) return "0:00"

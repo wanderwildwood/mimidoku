@@ -25,4 +25,35 @@ object Progress {
     /** Where the knob sits, 0 to 1; at the start when the length is not known. */
     fun seekFraction(positionMs: Long, lengthMs: Long): Float =
         if (lengthMs > 0) (positionMs.toFloat() / lengthMs).coerceIn(0f, 1f) else 0f
+
+    /** Whether the reader has been through the whole book: its last few seconds count as the end. */
+    fun isFinished(durationMs: Long, progressMs: Long): Boolean =
+        durationMs > 0 && progressMs >= durationMs - FINISHED_WITHIN_MS
+
+    /**
+     * Where a book stands with its reader. One played to its end is finished rather than still
+     * started; played again it is started again, since its place moves back off the end.
+     */
+    fun status(everPlayed: Boolean, durationMs: Long, progressMs: Long): Status = when {
+        !everPlayed -> Status.NotStarted
+        isFinished(durationMs, progressMs) -> Status.Finished
+        else -> Status.Started
+    }
+
+    /** In the order the shelves are listed: the two there always were, then what is done. */
+    enum class Status { NotStarted, Started, Finished }
+
+    /**
+     * Whether the sleep timer's countdown is redrawn on this half-second look at the player.
+     *
+     * The place in the book and the countdown each turn over once a second, but not at the same
+     * moment, and drawn apart they made two redraws a second on a panel that smears. So the
+     * countdown waits for the place to move and both are drawn in one frame. When the place is
+     * not moving (paused, or still loading) there is nothing to wait for, and a countdown that
+     * has [waited] a second already is drawn anyway.
+     */
+    fun drawCountdown(placeMoved: Boolean, playing: Boolean, waited: Int): Boolean =
+        placeMoved || !playing || waited >= 2
+
+    private const val FINISHED_WITHIN_MS = 3_000L
 }

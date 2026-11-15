@@ -46,4 +46,46 @@ class ProgressTest {
     fun seekFractionIsAtTheStartWhenLengthUnknown() {
         assertEquals(0f, Progress.seekFraction(119_000, 0), 0f)
     }
+
+    @Test
+    fun aBookPlayedToItsEndIsFinishedNotStarted() {
+        assertEquals(Progress.Status.Finished, Progress.status(true, 49_000, 49_000))
+        assertEquals(Progress.Status.Finished, Progress.status(true, 49_000, 46_500))
+    }
+
+    @Test
+    fun aBookPartWayThroughIsStarted() {
+        assertEquals(Progress.Status.Started, Progress.status(true, 49_000, 20_000))
+        assertEquals(Progress.Status.Started, Progress.status(true, 49_000, 0))
+    }
+
+    @Test
+    fun aBookOfUnknownLengthIsNeverFinished() {
+        assertEquals(Progress.Status.Started, Progress.status(true, 0, 0))
+    }
+
+    @Test
+    fun aBookNeverPlayedIsNotStarted() {
+        assertEquals(Progress.Status.NotStarted, Progress.status(false, 49_000, 0))
+    }
+
+    @Test
+    fun statusShelvesListFinishedLast() {
+        assertEquals(
+            listOf(Progress.Status.NotStarted, Progress.Status.Started, Progress.Status.Finished),
+            Progress.Status.entries.sorted(),
+        )
+    }
+
+    @Test
+    fun countdownIsDrawnWithThePlaceWhilePlaying() {
+        assertEquals(true, Progress.drawCountdown(placeMoved = true, playing = true, waited = 0))
+        assertEquals(false, Progress.drawCountdown(placeMoved = false, playing = true, waited = 1))
+    }
+
+    @Test
+    fun countdownDoesNotWaitForAPlaceThatIsNotMoving() {
+        assertEquals(true, Progress.drawCountdown(placeMoved = false, playing = false, waited = 0))
+        assertEquals(true, Progress.drawCountdown(placeMoved = false, playing = true, waited = 2))
+    }
 }
