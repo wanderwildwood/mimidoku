@@ -117,7 +117,7 @@ dependencies {
 
   testImplementation(libs.junit)
   // Android's org.json is a stub under unit tests; the places backup is JSON.
-  testImplementation("org.json:json:20240303")
+  testImplementation("org.json:json:20260814")
   testImplementation(libs.okhttp.mockwebserver)
 }
 
