@@ -720,8 +720,9 @@ private fun Mimidoku(
             title = it.shownTitle(),
             remaining = when {
                 screen == Screen.Player -> remaining.asClock()
-                // A book read to its end says so, not "0 min left".
-                it.isFinished() -> context.getString(R.string.library_finished)
+                // A book read to its end says so, not "0 min left". The book held here is the
+                // copy taken when it was opened, so the end just reached is asked of the player.
+                endNoted || it.isFinished() -> context.getString(R.string.library_finished)
                 else -> remaining.asMinutesLeft(context.resources)
             },
             isPlaying = isPlaying,
