@@ -15,7 +15,7 @@ android {
 
   defaultConfig {
     applicationId = "com.wanderwildwood.mimidoku"
-    // The Kompakt runs 28; nothing here needs anything newer.
+    // A floor, not the target phone: the Kompakt runs 31. Nothing here needs anything newer than 28.
     minSdk = 28
     targetSdk = 36
     versionCode = 198
@@ -25,7 +25,7 @@ android {
   // A real keystore in signing/ signs every build type when it is present, so the
   // very first install is already release-signed and a later update can never hit
   // INSTALL_FAILED_UPDATE_INCOMPATIBLE. It is gitignored. Nothing is checked in as
-  // a fallback: this repository has no remotes, so there is nobody to clone it.
+  // a fallback: no key belongs in a repository, so a clone without signing/ builds unsigned.
   val signingPropertiesFile = rootProject.file("signing/signing.properties")
   val realSigningConfig = if (signingPropertiesFile.isFile) {
     val signingProperties = Properties().apply {
@@ -49,10 +49,9 @@ android {
     getByName("release") {
         // Release APKs carry arm64-v8a only: every device this app is for is arm64. Debug builds keep the emulator's.
         ndk { abiFilters += listOf("arm64-v8a") }
-      // The one thing that differs between a release built here and the one GitHub
-      // publishes: AGP stamps the git revision into META-INF, and the build box works
-      // from an rsync with no .git, so it writes NO_SUPPORTED_VCS_FOUND where the CI
-      // runner writes the commit. Off, so the two have identical contents.
+      // AGP stamps the git revision into META-INF, and the build box works from an rsync
+      // with no .git, so it would write NO_SUPPORTED_VCS_FOUND. Off, so a build's contents
+      // do not depend on where it was built.
       vcsInfo {
         include = false
       }
