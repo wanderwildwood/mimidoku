@@ -330,6 +330,9 @@ interface LibraryDao {
     @Query("DELETE FROM chapters WHERE bookUri NOT IN (SELECT uri FROM books)")
     suspend fun deleteOrphanedChapters()
 
+    @Query("DELETE FROM chapters WHERE bookUri = :bookUri AND uri NOT IN (:keep)")
+    suspend fun deleteChaptersNotIn(bookUri: String, keep: List<String>)
+
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
 
@@ -425,6 +428,12 @@ interface LibraryDao {
          * as they are rather than deleted with everything that belonged to them.
          */
         stillThere: Collection<String> = emptyList(),
+        /**
+         * Whether a chapter of a book in [books] that is missing from [chapters] is gone. True
+         * only for a complete read of the card: a server book's chapters hold its downloads, and
+         * a scan that could not list every folder has not seen every file.
+         */
+        pruneChapters: Boolean = false,
     ) {
         insertBooks(books)
         books.forEach {
@@ -434,6 +443,15 @@ interface LibraryDao {
         stillThere.forEach { markSeen(it, at) }
         insertChapters(chapters)
         chapters.forEach { refreshChapter(it.uri, it.bookUri, it.name, it.sortIndex) }
+        // A file gone from a book's folder goes from its chapters too, or the player would stop
+        // at it. (SQLite takes at most 999 values in one list; a longer book keeps its rows.)
+        if (pruneChapters) {
+            val seen = chapters.groupBy({ it.bookUri }, { it.uri })
+            books.forEach { book ->
+                val keep = seen[book.uri].orEmpty()
+                if (keep.isNotEmpty() && keep.size < 900) deleteChaptersNotIn(book.uri, keep)
+            }
+        }
         // Everything this scan did not stamp is no longer on the card, and everything that
         // belonged to it goes with it.
         deleteBooksUnseenSince(at, sourceType)
