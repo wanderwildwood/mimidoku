@@ -24,7 +24,8 @@ class ChapterMarksTest {
     fun `an m4b chapter list is read`() {
         val marks = ChapterMarks.read(
             m4b(chpl(version = 1, chapters = listOf(0L to "Chapter One", 363_214L to "Chapter Two"))),
-        , numbered)
+            numbered,
+        )
 
         assertEquals(listOf("Chapter One", "Chapter Two"), marks.map { it.title })
         assertEquals(listOf(0L, 363_214L), marks.map { it.startMs })
@@ -94,7 +95,8 @@ class ChapterMarksTest {
     fun `an mp3 says where its chapters are`() {
         val marks = ChapterMarks.read(
             id3(listOf(0L to "The Ferry", 90_000L to "The Flood")),
-        , numbered)
+            numbered,
+        )
 
         assertEquals(listOf("The Ferry", "The Flood"), marks.map { it.title })
         assertEquals(listOf(0L, 90_000L), marks.map { it.startMs })
@@ -104,14 +106,16 @@ class ChapterMarksTest {
     fun `chapters are given back in the order they are heard`() {
         val marks = ChapterMarks.read(
             m4b(chpl(version = 1, chapters = listOf(0L to "One", 5_000L to "Two"))),
-        , numbered)
+            numbered,
+        )
 
         assertEquals(marks.sortedBy { it.startMs }, marks)
     }
 
     // ---- fixtures --------------------------------------------------------------------------
 
-    private fun ChapterMarks.read(bytes: ByteArray, numbered): List<Mark> = read(ByteArrayInputStream(bytes))
+    private fun ChapterMarks.read(bytes: ByteArray, numbered: (Int) -> String): List<Mark> =
+        read(ByteArrayInputStream(bytes), numbered)
 
     /** A file shaped like an m4b: the boxes an audiobook has, around the list under test. */
     private fun m4b(chpl: ByteArray, audioBytes: Int = 1024, audioFirst: Boolean = false): ByteArray {
