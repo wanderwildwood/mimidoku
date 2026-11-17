@@ -208,8 +208,17 @@ class PlaybackService : MediaSessionService() {
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
-        ): MediaSession.ConnectionResult =
-            MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+        ): MediaSession.ConnectionResult {
+            val systemController = session.isMediaNotificationController(controller) ||
+                session.isAutomotiveController(controller) ||
+                session.isAutoCompanionController(controller)
+            if (!ControllerGate.accepts(packageName, controller.packageName, controller.isTrusted, systemController)) {
+                return MediaSession.ConnectionResult.reject()
+            }
+            if (!ControllerGate.mayUseNamedCommands(packageName, controller.packageName)) {
+                return MediaSession.ConnectionResult.AcceptedResultBuilder(session).build()
+            }
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                         .add(SessionCommand(SKIP_SILENCE, Bundle.EMPTY))
@@ -218,6 +227,7 @@ class PlaybackService : MediaSessionService() {
                         .build(),
                 )
                 .build()
+        }
 
         override fun onCustomCommand(
             session: MediaSession,
@@ -225,6 +235,9 @@ class PlaybackService : MediaSessionService() {
             command: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
+            if (!ControllerGate.mayUseNamedCommands(packageName, controller.packageName)) {
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_PERMISSION_DENIED))
+            }
             val on = args.getBoolean(ON)
             when (command.customAction) {
                 SKIP_SILENCE -> player?.skipSilenceEnabled = on
