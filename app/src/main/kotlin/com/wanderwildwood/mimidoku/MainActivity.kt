@@ -498,6 +498,16 @@ private fun Mimidoku(
                 )
                 PlacesFiles.Result.Unreadable -> context.getString(R.string.places_unreadable)
             }
+            // The book in the strip holds its place from before the restore, and Play would carry
+            // on from there and write it back. Take the restored place, in the player too.
+            playing?.let { held ->
+                val fresh = library.book(held.uri) ?: return@let
+                playing = fresh
+                val c = controller ?: return@let
+                if (c.mediaItemCount == 0 || c.getMediaItemAt(0).mediaId != chapters.firstOrNull()?.uri) return@let
+                val at = chapters.indexOfFirst { it.uri == fresh.currentChapterUri }
+                if (at >= 0) c.seekTo(at, fresh.positionMs)
+            }
             notice = message
         }
     }
