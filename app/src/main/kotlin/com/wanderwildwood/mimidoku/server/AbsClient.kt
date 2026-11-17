@@ -200,12 +200,21 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
             connection?.disconnect()
         }
     }
+
+    /**
+     * The answer, read into what the app wants. JSON of another shape (an item with no media, a
+     * file with no ino, another service at this address) is the same as no Audiobookshelf.
+     */
+    private inline fun <T, R> AbsResult<T>.map(transform: (T) -> R): AbsResult<R> = when (this) {
+        is AbsResult.Failure -> this
+        is AbsResult.Success -> try {
+            AbsResult.Success(transform(value))
+        } catch (e: org.json.JSONException) {
+            AbsResult.Failure(resources.getString(R.string.server_not_audiobookshelf))
+        }
+    }
 }
 
-private inline fun <T, R> AbsResult<T>.map(transform: (T) -> R): AbsResult<R> = when (this) {
-    is AbsResult.Failure -> this
-    is AbsResult.Success -> AbsResult.Success(transform(value))
-}
 
 private fun JSONArray?.orEmpty(): JSONArray = this ?: JSONArray()
 
