@@ -210,6 +210,16 @@ interface LibraryDao {
     suspend fun chaptersWithoutDuration(limit: Int): List<ChapterEntity>
 
     /**
+     * Files marked unreadable are asked again, once each time the app starts: a memory card out
+     * or a folder briefly unreachable is not a damaged file, and should not stay one for good.
+     */
+    @Query(
+        "UPDATE chapters SET durationMs = 0 WHERE durationMs = -1 " +
+            "AND bookUri IN (SELECT uri FROM books WHERE sourceType = '" + SOURCE_LOCAL + "')",
+    )
+    suspend fun retryUnreadableDurations()
+
+    /**
      * Chapters are inserted with IGNORE so a rescan cannot throw away a duration that has already
      * been read, which means the things a rescan *can* know have to be written back explicitly.
      */

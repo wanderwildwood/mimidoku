@@ -26,6 +26,10 @@ class DurationReader(private val context: Context) {
     private val dao = LibraryDatabase.get(context).dao()
 
     suspend fun run() = withContext(Dispatchers.IO) {
+        if (!retried) {
+            retried = true
+            dao.retryUnreadableDurations()
+        }
         while (true) {
             coroutineContext.ensureActive()
             val batch = dao.chaptersWithoutDuration(BATCH)
@@ -60,8 +64,9 @@ class DurationReader(private val context: Context) {
         // would name every book after its first chapter.
         val single = dao.chapterCountOf(chapter.bookUri) == 1
         // A file that cannot be read gets -1 rather than 0, so it is not asked about again
-        // on every pass. Something the reader has to fix is not something to retry forever.
-        dao.setChapterDuration(chapter.uri, read?.durationMs ?: -1L)
+        // on every pass; it is asked once more the next time the app starts. A length of 0 is
+        // no length either, and left at 0 the pass would pick the same file up again at once.
+        dao.setChapterDuration(chapter.uri, read?.durationMs?.takeIf { it > 0 } ?: -1L)
         // Whatever the first file that has one says; these queries only write where
         // nothing has been written yet, so later files cannot overrule the first.
         read?.genre?.let { dao.setGenre(chapter.bookUri, it) }
@@ -151,6 +156,9 @@ class DurationReader(private val context: Context) {
     }.getOrNull()
 
     private companion object {
+        /** Whether this process has asked the unreadable files again yet; once per start is enough. */
+        @Volatile var retried = false
+
         /** Small enough that stopping mid-library loses a second of work, not a minute of it. */
         const val BATCH = 40
 
