@@ -14,3 +14,5 @@ local.properties
 /signing
 # JVM heap dumps land at the repo root when a build runs out of memory.
 *.hprof
+# Working notes stay on this machine.
+/WHERE-WE-ARE.md
