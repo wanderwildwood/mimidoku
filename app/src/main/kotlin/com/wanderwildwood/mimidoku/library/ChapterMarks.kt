@@ -22,15 +22,16 @@ data class Mark(
  */
 object ChapterMarks {
 
-    fun read(resolver: ContentResolver, uri: Uri): List<Mark> = runCatching {
-        resolver.openInputStream(uri)?.use { read(it) }.orEmpty()
+    /** [numbered] is what to call chapter n when the file gives it no name of its own. */
+    fun read(resolver: ContentResolver, uri: Uri, numbered: (Int) -> String): List<Mark> = runCatching {
+        resolver.openInputStream(uri)?.use { read(it, numbered) }.orEmpty()
     }.getOrDefault(emptyList())
 
     /**
      * Taken as bytes rather than as a file, so that what the parsers do with a header can be
      * asked of them directly.
      */
-    fun read(stream: InputStream): List<Mark> {
+    fun read(stream: InputStream, numbered: (Int) -> String): List<Mark> {
         // Eight bytes is a box header, which is the shorter of the two things this can be
         // looking at; the other two bytes of an ID3 header are read once it is one.
         val head = stream.readAtMost(8)
@@ -44,7 +45,7 @@ object ChapterMarks {
         } else {
             mp4(stream, head)
         }
-        return found.sortedBy { it.startMs }.mapIndexed { index, mark -> mark.named(index) }
+        return found.sortedBy { it.startMs }.mapIndexed { index, mark -> mark.named(index, numbered) }
     }
 
     /**
@@ -54,9 +55,9 @@ object ChapterMarks {
      * reads as a serial number rather than as a place in a book. A title that is only its own
      * number is not a name, so it is given the one a reader would say out loud.
      */
-    private fun Mark.named(index: Int): Mark {
+    private fun Mark.named(index: Int, numbered: (Int) -> String): Mark {
         if (title.isNotEmpty() && !title.all { it.isDigit() }) return this
-        return copy(title = "Chapter ${title.trimStart('0').toIntOrNull() ?: (index + 1)}")
+        return copy(title = numbered(title.trimStart('0').toIntOrNull() ?: (index + 1)))
     }
 
     // ---- mp3 -------------------------------------------------------------------------------

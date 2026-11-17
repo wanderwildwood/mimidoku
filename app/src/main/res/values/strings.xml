@@ -1,6 +1,8 @@
 <resources>
     <!-- The launcher label. Internally the project is mimidoku, 耳読 - reading by ear. -->
     <string name="app_name">Audio Reader</string>
+    <!-- A chapter the file gave no name, or only its number. -->
+    <string name="chapter_numbered">Chapter %1$d</string>
 
     <!-- ============================================================ -->
     <!-- Shared: icon descriptions read aloud by a screen reader, used on several screens -->

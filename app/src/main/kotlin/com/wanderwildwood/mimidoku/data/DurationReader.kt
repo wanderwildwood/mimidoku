@@ -4,6 +4,7 @@ import com.wanderwildwood.mimidoku.library.Sameness
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import androidx.core.net.toUri
+import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.library.ChapterMarks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -97,7 +98,9 @@ class DurationReader(private val context: Context) {
     private suspend fun marks(chapter: ChapterEntity, single: Boolean) {
         if (!single) return
         if (dao.markCount(chapter.bookUri) > 0) return
-        val found = ChapterMarks.read(context.contentResolver, chapter.audioUri.toUri())
+        val found = ChapterMarks.read(context.contentResolver, chapter.audioUri.toUri()) {
+            context.getString(R.string.chapter_numbered, it)
+        }
         // One mark at the start is the same as no marks, and a list of one is worse than none:
         // it looks like a book whose chapters failed to load.
         if (found.size < 2) return

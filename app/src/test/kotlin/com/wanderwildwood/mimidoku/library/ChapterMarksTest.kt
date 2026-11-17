@@ -17,11 +17,14 @@ import org.junit.Test
  */
 class ChapterMarksTest {
 
+    /** As strings.xml has it: chapter_numbered. */
+    private val numbered = { n: Int -> "Chapter $n" }
+
     @Test
     fun `an m4b chapter list is read`() {
         val marks = ChapterMarks.read(
             m4b(chpl(version = 1, chapters = listOf(0L to "Chapter One", 363_214L to "Chapter Two"))),
-        )
+        , numbered)
 
         assertEquals(listOf("Chapter One", "Chapter Two"), marks.map { it.title })
         assertEquals(listOf(0L, 363_214L), marks.map { it.startMs })
@@ -29,7 +32,7 @@ class ChapterMarksTest {
 
     @Test
     fun `a chapter list written the older way is read`() {
-        val marks = ChapterMarks.read(m4b(chpl(version = 0, chapters = listOf(0L to "One", 5_000L to "Two"))))
+        val marks = ChapterMarks.read(m4b(chpl(version = 0, chapters = listOf(0L to "One", 5_000L to "Two"))), numbered)
 
         assertEquals(listOf("One", "Two"), marks.map { it.title })
         assertEquals(listOf(0L, 5_000L), marks.map { it.startMs })
@@ -48,7 +51,7 @@ class ChapterMarksTest {
             ),
         )
 
-        val marks = ChapterMarks.read(counted)
+        val marks = ChapterMarks.read(counted, numbered)
 
         assertEquals(2, marks.size)
         assertTrue("read ${counted.read} bytes", counted.read < 64 * 1024)
@@ -56,14 +59,14 @@ class ChapterMarksTest {
 
     @Test
     fun `a chapter titled with its own number is named`() {
-        val marks = ChapterMarks.read(m4b(chpl(version = 1, chapters = listOf(0L to "001", 60_000L to "002"))))
+        val marks = ChapterMarks.read(m4b(chpl(version = 1, chapters = listOf(0L to "001", 60_000L to "002"))), numbered)
 
         assertEquals(listOf("Chapter 1", "Chapter 2"), marks.map { it.title })
     }
 
     @Test
     fun `a chapter with no title at all is named for where it falls`() {
-        val marks = ChapterMarks.read(m4b(chpl(version = 1, chapters = listOf(0L to "", 60_000L to ""))))
+        val marks = ChapterMarks.read(m4b(chpl(version = 1, chapters = listOf(0L to "", 60_000L to ""))), numbered)
 
         assertEquals(listOf("Chapter 1", "Chapter 2"), marks.map { it.title })
     }
@@ -76,14 +79,14 @@ class ChapterMarksTest {
             // the list is ever parsed and this would pass without testing anything.
             .also { writeInt(it, 0, it.size) }
 
-        assertEquals(emptyList<Mark>(), ChapterMarks.read(m4b(truncated)))
+        assertEquals(emptyList<Mark>(), ChapterMarks.read(m4b(truncated), numbered))
     }
 
     @Test
     fun `a file that is neither is left alone`() {
         val counted = Counting(ByteArray(4096) { 0x7f })
 
-        assertEquals(emptyList<Mark>(), ChapterMarks.read(counted))
+        assertEquals(emptyList<Mark>(), ChapterMarks.read(counted, numbered))
         assertTrue("read ${counted.read} bytes", counted.read <= 16)
     }
 
@@ -91,7 +94,7 @@ class ChapterMarksTest {
     fun `an mp3 says where its chapters are`() {
         val marks = ChapterMarks.read(
             id3(listOf(0L to "The Ferry", 90_000L to "The Flood")),
-        )
+        , numbered)
 
         assertEquals(listOf("The Ferry", "The Flood"), marks.map { it.title })
         assertEquals(listOf(0L, 90_000L), marks.map { it.startMs })
@@ -101,14 +104,14 @@ class ChapterMarksTest {
     fun `chapters are given back in the order they are heard`() {
         val marks = ChapterMarks.read(
             m4b(chpl(version = 1, chapters = listOf(0L to "One", 5_000L to "Two"))),
-        )
+        , numbered)
 
         assertEquals(marks.sortedBy { it.startMs }, marks)
     }
 
     // ---- fixtures --------------------------------------------------------------------------
 
-    private fun ChapterMarks.read(bytes: ByteArray): List<Mark> = read(ByteArrayInputStream(bytes))
+    private fun ChapterMarks.read(bytes: ByteArray, numbered): List<Mark> = read(ByteArrayInputStream(bytes))
 
     /** A file shaped like an m4b: the boxes an audiobook has, around the list under test. */
     private fun m4b(chpl: ByteArray, audioBytes: Int = 1024, audioFirst: Boolean = false): ByteArray {
