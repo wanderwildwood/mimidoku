@@ -260,7 +260,7 @@ private fun Mimidoku(
     var controller by remember { mutableStateOf<MediaController?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var position by remember { mutableStateOf(0L) }
-    // Whether the book playing has been played to its end and that has been written down.
+    // Whether the book playing has been played to its end, so the strip says finished at once.
     var endNoted by remember { mutableStateOf(false) }
     var duration by remember { mutableStateOf(0L) }
     var scanning by remember { mutableStateOf(false) }
@@ -360,7 +360,6 @@ private fun Mimidoku(
     // Position is polled rather than observed: the player reports it continuously while playing,
     // and there is no callback that fires per second.
     LaunchedEffect(controller) {
-        var sinceSaved = 0
         var failureSaidAt = 0L
         var countdownWaited = 0
         while (true) {
@@ -381,14 +380,11 @@ private fun Mimidoku(
                 val placeMoved = (it.currentPosition / 1000 * 1000) != position
                 if (placeMoved) position = it.currentPosition / 1000 * 1000
 
-                // A book played to its end is written down as finished, once.
+                // A book played to its end shows as finished at once. The service writes it down
+                // as finished; this screen only draws it.
                 val over = it.playbackState == Player.STATE_ENDED
-                val last = playing
-                if (over && last != null && !endNoted) {
+                if (over && playing != null && !endNoted) {
                     endNoted = true
-                    it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }?.let { chapter ->
-                        library.rememberPosition(last.uri, chapter, it.duration.coerceAtLeast(0))
-                    }
                 } else if (!over) {
                     endNoted = false
                 }
@@ -422,19 +418,9 @@ private fun Mimidoku(
                 (it.duration.takeIf { d -> d > 0 } ?: 0L).let { d -> if (d != duration) duration = d }
                 it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }.let { id -> if (id != chapterUri) chapterUri = id }
 
-                // Written every few seconds rather than on every tick: often enough that killing
-                // the app loses a moment rather than a chapter, rarely enough not to write to
-                // storage ten times a minute.
-                val book = playing
-                if (book != null && it.isPlaying && ++sinceSaved >= SAVE_EVERY_TICKS) {
-                    sinceSaved = 0
-                    // mediaId rather than localConfiguration.uri: a MediaController is on the far
-                    // side of a binder, and localConfiguration is documented as not surviving that
-                    // trip. The id always does, which is why the chapters are given one.
-                    it.currentMediaItem?.mediaId?.takeIf { id -> id.isNotEmpty() }?.let { chapter ->
-                        library.rememberPosition(book.uri, chapter, it.currentPosition)
-                    }
-                }
+                // The reader's place is written by PlaybackService, not here: this screen can be
+                // gone for hours while the book plays on, and a place written only by the screen
+                // was lost with it.
             }
             delay(500)
         }
@@ -2348,9 +2334,6 @@ private fun dayAt(minutesOfDay: Int): Date = Calendar.getInstance().apply {
 private fun MediaController.ask(action: String, on: Boolean) {
     sendCustomCommand(SessionCommand(action, Bundle.EMPTY), Bundle().apply { putBoolean(PlaybackService.ON, on) })
 }
-
-/** Half-second ticks, so ten of them is five seconds. */
-private const val SAVE_EVERY_TICKS = 10
 
 /** Hours only when there are hours, because most chapters do not have any. */
 /** The strip's reading off the player: hours and minutes left, never seconds. */

@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -22,8 +23,11 @@ import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.glance.NowReading
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -66,6 +70,18 @@ class PlaybackService : MediaSessionService() {
 
     /** For the one thing the timer has to write down: where the reader stopped following. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * The reader's place, written here rather than by the screen: see [PlaceKeeper].
+     *
+     * Writes go through one queue with one reader, so they land in the order they were made: two
+     * launched side by side could finish the other way round and leave an older place standing.
+     * The queue's reader is not cancelled with [scope], so the last place, written as the service
+     * goes, still reaches the database.
+     */
+    private val keeper = PlaceKeeper()
+    private val places = Channel<PlaceKeeper.Place>(Channel.UNLIMITED)
+    private var ticking: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -112,9 +128,59 @@ class PlaybackService : MediaSessionService() {
         sleep = timer
         publishSleep()
 
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            for (place in places) {
+                runCatching {
+                    val book = library.bookOfChapter(place.chapterUri) ?: return@runCatching
+                    library.rememberPosition(book.uri, place.chapterUri, place.positionMs)
+                }.onFailure { Log.w(TAG, "The place was not written", it) }
+            }
+        }
+
         exoPlayer.addListener(object : Player.Listener {
             override fun onAudioSessionIdChanged(audioSessionId: Int) = applyBoost()
-            override fun onIsPlayingChanged(isPlaying: Boolean) = timer.onPlayingChanged(isPlaying)
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                timer.onPlayingChanged(isPlaying)
+                ticking?.cancel()
+                ticking = null
+                if (isPlaying) {
+                    keeper.started()
+                    ticking = scope.launch {
+                        while (true) {
+                            delay(SAVE_EVERY_MS)
+                            writePlace(exoPlayer)
+                        }
+                    }
+                } else {
+                    // Paused, stopped, played to the end, or waiting on the file: where it stands
+                    // now is where the reader will want to come back to.
+                    writePlace(exoPlayer)
+                }
+            }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) {
+                when (reason) {
+                    // The book is being taken out of the player, for another or for none: this is
+                    // the last chance to say where it was. It comes before the item change below.
+                    Player.DISCONTINUITY_REASON_REMOVE ->
+                        keeper.at(oldPosition.mediaItem?.mediaId, oldPosition.positionMs)?.let(places::trySend)
+                    // A chapter ending into the next, or the reader moving: written at once, so a
+                    // place moved while paused is not lost with the screen.
+                    Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+                    Player.DISCONTINUITY_REASON_SEEK,
+                    Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT ->
+                        keeper.at(newPosition.mediaItem?.mediaId, newPosition.positionMs)?.let(places::trySend)
+                }
+            }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) keeper.loaded()
+            }
 
             // Play, pause, a seek, the next file, a stop: Glance's line is worked out again,
             // and Glance is told if it would now say something different.
@@ -222,6 +288,17 @@ class PlaybackService : MediaSessionService() {
         }.onFailure { Log.w(TAG, "Loudness enhancer refused", it) }
     }
 
+    /**
+     * Hands the place the player is at to the writer, if it is one worth writing. A book played to
+     * its end is written at the end of its last file, so it reads as finished.
+     */
+    private fun writePlace(player: Player) {
+        val ended = player.playbackState == Player.STATE_ENDED
+        val length = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
+        val at = if (ended && length != null) length else player.currentPosition
+        keeper.at(player.currentMediaItem?.mediaId, at)?.let(places::trySend)
+    }
+
     /** Where the player is, for Glance's lock-screen panel; nothing while stopped or finished. */
     private fun publishReading(player: Player) {
         val chapter = player.currentMediaItem?.mediaId?.takeIf { it.isNotEmpty() }
@@ -259,6 +336,10 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         _activeSession.value = null
         NowReading.set(this, null)
+        // The last place, before the player goes. The writer finishes what is queued and stops.
+        player?.let(::writePlace)
+        places.close()
+        ticking = null
         sleep?.release()
         sleep = null
         scope.cancel()
@@ -302,5 +383,11 @@ class PlaybackService : MediaSessionService() {
         const val SEEK_FORWARD_MS = 20_000L
 
         const val BOOST_MILLIBELS = 800
+
+        /**
+         * How often the place is written while a book plays: often enough that a killed app loses a
+         * moment rather than a chapter, rarely enough not to write to storage ten times a minute.
+         */
+        const val SAVE_EVERY_MS = 5_000L
     }
 }
