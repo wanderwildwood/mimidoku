@@ -33,6 +33,8 @@
         <package android:name="com.wanderwildwood.tana" />
         <!-- Glance, so the lock-screen line can check who is asking (its signing certificate). -->
         <package android:name="com.wanderwildwood.hitome" />
+        <!-- Shelf, so the book lookup can check who is asking (its signing certificate). -->
+        <package android:name="com.wanderwildwood.shoka" />
     </queries>
 
     <application
