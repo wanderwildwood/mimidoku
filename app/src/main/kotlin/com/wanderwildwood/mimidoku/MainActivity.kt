@@ -350,9 +350,16 @@ private fun Mimidoku(
     DisposableEffect(Unit) {
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
-        future.addListener({ controller = future.get() }, MoreExecutors.directExecutor())
+        future.addListener(
+            {
+                // A refused or cancelled connection leaves no controller, rather than a crash.
+                runCatching { future.get() }.getOrNull()?.let { controller = it }
+            },
+            MoreExecutors.directExecutor(),
+        )
         onDispose {
-            controller?.release()
+            // Releases the controller, or cancels one still connecting so it never holds the service.
+            MediaController.releaseFuture(future)
             controller = null
         }
     }
