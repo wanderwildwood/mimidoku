@@ -1,8 +1,8 @@
 # Privacy
 
 Audio Reader plays audiobooks that are on your phone. It talks to nothing on the internet
-and to no one at all, unless you give it the address of your own audiobook server — and then
-it talks only to that.
+and to no one at all, unless you give it the address of your own audiobook server or your
+Nextcloud — and then it talks only to those.
 
 This file describes what is true of the code in this repository *today*. When that changes,
 this file changes in the same commit as the code that changed it.
@@ -11,8 +11,9 @@ this file changes in the same commit as the code that changed it.
 
 You choose a folder. The app reads it through Android's storage access framework, which
 means it is given a handle to that one folder and nothing else — not your photos, not your
-downloads, not the rest of the card. There is no "read all files" permission here, and no
-way for the app to look outside what you handed it.
+downloads, not the rest of the card. The library needs no "read all files" permission, and the
+app does not look outside what you handed it. (The one exception is a book another app hands
+over by its file path; see the permissions below.)
 
 What it keeps from that folder is a list: book names, author names, chapter names, file
 sizes, durations, and where you are in each one. That list lives in a database that is
@@ -56,7 +57,8 @@ entry or nothing. No other app is answered, and the library is never listed for 
 
 ## What leaves the phone
 
-Nothing, until you add a server. Then: requests to that server, and nowhere else. Not for
+Nothing, until you add a server or a Nextcloud folder. Then: requests to those, and nowhere
+else. Not for
 cover art, not for metadata, not for a catalog lookup, not for crash reports. There is no
 analytics code here and no third party to send anything to. A book you are reading is not
 something anyone else needs to know about.
@@ -92,8 +94,9 @@ any time. The app password is sealed the same way as the server key, in the app'
 settings. The same http rule applies: plain http only on your home network, https otherwise.
 
 Books you download are kept in the app's own folder — on the phone, or on a memory card if
-you choose that in Settings — which means uninstalling the app takes them with it. No other
-app on the phone can read them, but a memory card can be taken out and read in a computer.
+you choose that in Settings — which means uninstalling the app takes them with it. On Android 11 and later (the Kompakt
+runs 12) no other app on the phone can read them; on older Android an app with storage access
+could. A memory card can always be taken out and read in a computer.
 
 ## What is stored
 
@@ -109,8 +112,8 @@ App-private means other apps cannot read it and it goes away when you uninstall.
 
 | Permission | Why |
 |---|---|
-| `INTERNET` | Talking to your own audiobook server, if you have given it one. Nothing else in this app uses the network. |
-| `ACCESS_NETWORK_STATE` | Added by a library the app uses; the app only asks whether the phone is online before contacting your server. |
+| `INTERNET` | Talking to your own audiobook server or Nextcloud, if you have given it one. Nothing else in this app uses the network. |
+| `ACCESS_NETWORK_STATE` | Added by the player library (Media3). The app's own code does not use it. |
 | `FOREGROUND_SERVICE` | Playback, and a download from your server, continue with the screen off. |
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The kind of foreground service the player is, which Android requires it to name. |
 | `FOREGROUND_SERVICE_DATA_SYNC` | The kind the downloader is. It runs only while a book you asked for is arriving, and stops when it is done. |
@@ -118,7 +121,8 @@ App-private means other apps cannot read it and it goes away when you uninstall.
 | `WAKE_LOCK` | The processor stays awake while audio is playing or a book is downloading, and not otherwise. |
 | `READ_EXTERNAL_STORAGE` (Android 12 and older) and `READ_MEDIA_AUDIO` | Only when another app hands over an audiobook by its file path rather than sharing it. Asked for at that moment, and you can say no. Your library folders need neither. |
 
-No microphone, no location, no contacts, and no storage-wide read.
+No microphone, no location, no contacts, and no storage-wide read except the one above, asked
+for only when another app hands over a book by its path.
 
 ## One optional service
 

@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-        Only ever used to talk to an Audiobookshelf server the reader has typed in themselves.
-        There is no other network code in this app: no cover lookups, no catalogue, no crash
+        Only ever used to talk to an Audiobookshelf server or a Nextcloud the reader has typed in
+        themselves. There is no other network code in this app: no cover lookups, no catalogue, no crash
         reporting. PRIVACY.md says the same thing and is kept true in the same commit as this.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
