@@ -65,7 +65,8 @@ class LibraryRepository(private val context: Context) {
             }
         }
         // A folder that could not be read is not a folder that is empty: its books stay listed.
-        val unreadable = results.filterValues { it.shape == TreeShape.Unreadable }.keys
+        // So do those of a folder that read only in part, a subfolder failing to list mid-scan.
+        val unreadable = results.filterValues { it.shape == TreeShape.Unreadable || it.partial }.keys
         val kept = if (unreadable.isEmpty()) emptyList() else Folders.keptFrom(unreadable, dao.bookUrisFrom(SOURCE_LOCAL))
         dao.merge(books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_LOCAL, stillThere = kept)
         return results.mapValues { it.value.shape }

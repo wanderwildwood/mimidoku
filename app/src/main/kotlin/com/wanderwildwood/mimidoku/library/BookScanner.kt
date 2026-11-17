@@ -75,6 +75,8 @@ enum class TreeShape {
 data class ScanResult(
     val shape: TreeShape,
     val books: List<Book>,
+    /** A folder somewhere below the chosen one would not list: [books] may be missing some. */
+    val partial: Boolean = false,
 )
 
 /**
@@ -98,7 +100,17 @@ class BookScanner(private val resolver: ContentResolver) {
      * assumption is kept for folders granted before there was a question, and dropped as soon as
      * one is answered.
      */
-    suspend fun scan(treeUri: Uri, reading: Reading? = null): ScanResult = coroutineScope {
+    suspend fun scan(treeUri: Uri, reading: Reading? = null): ScanResult {
+        val key = treeUri.toString()
+        failedTrees.remove(key)
+        val result = scanTree(treeUri, reading)
+        return if (failedTrees.remove(key)) result.copy(partial = true) else result
+    }
+
+    /** Trees in which a folder failed to list during the scan under way. */
+    private val failedTrees: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    private suspend fun scanTree(treeUri: Uri, reading: Reading?): ScanResult = coroutineScope {
         val root = DocumentsContract.getTreeDocumentId(treeUri)
         if (!readable(treeUri, root)) return@coroutineScope ScanResult(TreeShape.Unreadable, emptyList())
         val entries = children(treeUri, root)
@@ -248,8 +260,11 @@ class BookScanner(private val resolver: ContentResolver) {
             DocumentsContract.Document.COLUMN_MIME_TYPE,
             DocumentsContract.Document.COLUMN_SIZE,
         )
+        // A listing that fails is not an empty folder: the tree is marked, so that the books
+        // under this folder are kept rather than taken for gone (see LibraryRepository.rescan).
         return runCatching {
-            resolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+            (resolver.query(childrenUri, projection, null, null, null)
+                ?: error("no cursor for a folder listing")).use { cursor ->
                 buildList {
                     while (cursor.moveToNext()) {
                         val id = cursor.getString(0) ?: continue
@@ -267,8 +282,11 @@ class BookScanner(private val resolver: ContentResolver) {
                         )
                     }
                 }
-            }.orEmpty()
-        }.getOrDefault(emptyList())
+            }
+        }.getOrElse {
+            failedTrees += treeUri.toString()
+            emptyList()
+        }
     }
 
     /**
