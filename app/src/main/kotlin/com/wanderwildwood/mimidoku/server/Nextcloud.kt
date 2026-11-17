@@ -149,7 +149,7 @@ class NextcloudClient(
                 it.code == 404 -> throw NotDav()
                 !it.isSuccessful -> throw Answered(it.code)
             }
-            val text = it.body!!.string()
+            val text = it.body!!.cappedText()
             val href = try {
                 val doc = parse(text)
                 (doc.getElementsByTagNameNS("DAV:", "current-user-principal").item(0) as? Element)
@@ -171,7 +171,7 @@ class NextcloudClient(
                 it.code != 207 && !it.isSuccessful -> throw Answered(it.code)
             }
             return try {
-                entries(it.body!!.string(), root)
+                entries(it.body!!.cappedText(), root)
             } catch (e: Exception) {
                 throw NotDav()
             }
@@ -199,9 +199,27 @@ class NextcloudClient(
                 .build()
         }
 
-        private fun parse(text: String) =
-            DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
-                .newDocumentBuilder().parse(text.byteInputStream())
+        /**
+         * A WebDAV answer never carries a DOCTYPE. One that does is not Nextcloud, and its
+         * entities are the way an XML document is made to grow without end as it is read.
+         */
+        private fun parse(text: String): org.w3c.dom.Document {
+            require(!text.contains("<!DOCTYPE", ignoreCase = true)) { "a DOCTYPE in a WebDAV answer" }
+            return DocumentBuilderFactory.newInstance().apply {
+                isNamespaceAware = true
+                isExpandEntityReferences = false
+            }.newDocumentBuilder().parse(text.byteInputStream())
+        }
+
+        /** Far more than any folder listing; an answer larger than this is not one. */
+        private const val MAX_ANSWER_BYTES = 32L * 1024 * 1024
+
+        /** The body as text, refusing one past [MAX_ANSWER_BYTES] before it is in memory. */
+        private fun okhttp3.ResponseBody.cappedText(): String {
+            val source = source()
+            if (source.request(MAX_ANSWER_BYTES + 1)) throw NotDav()
+            return source.buffer.readUtf8()
+        }
 
         /** A multistatus answer as entries, paths relative to [root] and decoded. */
         internal fun entries(xml: String, root: HttpUrl): List<DavEntry> {

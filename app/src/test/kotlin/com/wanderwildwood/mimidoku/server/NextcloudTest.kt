@@ -92,6 +92,13 @@ class NextcloudTest {
         assertNull(pond.author)
     }
 
+    @Test fun `an answer with a DOCTYPE is refused before it is parsed`() {
+        val xml = """<?xml version="1.0"?><!DOCTYPE d:multistatus [<!ENTITY a "aaaaaaaa">]>""" +
+            """<d:multistatus xmlns:d="DAV:"><d:response><d:href>&a;</d:href></d:response></d:multistatus>"""
+        val refused = runCatching { NextcloudClient.entries(xml, "https://cloud.example.org/remote.php/dav/files/ada-id/".toHttpUrl()) }
+        assertTrue(refused.isFailure)
+    }
+
     @Test fun `a refused password and a missing folder say so`() = runBlocking {
         assertTrue((client(password = "nope").books() as AbsResult.Failure).message.startsWith("said"))
         val missing = client(folder = "Nowhere").books() as AbsResult.Failure
