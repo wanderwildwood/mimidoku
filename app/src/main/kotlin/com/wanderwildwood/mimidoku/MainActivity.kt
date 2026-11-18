@@ -187,7 +187,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (intent?.action != Intent.ACTION_VIEW) return
-        intent.data?.let { opened.value = it }
+        intent.data?.takeIf { OpenedBook.mayOpen(this, it) }?.let { opened.value = it }
     }
 }
 

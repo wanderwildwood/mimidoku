@@ -2,7 +2,9 @@ package com.wanderwildwood.mimidoku.library
 
 import com.wanderwildwood.mimidoku.glance.NowReading
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OpenedBookTest {
@@ -50,5 +52,26 @@ class OpenedBookTest {
         val now = NowReading.Now("book", 10_000L, 0L, isPlaying = true, speed = 1.5f, at = 1_000L)
         assertEquals(25_000L, now.positionAt(11_000L))
         assertEquals(10_000L, now.copy(isPlaying = false).positionAt(11_000L))
+    }
+
+    @Test
+    fun theAppsOwnFoldersAreNotOpenedForAnotherApp() {
+        val own = listOf("/data/data/com.wanderwildwood.mimidoku", "/storage/emulated/0/Android/data/com.wanderwildwood.mimidoku/")
+        assertTrue(OpenedBook.insideAny("/data/data/com.wanderwildwood.mimidoku/databases/library.db", own))
+        assertTrue(OpenedBook.insideAny("/storage/emulated/0/Android/data/com.wanderwildwood.mimidoku", own))
+        assertFalse(OpenedBook.insideAny("/data/data/com.wanderwildwood.mimidokuish/a.m4b", own))
+        assertFalse(OpenedBook.insideAny("/storage/emulated/0/Download/The Willow Road.m4b", own))
+        assertFalse(OpenedBook.insideAny("/storage/emulated/0/Download/a.m4b", listOf("", "/")))
+    }
+
+    @Test
+    fun theAppsOwnProvidersAreNotOpenedForAnotherApp() {
+        val app = "com.wanderwildwood.mimidoku"
+        assertTrue(OpenedBook.isOwnAuthority(app, app))
+        assertTrue(OpenedBook.isOwnAuthority("$app.glance", app))
+        assertTrue(OpenedBook.isOwnAuthority("com.wanderwildwood.mimidoku.books", "$app.debug"))
+        assertFalse(OpenedBook.isOwnAuthority("com.android.externalstorage.documents", app))
+        assertFalse(OpenedBook.isOwnAuthority("com.wanderwildwood.mimidokuish", app))
+        assertFalse(OpenedBook.isOwnAuthority(null, app))
     }
 }
