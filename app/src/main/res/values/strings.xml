@@ -335,6 +335,9 @@
     <!-- Shown as the server's status when asking it something fails -->
     <string name="server_key_refused">The server did not accept that key.</string>
     <string name="server_no_such_thing">The server has no such thing.</string>
+    <!-- A server book with no title, and a file in it with no name. -->
+    <string name="server_untitled">Untitled</string>
+    <string name="server_part_numbered">Part %1$d</string>
     <!-- %1$d is an HTTP status code -->
     <string name="server_answered">The server answered %1$d.</string>
     <string name="server_unreachable">The server could not be reached.</string>

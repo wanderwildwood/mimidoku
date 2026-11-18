@@ -117,7 +117,7 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
             val metadata = media.optJSONObject("metadata") ?: JSONObject()
             AbsBook(
                 id = id,
-                title = metadata.optString("title", "").ifBlank { "Untitled" },
+                title = metadata.optString("title", "").ifBlank { resources.getString(R.string.server_untitled) },
                 // "Author/01 Title" relative to the library folder; the last part is the book's
                 // own folder. A book that is one file sitting loose has its file name here.
                 folder = body.optString("relPath", "").trim().trimEnd('/')
@@ -142,7 +142,8 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
                             ino = file.getString("ino"),
                             index = file.optInt("index", 1),
                             name = file.optJSONObject("metadata")?.optString("filename")
-                                ?.ifBlank { null } ?: "Part ${file.optInt("index", 1)}",
+                                ?.ifBlank { null }
+                                ?: resources.getString(R.string.server_part_numbered, file.optInt("index", 1)),
                             durationMs = file.optDouble("duration", 0.0).seconds(),
                         )
                     }
