@@ -23,7 +23,20 @@ class RemovalTest {
             book("server-fetched", "ABS", kept = true),
             book("server-listed", "ABS", kept = false),
         )
-        assertEquals(listOf("server-fetched"), Removal.serverCopies(books).map { it.uri })
+        assertEquals(listOf("server-fetched"), Removal.serverCopies(books, emptySet()).map { it.uri })
+    }
+
+    @Test
+    fun `a server book waiting for a new file still gives back the files it has`() {
+        val books = listOf(
+            book("card", SOURCE_LOCAL),
+            book("other-app", SOURCE_OPENED),
+            book("server-partly", "ABS", kept = false),
+            book("server-listed", "ABS", kept = false),
+        )
+        // A card book's chapters have audio too; being in the set never makes it a server copy.
+        val withAudio = setOf("card", "other-app", "server-partly")
+        assertEquals(listOf("server-partly"), Removal.serverCopies(books, withAudio).map { it.uri })
     }
 
     @Test
@@ -35,7 +48,7 @@ class RemovalTest {
     @Test
     fun `nothing to hide or delete for a list with only listed server books`() {
         val books = listOf(book("a", "ABS", kept = false), book("b", "ABS", kept = false))
-        assertTrue(Removal.serverCopies(books).isEmpty())
+        assertTrue(Removal.serverCopies(books, emptySet()).isEmpty())
         assertTrue(Removal.hiding(books).isEmpty())
     }
 }

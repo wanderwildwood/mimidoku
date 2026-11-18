@@ -849,9 +849,15 @@ private fun Mimidoku(
         }
     }
 
+    // Server books with audio on the phone, all of it or not: one the server gave another file
+    // waits to fetch it and still holds the files it had, which stay listed here to be given back.
+    val withAudio by remember(library) {
+        library.library.serverBooksWithAudioNow().distinctUntilChanged().map { it.toSet() }
+    }.collectAsState(initial = emptySet())
+
     // Every book downloaded from a server or a Nextcloud folder; each screen shows its own.
-    val keptBooks = remember(books, keptSizes) {
-        books.filter { isServerSource(it.sourceType) && it.kept }
+    val keptBooks = remember(books, keptSizes, withAudio) {
+        books.filter { isServerSource(it.sourceType) && (it.kept || it.uri in withAudio) }
             .map {
                 KeptBook(
                     id = it.uri,
@@ -929,7 +935,7 @@ private fun Mimidoku(
         val asked = targets.distinctBy { it.uri }
         scope.launch {
             val (cardFiles, cardBytes) = Removal.weigh(context, library.library, asked)
-            val fetched = asked.filter { isServerSource(it.sourceType) && it.kept }
+            val fetched = asked.filter { isServerSource(it.sourceType) && (it.kept || it.uri in withAudio) }
             removeAsk = RemoveAsk(
                 title = name,
                 books = asked,

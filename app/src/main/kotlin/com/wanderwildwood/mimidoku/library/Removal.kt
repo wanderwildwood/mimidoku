@@ -54,11 +54,16 @@ object Removal {
 
     /**
      * The copies this app fetched from a server, which are the only things of a server book that
-     * [remove] deletes. A server book that was never fetched has nothing here to delete, and the
-     * server is never reached either way.
+     * [remove] deletes: every book marked as on the phone, and any other with audio of its own in
+     * [withAudio] -- one the server gave another file still holds the files it had until that one
+     * is fetched. A server book that was never fetched has nothing here to delete, and the server
+     * is never reached either way.
      */
-    internal fun serverCopies(books: List<BookEntity>): List<BookEntity> =
-        books.filter { it.sourceType != SOURCE_LOCAL && it.sourceType != SOURCE_OPENED && it.kept }
+    internal fun serverCopies(books: List<BookEntity>, withAudio: Set<String>): List<BookEntity> =
+        books.filter {
+            it.sourceType != SOURCE_LOCAL && it.sourceType != SOURCE_OPENED &&
+                (it.kept || it.uri in withAudio)
+        }
 
     /** Which books [shelve] writes into the hidden set: only those on the card, never a server book. */
     internal fun hiding(books: List<BookEntity>): List<String> =
@@ -131,7 +136,8 @@ object Removal {
                     else -> Unit
                 }
             }
-            for (copy in serverCopies(books)) AbsDownloader.remove(context, dao, copy.uri)
+            val withAudio = dao.serverBooksWithAudio().toSet()
+            for (copy in serverCopies(books, withAudio)) AbsDownloader.remove(context, dao, copy.uri)
             if (left > 0) Outcome.Partly(left) else Outcome.Done
         }
 

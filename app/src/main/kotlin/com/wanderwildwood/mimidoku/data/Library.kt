@@ -28,6 +28,10 @@ const val SOURCE_LOCAL = "LOCAL"
  */
 const val SOURCE_OPENED = "OPENED"
 
+private const val BOOKS_WITH_AUDIO =
+    "SELECT DISTINCT bookUri FROM chapters WHERE audioUri != '' AND bookUri IN " +
+        "(SELECT uri FROM books WHERE sourceType NOT IN ('" + SOURCE_LOCAL + "', '" + SOURCE_OPENED + "'))"
+
 /**
  * A book as the app remembers it.
  *
@@ -344,6 +348,18 @@ interface LibraryDao {
      */
     @Query("UPDATE books SET kept = 0 WHERE kept = 1 AND sourceType = :sourceType AND uri IN (SELECT bookUri FROM chapters WHERE audioUri = '')")
     suspend fun unkeepPartlyDownloaded(sourceType: String)
+
+    /**
+     * Every server book with audio of its own on the phone, whether or not it is all there: one
+     * waiting to fetch a file the server gained still holds the files it had, and those must stay
+     * listed and removable rather than be left behind where nothing can reach them.
+     */
+    @Query(BOOKS_WITH_AUDIO)
+    suspend fun serverBooksWithAudio(): List<String>
+
+    /** The same as [serverBooksWithAudio], as it changes. */
+    @Query(BOOKS_WITH_AUDIO)
+    fun serverBooksWithAudioNow(): Flow<List<String>>
 
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
