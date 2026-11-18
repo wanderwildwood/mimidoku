@@ -96,7 +96,10 @@ object AbsSync {
             val keep = keepUris(dao.bookUrisFrom(SOURCE_ABS), fetched)
             dao.merge(
                 books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_ABS,
-                stillThere = keep - fetched
+                stillThere = keep - fetched,
+                // A file the server no longer has for a book it did give: its row goes, unless
+                // its audio is on the phone. Left in, every download of the book would fail on it.
+                pruneUndownloaded = true,
             )
             // Written after the merge, which is what clears the old ones: marks hang off books,
             // and a book that survived the merge keeps the marks it had.

@@ -50,7 +50,12 @@ object NextcloudSync {
             // from the folder stays on the shelf, with its downloaded audio, place and bookmarks,
             // until the reader removes it.
             val keep = AbsSync.keepUris(dao.bookUrisFrom(SOURCE_NC), fetched)
-            dao.merge(books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_NC, stillThere = keep - fetched)
+            // A folder is listed whole, so a file gone from a book's folder is gone: its row goes too,
+            // unless its audio is on the phone.
+            dao.merge(
+                books, chapters, at = System.currentTimeMillis(), sourceType = SOURCE_NC,
+                stillThere = keep - fetched, pruneUndownloaded = true,
+            )
         }
         return AbsResult.Success(AbsSync.SyncOutcome(read = books.size, listed = books.size))
     }

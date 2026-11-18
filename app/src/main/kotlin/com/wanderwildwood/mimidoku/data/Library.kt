@@ -333,6 +333,10 @@ interface LibraryDao {
     @Query("DELETE FROM chapters WHERE bookUri = :bookUri AND uri NOT IN (:keep)")
     suspend fun deleteChaptersNotIn(bookUri: String, keep: List<String>)
 
+    /** The same, for a server book: a chapter whose audio is on the phone stays, listed or not. */
+    @Query("DELETE FROM chapters WHERE bookUri = :bookUri AND audioUri = '' AND uri NOT IN (:keep)")
+    suspend fun deleteUndownloadedChaptersNotIn(bookUri: String, keep: List<String>)
+
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
 
@@ -440,6 +444,13 @@ interface LibraryDao {
          * a scan that could not list every folder has not seen every file.
          */
         pruneChapters: Boolean = false,
+        /**
+         * The server's version of [pruneChapters]: a chapter of a book in [books] that is missing
+         * from [chapters] goes only if none of its audio is on the phone. A server lists each
+         * book's files whole, so a file it no longer lists is gone from it, and a row left for it
+         * would make the book impossible to download; a downloaded file is never lost by a sync.
+         */
+        pruneUndownloaded: Boolean = false,
     ) {
         // Books new to this pass that hold files of a book this pass no longer finds: its first
         // file renamed, or a file sorting in ahead of it. Read before the files change hands.
@@ -465,11 +476,14 @@ interface LibraryDao {
         chapters.forEach { refreshChapter(it.uri, it.bookUri, it.name, it.sortIndex) }
         // A file gone from a book's folder goes from its chapters too, or the player would stop
         // at it. (SQLite takes at most 999 values in one list; a longer book keeps its rows.)
-        if (pruneChapters) {
+        if (pruneChapters || pruneUndownloaded) {
             val seen = chapters.groupBy({ it.bookUri }, { it.uri })
             books.forEach { book ->
                 val keep = seen[book.uri].orEmpty()
-                if (keep.isNotEmpty() && keep.size < 900) deleteChaptersNotIn(book.uri, keep)
+                if (keep.isNotEmpty() && keep.size < 900) {
+                    if (pruneChapters) deleteChaptersNotIn(book.uri, keep)
+                    else deleteUndownloadedChaptersNotIn(book.uri, keep)
+                }
             }
         }
         for (carry in carries) {
