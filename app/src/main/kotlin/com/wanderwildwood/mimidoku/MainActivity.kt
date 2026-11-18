@@ -769,7 +769,10 @@ private fun Mimidoku(
                 // The book already in the player carries on from where it is. Loading it again
                 // would seek to the place last written, up to a few seconds behind, and then
                 // write that older place over the true one.
-                if (c.holds(chapters) && c.playbackState != Player.STATE_ENDED && c.playerError == null) {
+                if (carriesOnInPlace(c.holds(chapters), c.playbackState, c.playerError != null)) {
+                    // A stop from a headset or the system leaves the book in the player but idle,
+                    // and an idle player does not play until it is prepared again.
+                    if (c.playbackState == Player.STATE_IDLE) c.prepare()
                     c.playWhenReady = true
                 } else {
                     c.play(context, chapters, book)
@@ -2317,6 +2320,14 @@ private suspend fun syncServer(
 private fun MediaController.holds(chapters: List<ChapterEntity>): Boolean =
     chapters.isNotEmpty() && mediaItemCount == chapters.size &&
         chapters.indices.all { getMediaItemAt(it).mediaId == chapters[it].uri }
+
+/**
+ * Whether opening a book the player already holds carries on from where the player is, rather
+ * than loading the book again. Not once it has ended or failed; an idle player (stopped from a
+ * headset or the system) still carries on, once it is prepared again.
+ */
+internal fun carriesOnInPlace(holdsBook: Boolean, playbackState: Int, failed: Boolean): Boolean =
+    holdsBook && playbackState != Player.STATE_ENDED && !failed
 
 private suspend fun MediaController.play(
     context: android.content.Context,
