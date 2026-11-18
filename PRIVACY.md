@@ -117,7 +117,7 @@ App-private means other apps cannot read it and it goes away when you uninstall.
 | `FOREGROUND_SERVICE` | Playback, and a download from your server, continue with the screen off. |
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The kind of foreground service the player is, which Android requires it to name. |
 | `FOREGROUND_SERVICE_DATA_SYNC` | The kind the downloader is. It runs only while a book you asked for is arriving, and stops when it is done. |
-| `POST_NOTIFICATIONS` | The player notification — the thing with the pause button in it — and the one that shows a download and its Stop button. You may refuse it and the app still plays and downloads. |
+| `POST_NOTIFICATIONS` | The player notification — the thing with the pause button in it — and the one that shows a download and its Stop button. On Android 13 and later it is asked for once, the first time a book is kept. You may refuse it and the app still plays and downloads. |
 | `WAKE_LOCK` | The processor stays awake while audio is playing or a book is downloading, and not otherwise. |
 | `READ_EXTERNAL_STORAGE` (Android 12 and older) and `READ_MEDIA_AUDIO` | Only when another app hands over an audiobook by its file path rather than sharing it. Asked for at that moment, and you can say no. Your library folders need neither. |
 

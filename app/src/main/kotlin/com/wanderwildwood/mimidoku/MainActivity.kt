@@ -111,6 +111,7 @@ import com.wanderwildwood.mimidoku.ui.KeptBook
 import com.wanderwildwood.mimidoku.server.AbsClient
 import com.wanderwildwood.mimidoku.server.AbsDownloader
 import com.wanderwildwood.mimidoku.server.KeepService
+import com.wanderwildwood.mimidoku.server.NotificationAsk
 import com.wanderwildwood.mimidoku.server.AbsResult
 import com.wanderwildwood.mimidoku.server.AbsServer
 import com.wanderwildwood.mimidoku.server.AbsSync
@@ -1709,6 +1710,10 @@ private fun Mimidoku(
         }
     }
 
+    // Android 13 and later: asked once, the first time a book is kept, so the download's
+    // notification can show. The download goes ahead whatever the answer.
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     // A book on the server is a book you can have, not a book you have. Asking first is worth it
     // for the size of the thing: this is hours of audio over a home network, and a reader who
     // meant to press the book below it should not discover that in a hundred megabytes.
@@ -1722,6 +1727,10 @@ private fun Mimidoku(
                 // Handed to a service rather than done here, so it carries on with the screen
                 // off or the app closed. The shelf hears back through [KeepService].
                 KeepService.keep(context, book.uri, book.shownTitle())
+                if (NotificationAsk.shouldAsk(context)) {
+                    NotificationAsk.asked(context)
+                    runCatching { askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+                }
             },
         )
     }
