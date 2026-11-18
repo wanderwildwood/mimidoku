@@ -753,7 +753,15 @@ private fun Mimidoku(
             scope.launch {
                 chapters = library.chaptersOf(book.uri)
                 marks = library.marksOf(book.uri)
-                controller?.play(context, chapters, book)
+                val c = controller ?: return@launch
+                // The book already in the player carries on from where it is. Loading it again
+                // would seek to the place last written, up to a few seconds behind, and then
+                // write that older place over the true one.
+                if (c.holds(chapters) && c.playbackState != Player.STATE_ENDED && c.playerError == null) {
+                    c.playWhenReady = true
+                } else {
+                    c.play(context, chapters, book)
+                }
             }
         }
     }
@@ -2292,6 +2300,11 @@ private suspend fun syncServer(
         else -> context.resources.getQuantityString(R.plurals.server_synced_books, synced.value.read, synced.value.read)
     }
 }
+
+/** Whether the player is holding exactly this book's chapters, in this order. */
+private fun MediaController.holds(chapters: List<ChapterEntity>): Boolean =
+    chapters.isNotEmpty() && mediaItemCount == chapters.size &&
+        chapters.indices.all { getMediaItemAt(it).mediaId == chapters[it].uri }
 
 private suspend fun MediaController.play(
     context: android.content.Context,
