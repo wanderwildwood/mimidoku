@@ -343,7 +343,7 @@ interface LibraryDao {
 
     /**
      * A server book marked as on the phone that now has a chapter whose audio is not: a file the
-     * server gained, or one it replaced. Marked as not on the phone, so the shelf offers Download,
+     * server gained (or gave a new id). Marked as not on the phone, so the shelf offers Download,
      * which fetches only what is missing, rather than the player stopping at that chapter.
      */
     @Query("UPDATE books SET kept = 0 WHERE kept = 1 AND sourceType = :sourceType AND uri IN (SELECT bookUri FROM chapters WHERE audioUri = '')")
