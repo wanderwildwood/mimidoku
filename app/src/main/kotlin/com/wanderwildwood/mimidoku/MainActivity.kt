@@ -488,11 +488,15 @@ private fun Mimidoku(
     }
     val restorePlaces = rememberLauncherForActivityResult(FilesOpenDocument(writable = false)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        // Paused first, or the player would write its own place over the restored one a few seconds later.
+        // Paused first, or the player would go on writing its own place over the restored one.
+        // The pause itself writes the old place once more, from the playback service and in its
+        // own time, so it may land after the restore: the player is sent to the restored place
+        // below, which the service then writes after it.
         controller?.pause()
         scope.launch {
             val r = context.resources
-            val message = when (val result = PlacesFiles.restore(context, uri)) {
+            val result = PlacesFiles.restore(context, uri)
+            val message = when (result) {
                 is PlacesFiles.Result.Done -> buildString {
                     append(r.getQuantityString(R.plurals.places_restored, result.books, result.books))
                     if (result.notFound > 0) append(' ').append(r.getQuantityString(R.plurals.places_not_found, result.notFound, result.notFound))
@@ -510,11 +514,19 @@ private fun Mimidoku(
             // on from there and write it back. Take the restored place, in the player too.
             playing?.let { held ->
                 val fresh = library.book(held.uri) ?: return@let
-                playing = fresh
+                // The place from the file rather than the row read back, which the pause's late
+                // write may already have put back to the old one.
+                val place = (result as? PlacesFiles.Result.Done)?.places?.firstOrNull { it.bookUri == held.uri }
+                playing = if (place == null) fresh else fresh.copy(
+                    currentChapterUri = place.chapterUri,
+                    positionMs = place.positionMs,
+                    lastPlayedAt = place.lastPlayedAt,
+                )
                 val c = controller ?: return@let
                 if (c.mediaItemCount == 0 || c.getMediaItemAt(0).mediaId != chapters.firstOrNull()?.uri) return@let
-                val at = chapters.indexOfFirst { it.uri == fresh.currentChapterUri }
-                if (at >= 0) c.seekTo(at, fresh.positionMs)
+                val chapterUri = place?.chapterUri ?: fresh.currentChapterUri
+                val at = chapters.indexOfFirst { it.uri == chapterUri }
+                if (at >= 0) c.seekTo(at, place?.positionMs ?: fresh.positionMs)
             }
             notice = message
         }

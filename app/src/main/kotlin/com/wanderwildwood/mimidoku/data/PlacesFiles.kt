@@ -11,7 +11,8 @@ import kotlinx.coroutines.withContext
 object PlacesFiles {
 
     sealed interface Result {
-        data class Done(val books: Int, val notFound: Int) : Result
+        /** [places] are the places written, so the book in the player can be sent to its own. */
+        data class Done(val books: Int, val notFound: Int, val places: List<PlacesBackup.Place> = emptyList()) : Result
         data class Refused(val kind: PlacesBackup.BackupException.Kind) : Result
         data object Unreadable : Result
     }
@@ -103,7 +104,7 @@ object PlacesFiles {
         }
         val plan = PlacesBackup.plan(saved, library)
         runCatching { dao.restorePlaces(plan.places, plan.bookmarks) }.onFailure { return@withContext Result.Unreadable }
-        Result.Done(plan.books, plan.notFound)
+        Result.Done(plan.books, plan.notFound, plan.places)
     }
 
     /** The name a book goes by on both phones: the tag when the files carry one, else the folder. */
