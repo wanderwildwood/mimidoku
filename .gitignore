@@ -16,3 +16,4 @@ local.properties
 *.hprof
 # Working notes stay on this machine.
 /WHERE-WE-ARE.md
+/docs/PLAN-nextcloud-books.md
