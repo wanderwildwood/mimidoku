@@ -753,8 +753,11 @@ private fun Mimidoku(
      * each and only one of them learnt that a book can now be somewhere else: a book still on the
      * server opened the player from the search results and sat there at 0:00 of 49:02 with
      * nothing to play. A list should not have to know that.
+     *
+     * [start] is false for a file another app handed over: any app can hand one over, so the
+     * book is put in the player and left for the reader to start.
      */
-    val openBook: (BookEntity) -> Unit = { book ->
+    val openBookThen: (BookEntity, Boolean) -> Unit = { book, start ->
         if (!book.kept) {
             // Nothing to play yet. Tapping it can only usefully mean "fetch this", or, while it is
             // being fetched, "stop".
@@ -773,13 +776,19 @@ private fun Mimidoku(
                     // A stop from a headset or the system leaves the book in the player but idle,
                     // and an idle player does not play until it is prepared again.
                     if (c.playbackState == Player.STATE_IDLE) c.prepare()
-                    c.playWhenReady = true
-                } else {
+                    if (start) c.playWhenReady = true
+                } else if (start) {
                     c.play(context, chapters, book)
+                } else {
+                    // The book playing before is put down, so the new one does not start in its
+                    // place.
+                    c.playWhenReady = false
+                    c.load(context, chapters, book)
                 }
             }
         }
     }
+    val openBook: (BookEntity) -> Unit = { book -> openBookThen(book, true) }
 
     // An audiobook file another app handed over, opened as a book of its own once there is a
     // player to hand it to, and from where the reader stopped if it has been opened before.
@@ -819,7 +828,7 @@ private fun Mimidoku(
         scope.launch {
             val book = OpenedBook.open(context, uri)
             if (book != null) {
-                openBook(book)
+                openBookThen(book, false)
                 return@launch
             }
             // A file named by its path can only be read with access to the phone's audio files,

@@ -62,7 +62,7 @@ Sleep timer -- by hand, or on its own between two hours you set -- playback spee
 list, bookmarks, and a shake to keep the timer going.
 
 An m4b opened from another app -- "Open with" in a file manager -- is read as a book of its own,
-with the chapters inside it, and opening it again picks up where you stopped. It stays off the
+with the chapters inside it. It opens paused, at the place you stopped if you opened it before. It stays off the
 shelves, which are the folders you granted. Other audio is left to a music player.
 
 With [Glance](https://github.com/wanderwildwood/hitome) installed, and Settings → **Show the book
