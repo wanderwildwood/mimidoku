@@ -63,6 +63,10 @@ cover art, not for metadata, not for a catalog lookup, not for crash reports. Th
 analytics code here and no third party to send anything to. A book you are reading is not
 something anyone else needs to know about.
 
+"Feed the llamas" in About opens a donation page (square.link) in your browser, only when you
+press it. The app sends nothing there; if you give, the payment is handled on that page by
+Square, not by this app.
+
 ## Your own server
 
 The app can fetch books from an Audiobookshelf server you run. It is off until you fill it
