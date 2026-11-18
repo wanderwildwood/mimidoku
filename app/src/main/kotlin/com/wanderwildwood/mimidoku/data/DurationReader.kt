@@ -132,12 +132,17 @@ class DurationReader(private val context: Context) {
     /**
      * One open of the file answers both questions. Opening it twice would double the cost of the
      * only expensive thing this class does.
+     *
+     * Released by hand rather than with `use`: MediaMetadataRetriever is AutoCloseable only from
+     * Android 10, and on Android 9 (minSdk) `use` throws when it closes, which would mark every
+     * file unreadable.
      */
     private fun read(uri: String): Read? = runCatching {
-        MediaMetadataRetriever().use { retriever ->
+        val retriever = MediaMetadataRetriever()
+        try {
             retriever.setDataSource(context, uri.toUri())
             val ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                ?.toLongOrNull() ?: return@use null
+                ?.toLongOrNull() ?: return@runCatching null
             fun tag(key: Int) = retriever.extractMetadata(key)?.trim()?.ifBlank { null }
             // "<unknown>" written into a file is the absence of an artist, not one.
             fun name(key: Int) = tag(key)?.takeUnless { Sameness.isPlaceholder(it) }
@@ -152,6 +157,8 @@ class DurationReader(private val context: Context) {
                 author = name(MediaMetadataRetriever.METADATA_KEY_ARTIST)
                     ?: name(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
             )
+        } finally {
+            runCatching { retriever.release() }
         }
     }.getOrNull()
 
