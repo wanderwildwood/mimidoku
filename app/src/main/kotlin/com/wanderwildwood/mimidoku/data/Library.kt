@@ -337,6 +337,14 @@ interface LibraryDao {
     @Query("DELETE FROM chapters WHERE bookUri = :bookUri AND audioUri = '' AND uri NOT IN (:keep)")
     suspend fun deleteUndownloadedChaptersNotIn(bookUri: String, keep: List<String>)
 
+    /**
+     * A server book marked as on the phone that now has a chapter whose audio is not: a file the
+     * server gained, or one it replaced. Marked as not on the phone, so the shelf offers Download,
+     * which fetches only what is missing, rather than the player stopping at that chapter.
+     */
+    @Query("UPDATE books SET kept = 0 WHERE kept = 1 AND sourceType = :sourceType AND uri IN (SELECT bookUri FROM chapters WHERE audioUri = '')")
+    suspend fun unkeepPartlyDownloaded(sourceType: String)
+
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
 
@@ -486,6 +494,8 @@ interface LibraryDao {
                 }
             }
         }
+        // A downloaded server book the server gave another file is no longer whole on the phone.
+        if (pruneUndownloaded) unkeepPartlyDownloaded(sourceType)
         for (carry in carries) {
             val map = Renamed.chapterMap(carry.oldChapters, carry.newChapters)
             val was = carry.was
