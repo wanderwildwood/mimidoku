@@ -390,6 +390,12 @@ interface LibraryDao {
     @Query("DELETE FROM bookmarks WHERE bookUri = :bookUri")
     suspend fun deleteBookmarksOf(bookUri: String)
 
+    @Query("SELECT * FROM bookmarks WHERE bookUri = :bookUri")
+    suspend fun bookmarksOf(bookUri: String): List<BookmarkEntity>
+
+    @Query("UPDATE marks SET bookUri = :to, chapterUri = :toChapter WHERE bookUri = :from AND chapterUri = :fromChapter")
+    suspend fun moveMarks(from: String, fromChapter: String, to: String, toChapter: String)
+
     @Insert
     suspend fun addBookmarks(bookmarks: List<BookmarkEntity>)
 
@@ -435,6 +441,20 @@ interface LibraryDao {
          */
         pruneChapters: Boolean = false,
     ) {
+        // Books new to this pass that hold files of a book this pass no longer finds: its first
+        // file renamed, or a file sorting in ahead of it. Read before the files change hands.
+        val knownBefore = bookUrisFrom(sourceType).toSet()
+        val going = knownBefore - books.mapTo(HashSet()) { it.uri } - stillThere.toSet()
+        val fresh = books.mapTo(HashSet()) { it.uri } - knownBefore
+        val carries = if (going.isEmpty() || fresh.isEmpty()) emptyList() else {
+            val newChapters = chapters.filter { it.bookUri in fresh }.groupBy({ it.bookUri }, { it.uri })
+            val ownerBefore = newChapters.values.flatten()
+                .mapNotNull { uri -> bookOfChapter(uri)?.let { uri to it.uri } }.toMap()
+            Renamed.pairs(newChapters, ownerBefore, going).mapNotNull { (newBook, oldBook) ->
+                val was = book(oldBook) ?: return@mapNotNull null
+                Carry(newBook, was, chaptersOf(oldBook).map { it.uri }, bookmarksOf(oldBook), newChapters.getValue(newBook))
+            }
+        }
         insertBooks(books)
         books.forEach {
             refreshDetails(it.uri, it.name, it.author, it.chapterCount)
@@ -451,6 +471,19 @@ interface LibraryDao {
                 val keep = seen[book.uri].orEmpty()
                 if (keep.isNotEmpty() && keep.size < 900) deleteChaptersNotIn(book.uri, keep)
             }
+        }
+        for (carry in carries) {
+            val map = Renamed.chapterMap(carry.oldChapters, carry.newChapters)
+            val was = carry.was
+            val chapter = was.currentChapterUri?.let { map[it] }
+            if (was.lastPlayedAt != null && chapter != null) {
+                rememberPosition(carry.newBook, chapter, was.positionMs, was.lastPlayedAt)
+            }
+            val moved = carry.bookmarks.mapNotNull { b ->
+                map[b.chapterUri]?.let { b.copy(id = 0, bookUri = carry.newBook, chapterUri = it) }
+            }
+            if (moved.isNotEmpty()) addBookmarks(moved)
+            for ((from, to) in map) moveMarks(was.uri, from, carry.newBook, to)
         }
         // Everything this scan did not stamp is no longer on the card, and everything that
         // belonged to it goes with it.
@@ -508,3 +541,12 @@ abstract class LibraryDatabase : RoomDatabase() {
             }
     }
 }
+
+/** A gone book's place, bookmarks and marks, to go over to the new book that carries it on. */
+class Carry(
+    val newBook: String,
+    val was: BookEntity,
+    val oldChapters: List<String>,
+    val bookmarks: List<BookmarkEntity>,
+    val newChapters: List<String>,
+)
