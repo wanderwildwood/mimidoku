@@ -131,8 +131,11 @@ Accessibility settings (Settings → Lock-screen controls goes there). The Kompa
 music widget is wired to Mudita's player and shows nothing else, and only an accessibility service
 may draw above the lock screen, so that is what this has to be. It draws Audio Reader's controls
 at the foot of the lock screen while a book plays, listens only to the system lock screen, and
-reads one thing there: whether the PIN field is showing, so the controls can make way for it. It
-reads no other app, and nothing it sees leaves the phone.
+reads one thing there: whether the PIN field is showing, so the controls can make way for it. So
+that they also make way for a call or an alarm, it checks two more things: whether another app's
+window, such as the call screen or an alarm, is up over the lock screen (only that such a window
+is there, not what is in it), and whether a call is ringing or in progress. It reads no text from
+any app, and nothing it sees leaves the phone.
 
 <!-- shared-about privacy section -->
 ## Who we are

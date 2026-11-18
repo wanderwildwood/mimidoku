@@ -400,7 +400,7 @@
     <string name="lockscreen_stop">Stop</string>
     <!-- Shown in Android's Accessibility settings under this service -->
     <string name="lockscreen_service_label">Audio Reader lock-screen controls</string>
-    <string name="lockscreen_service_description">Shows Audio Reader\' controls on the lock screen while a book plays. Only an accessibility service may draw above the lock screen, which is why this is one. It listens only to the system lock screen, and reads one thing there: whether the PIN field is showing, so the controls can make way for it. It reads no other app, and nothing leaves the phone.</string>
+    <string name="lockscreen_service_description">Shows Audio Reader\'s controls on the lock screen while a book plays. Only an accessibility service may draw above the lock screen, which is why this is one. It listens only to the system lock screen, and reads one thing there: whether the PIN field is showing, so the controls can make way for it. So they also make way for a call or an alarm, it checks whether another app\'s window is up over the lock screen and whether a call is ringing or in progress. It reads no text from any app, and nothing leaves the phone.</string>
 
     <!-- On Glance's lock-screen panel, beside the book -->
     <string name="glance_playing">Playing</string>
