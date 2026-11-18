@@ -193,6 +193,9 @@ class AbsClient(private val server: AbsServer, private val resources: Resources)
             }
         } catch (e: IOException) {
             AbsResult.Failure(resources.getString(R.string.server_unreachable))
+        } catch (e: IllegalArgumentException) {
+            // A key with a character no header may carry, refused before anything is sent.
+            AbsResult.Failure(resources.getString(R.string.server_key_unusable))
         } catch (e: org.json.JSONException) {
             // A wrong address usually reaches *something* -- a router, a different app -- and
             // what comes back is a web page rather than an error.

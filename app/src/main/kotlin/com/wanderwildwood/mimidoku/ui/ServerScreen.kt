@@ -48,7 +48,14 @@ import com.wanderwildwood.mimidoku.server.ServerAddress
 
 /** What the reader typed, on its way to being a server. */
 data class ServerEntry(val address: String, val key: String) {
-    val isComplete: Boolean get() = address.isNotBlank() && key.isNotBlank()
+    /**
+     * The key as the server made it. A key pasted from a note or a password manager can bring a
+     * line break or a space with it, and no key has one: left in, it is refused as a request
+     * header before anything reaches the server.
+     */
+    val token: String get() = key.filterNot { it.isWhitespace() || it.isISOControl() }
+
+    val isComplete: Boolean get() = address.isNotBlank() && token.isNotEmpty()
 }
 
 /** A book that has been fetched, and what it is costing to keep. */

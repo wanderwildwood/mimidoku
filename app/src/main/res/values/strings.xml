@@ -334,6 +334,7 @@
     <string name="server_library_empty">That library has nothing in it.</string>
     <!-- Shown as the server's status when asking it something fails -->
     <string name="server_key_refused">The server did not accept that key.</string>
+    <string name="server_key_unusable">That key has a character in it that no key has. Copy it again from the server.</string>
     <string name="server_no_such_thing">The server has no such thing.</string>
     <!-- A server book with no title, and a file in it with no name. -->
     <string name="server_untitled">Untitled</string>

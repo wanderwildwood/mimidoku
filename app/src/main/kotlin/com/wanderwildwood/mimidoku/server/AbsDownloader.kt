@@ -220,6 +220,9 @@ object AbsDownloader {
         } catch (e: IOException) {
             partial.delete()
             AbsResult.Failure(context.getString(R.string.download_unfinished))
+        } catch (e: IllegalArgumentException) {
+            // A key with a character no header may carry, refused before anything is sent.
+            AbsResult.Failure(context.getString(R.string.server_key_unusable))
         } finally {
             // A download stopped part-way -- by the reader, or by the phone -- leaves its partial
             // file behind otherwise, and the next try may not even be writing to the same place.

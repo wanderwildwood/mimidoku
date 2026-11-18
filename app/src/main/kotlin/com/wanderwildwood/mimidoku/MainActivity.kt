@@ -1315,7 +1315,7 @@ private fun Mimidoku(
                               try {
                                 serverBusy = true
                                 serverStatus = context.getString(R.string.server_asking)
-                                val server = AbsServer(ServerAddress.withScheme(entered.address), entered.key)
+                                val server = AbsServer(ServerAddress.withScheme(entered.address), entered.token)
                                 val client = AbsClient(server, context.resources)
                                 when (val found = client.libraries()) {
                                     is AbsResult.Failure -> serverStatus = found.message
@@ -1327,7 +1327,7 @@ private fun Mimidoku(
                                             serverStatus = context.getString(R.string.server_no_book_library)
                                         } else {
                                             preferences.serverUrl = server.base
-                                            preferences.serverToken = entered.key
+                                            preferences.serverToken = entered.token
                                             preferences.serverLibraryId = shelf.id
                                             serverStatus = syncServer(context, client, shelf.id, library.library) {
                                                 serverStatus = it
