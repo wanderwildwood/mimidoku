@@ -254,7 +254,16 @@ private fun Mimidoku(
     val books = shelves.books
     val byUri = shelves.byUri
     val shelvedCopies = shelves.shelvedCopies
-    val shelvedBooks = shelves.shelvedBooks
+    // While Home is signed out of Nextcloud, so is this app: a book that is only on the server
+    // cannot be fetched, so the shelves show only what is on the phone until Home is back.
+    val nextcloudSignedOut = preferences.usesHomeAccount && !preferences.hasNextcloud
+    val shelvedBooks = remember(shelves, nextcloudSignedOut) {
+        if (nextcloudSignedOut) {
+            shelves.shelvedBooks.filter { it.kept || it.sourceType != NextcloudSync.SOURCE_NC }
+        } else {
+            shelves.shelvedBooks
+        }
+    }
     val copiesOf = shelves.copiesOf
     val recentBooks = shelves.recentBooks
     // The book in the player comes straight from the database, so it is named the same way here.
@@ -1564,7 +1573,7 @@ private fun Mimidoku(
                         fromHome = if (preferences.usesHomeAccount) {
                             FromHome(
                                 user = preferences.nextcloudLogin,
-                                server = preferences.nextcloudUrl.substringAfter("://"),
+                                server = HomeAccount.sameServer(preferences.nextcloudUrl).substringAfter("://"),
                                 signedOut = !preferences.hasNextcloud,
                             )
                         } else {

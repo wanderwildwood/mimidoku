@@ -84,6 +84,10 @@ object HomeLink {
         password = held.password
         prefs.nextcloudUrl = held.server.trimEnd('/')
         prefs.nextcloudLogin = held.user
+        // Sign in with the login name; build every path with the user id, which may differ (an
+        // email address logs in too). An older Home has no uid column, and then Held.uid is the
+        // login name: the id this app finds itself ([NextcloudClient.userId]) is used instead.
+        if (held.uid != held.user) prefs.nextcloudUserId = held.uid
         prefs.nextcloudHomeStamp = held.stamp
     }
 
