@@ -55,6 +55,17 @@ Shelf (com.wanderwildwood.shoka), when installed, can ask whether the library ha
 its title and author, so that its book page can offer **Listen**. The answer is that book's
 entry or nothing. No other app is answered, and the library is never listed for anyone.
 
+## Other apps on the phone
+
+Besides Glance and Shelf above, the app can see whether these are on the phone. None of this
+is a permission, and the app sends none of them anything:
+
+- **Home** (`com.wanderwildwood.iori`): when it is installed, the app asks it whether its dark
+  mode switch is on, a yes or no.
+- **Cabinet** (`com.wanderwildwood.tana`): when it is installed, choosing a folder, opening a
+  file and saving one go through its screens instead of Android's.
+- **A browser**, so a link in About opens in a real one.
+
 ## What leaves the phone
 
 Nothing, until you add a server or a Nextcloud folder. Then: requests to those, and nowhere
