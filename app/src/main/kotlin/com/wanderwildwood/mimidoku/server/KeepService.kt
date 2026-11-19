@@ -125,6 +125,15 @@ class KeepService : Service() {
         val preferences = Preferences.of(this)
         val client: BookFiles =
             if (uri.startsWith(NextcloudSync.bookUri(""))) {
+                // Home's account, when it is the one in use, is asked for again before each book.
+                if (preferences.usesHomeAccount) HomeLink.refresh(this, stopDownloads = false)
+                if (preferences.usesHomeAccount && !preferences.hasNextcloud) {
+                    return getString(R.string.home_account_signed_out, getString(R.string.home_account_kept))
+                }
+                if (!preferences.nextcloudReady) {
+                    preferences.failedDownloads += uri
+                    return getString(R.string.download_failed, title)
+                }
                 NextcloudClient(preferences.nextcloudAccount(), resources)
             } else {
                 AbsClient(AbsServer(preferences.serverUrl, preferences.serverToken), resources)

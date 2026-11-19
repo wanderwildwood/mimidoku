@@ -301,6 +301,14 @@
     <string name="nextcloud_no_folder">There is no folder called \"%1$s\" in your files.</string>
     <string name="nextcloud_not_nextcloud">That address answered with something that is not Nextcloud.</string>
     <string name="nextcloud_reading">Reading the folder…</string>
+    <!-- Home's Nextcloud account (shared-homeaccount): the same words in every app that uses it. -->
+    <string name="home_account_use">Use the phone\'s Nextcloud account</string>
+    <!-- %1$s is the user, %2$s the server without https:// -->
+    <string name="home_account_in_use">%1$s on %2$s, from Home.</string>
+    <string name="home_account_stop">Stop using it</string>
+    <!-- %1$s is home_account_kept -->
+    <string name="home_account_signed_out">Home is signed out of Nextcloud, so this app is too. Your %1$s stay on the phone.</string>
+    <string name="home_account_kept">downloaded books</string>
     <plurals name="nextcloud_books_in_folder">
         <item quantity="one">%d book in the folder.</item>
         <item quantity="other">%d books in the folder.</item>

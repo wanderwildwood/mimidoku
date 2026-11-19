@@ -61,7 +61,9 @@ Besides Glance and Shelf above, the app can see whether these are on the phone. 
 is a permission, and the app sends none of them anything:
 
 - **Home** (`com.wanderwildwood.iori`): when it is installed, the app asks it whether its dark
-  mode switch is on, a yes or no.
+  mode switch is on, a yes or no. If Home is signed in to a Nextcloud, the app also asks it
+  whether it may use that account (see Your Nextcloud below). It asks only after checking that
+  the app answering really is Home, by its signing certificate.
 - **Cabinet** (`com.wanderwildwood.tana`): when it is installed, choosing a folder, opening a
   file and saving one go through its screens instead of Android's.
 - **A browser**, so a link in About opens in a real one.
@@ -107,6 +109,12 @@ never tells Nextcloud where you are in a book. It signs in with your login name 
 password you make in Nextcloud (Personal settings, Security), which you can take back there at
 any time. The app password is sealed the same way as the server key, in the app's private
 settings. The same http rule applies: plain http only on your home network, https otherwise.
+
+If Home is signed in to your Nextcloud, the Nextcloud screen offers "Use the phone's Nextcloud
+account" instead of typing it in. Then the app keeps only which account and server you chose; the
+app password stays with Home, and the app asks Home for it when it reads the folder or downloads a
+book, holding it in memory only. When Home signs out, this app is signed out too, and the books
+already downloaded stay on the phone. "Stop using it" goes back to the app's own sign-in.
 
 Books you download are kept in the app's own folder — on the phone, or on a memory card if
 you choose that in Settings — which means uninstalling the app takes them with it. On Android 11 and later (the Kompakt

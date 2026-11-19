@@ -1,6 +1,8 @@
 package com.wanderwildwood.mimidoku.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +40,12 @@ import com.mudita.mmd.components.text_field.TextFieldMMD
 import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.server.ServerAddress
 
+/**
+ * Home's Nextcloud account as this screen shows it. [user] and [server] (without https://) while
+ * it is in use; [signedOut] while the reader chose it and Home is signed out.
+ */
+data class FromHome(val user: String, val server: String, val signedOut: Boolean)
+
 /** What the reader typed, on its way to being a Nextcloud folder. */
 data class NextcloudEntry(val address: String, val login: String, val password: String, val folder: String) {
     val isComplete: Boolean get() = address.isNotBlank() && login.isNotBlank() && password.isNotBlank()
@@ -69,7 +77,22 @@ fun NextcloudScreen(
     onCancel: () -> Unit,
     onGiveBack: (KeptBook) -> Unit,
     onForget: () -> Unit,
+    /** Home holds an account this app may use: the row "Use the phone's Nextcloud account" shows. */
+    homeAvailable: Boolean = false,
+    /** Home's account, when the reader chose it; null while the app's own sign-in is in use. */
+    fromHome: FromHome? = null,
+    onUseHome: (folder: String) -> Unit = {},
+    onConnectHome: (folder: String) -> Unit = {},
+    onStopHome: () -> Unit = {},
 ) {
+    if (fromHome != null) {
+        HomeNextcloudScreen(
+            fromHome = fromHome, folder = folder, connected = connected, bookCount = bookCount, kept = kept,
+            isBusy = isBusy, status = status, onBack = onBack, onConnect = onConnectHome, onSyncNow = onSyncNow,
+            onCancel = onCancel, onGiveBack = onGiveBack, onForget = onForget, onStop = onStopHome,
+        )
+        return
+    }
     var typedAddress by rememberSaveable { mutableStateOf(address) }
     var typedLogin by rememberSaveable { mutableStateOf(login) }
     var typedFolder by rememberSaveable { mutableStateOf(folder) }
@@ -133,6 +156,13 @@ fun NextcloudScreen(
                     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
                         Said(stringResource(R.string.nextcloud_intro))
                         Spacer(modifier = Modifier.height(20.dp))
+                        // Only while Home has an account for this app; it takes the folder typed below.
+                        if (homeAvailable) {
+                            PlainRow(stringResource(R.string.home_account_use)) {
+                                if (isBusy) why = busyWhy else onUseHome(typedFolder.trim().trim('/'))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
                 }
                 item {
@@ -290,4 +320,160 @@ private fun Said(text: String) {
         lineHeight = 22.sp,
         color = Color.Black,
     )
+}
+
+/**
+ * The same screen while Home's account is in use: who, on which server, from Home; the folder;
+ * and "Stop using it", which goes back to the app's own sign-in, empty. While Home is signed out
+ * it says so and nothing more: no error, nothing to retry.
+ */
+@Composable
+private fun HomeNextcloudScreen(
+    fromHome: FromHome,
+    folder: String,
+    connected: Boolean,
+    bookCount: Int,
+    kept: List<KeptBook>,
+    isBusy: Boolean,
+    status: String?,
+    onBack: () -> Unit,
+    onConnect: (folder: String) -> Unit,
+    onSyncNow: () -> Unit,
+    onCancel: () -> Unit,
+    onGiveBack: (KeptBook) -> Unit,
+    onForget: () -> Unit,
+    onStop: () -> Unit,
+) {
+    var typedFolder by rememberSaveable { mutableStateOf(folder) }
+    var why by remember { mutableStateOf<String?>(null) }
+    val busyWhy = stringResource(R.string.server_busy_why)
+    LaunchedEffect(isBusy, typedFolder) { why = null }
+
+    val list = rememberLazyListState()
+    val form = rememberFormFields(list, firstRow = 1, count = 1)
+    val focus = LocalFocusManager.current
+    val connect = {
+        if (isBusy) why = busyWhy else { why = null; onConnect(typedFolder.trim().trim('/')) }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.White).imePadding()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            ScreenTopBar(
+                title = stringResource(R.string.nextcloud_title),
+                onBack = onBack,
+                trailing = {
+                    if (isBusy) BarText(stringResource(R.string.server_cancel), onCancel)
+                    else if (connected) BarText(stringResource(R.string.server_sync_now), onSyncNow)
+                },
+            )
+
+            PagedColumn(modifier = Modifier.weight(1f).then(form.listModifier()), state = list, showCutRow = true) {
+                item {
+                    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 28.dp)) {
+                        Said(
+                            if (fromHome.signedOut) {
+                                stringResource(R.string.home_account_signed_out, stringResource(R.string.home_account_kept))
+                            } else {
+                                stringResource(R.string.home_account_in_use, fromHome.user, fromHome.server)
+                            },
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+                }
+                if (!fromHome.signedOut) {
+                    item {
+                        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
+                            TextFieldMMD(
+                                modifier = Modifier.fillMaxWidth().then(form.fieldModifier(0)),
+                                value = typedFolder,
+                                onValueChange = { typedFolder = it },
+                                label = { TextMMD(text = stringResource(R.string.nextcloud_folder)) },
+                                placeholder = { TextMMD(text = stringResource(R.string.nextcloud_folder_example)) },
+                                singleLine = true,
+                                enabled = !isBusy,
+                                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); connect() }),
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+                    }
+                    item {
+                        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
+                            ButtonMMD(onClick = connect, modifier = Modifier.fillMaxWidth()) {
+                                TextMMD(
+                                    text = stringResource(if (connected) R.string.server_connect_again else R.string.server_connect),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            why?.let {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Said(it)
+                            }
+                            status?.let {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Said(it)
+                            }
+                            if (status == null && connected && bookCount > 0) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Said(pluralStringResource(R.plurals.nextcloud_books_in_folder, bookCount, bookCount))
+                            }
+                            Spacer(modifier = Modifier.height(if (kept.isEmpty()) 28.dp else 32.dp))
+                        }
+                    }
+                }
+
+                if (kept.isNotEmpty()) {
+                    item {
+                        TextMMD(
+                            text = stringResource(R.string.server_on_this_phone),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.Black,
+                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                        )
+                    }
+                    items(kept, key = { it.id }) { book ->
+                        KeptLine(book = book, onGiveBack = { onGiveBack(book) })
+                    }
+                    item { Spacer(modifier = Modifier.height(28.dp)) }
+                }
+
+                if (!fromHome.signedOut) {
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Said(stringResource(R.string.nextcloud_folder_note))
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Said(stringResource(R.string.server_privacy_note))
+                        Spacer(modifier = Modifier.height(32.dp))
+                        PlainRow(stringResource(R.string.home_account_stop)) { if (isBusy) why = busyWhy else onStop() }
+                        if (connected) {
+                            ForgetRow(
+                                onForget = onForget,
+                                words = R.string.nextcloud_forget,
+                                armedWords = R.string.nextcloud_forget_confirm,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A row of words that does one thing when pressed, as the Forget row is drawn. */
+@Composable
+private fun PlainRow(text: String, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp)) {
+        TextMMD(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            lineHeight = 24.sp,
+            color = Color.Black,
+        )
+    }
 }

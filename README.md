@@ -48,6 +48,11 @@ the shelf, whatever the files' tags say, and "Basil Moor", "basil moor " and a s
 length -- is listed once. **Recent**, above the shelves, lists the books lately played.
 With an Audiobookshelf server or a Nextcloud folder, a swipe down at the top of the library reads its catalog again.
 
+With Home signed in to a Nextcloud, Settings → Nextcloud folder offers **Use the phone's Nextcloud
+account**, so the address and an app password need not be typed again. The password stays with
+Home; when Home signs out, this app is signed out too, and **Stop using it** goes back to its own
+sign-in.
+
 Each book (and each author's shelf) has a plain "Remove" at the end of its row. It asks, and the
 two answers are different things. "Remove from the shelf" takes the book off the list and leaves
 every audio file where it is; the book stays off the list until you bring it back with Settings →

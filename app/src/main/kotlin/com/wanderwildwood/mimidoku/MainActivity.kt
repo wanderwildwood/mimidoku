@@ -115,10 +115,13 @@ import com.wanderwildwood.mimidoku.server.NotificationAsk
 import com.wanderwildwood.mimidoku.server.AbsResult
 import com.wanderwildwood.mimidoku.server.AbsServer
 import com.wanderwildwood.mimidoku.server.AbsSync
+import com.wanderwildwood.mimidoku.server.HomeAccount
+import com.wanderwildwood.mimidoku.server.HomeLink
 import com.wanderwildwood.mimidoku.server.NextcloudAccount
 import com.wanderwildwood.mimidoku.server.NextcloudClient
 import com.wanderwildwood.mimidoku.server.NextcloudSync
 import com.wanderwildwood.mimidoku.server.isServerSource
+import com.wanderwildwood.mimidoku.ui.FromHome
 import com.wanderwildwood.mimidoku.ui.NextcloudScreen
 import com.wanderwildwood.mimidoku.server.ServerAddress
 import com.wanderwildwood.mimidoku.shelf.ShelfLookup
@@ -326,6 +329,35 @@ private fun Mimidoku(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             KeepService.said.collect { downloadSaid = it }
+        }
+    }
+    // Home's Nextcloud account: asked on every start and resume and on each change notice from
+    // Home, off the main thread, and followed as HomeAccount.follow says (HomeLink). Whether it
+    // has an account for this app is what shows the row on the Nextcloud screen.
+    var homeAvailable by remember { mutableStateOf(false) }
+    val askHome: () -> Unit = {
+        scope.launch { homeAvailable = HomeLink.refresh(context) is HomeAccount.Answer.Has }
+    }
+    DisposableEffect(lifecycleOwner) {
+        var stopWatching: (() -> Unit)? = null
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> {
+                    stopWatching?.invoke()
+                    stopWatching = HomeAccount.observe(context) { askHome() }
+                }
+                Lifecycle.Event.ON_RESUME -> askHome()
+                Lifecycle.Event.ON_STOP -> {
+                    stopWatching?.invoke()
+                    stopWatching = null
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            stopWatching?.invoke()
         }
     }
     // What each kept book takes up. Read off the files rather than trusted from the server,
@@ -1040,7 +1072,9 @@ private fun Mimidoku(
                                     (AbsSync.sync(client, preferences.serverLibraryId, library.library, context) as? AbsResult.Failure)
                                         ?.let { failed = it.message }
                                 }
-                                if (preferences.hasNextcloud) {
+                                // Home's account is asked for again before each read of the folder.
+                                if (preferences.usesHomeAccount) HomeLink.refresh(context)
+                                if (preferences.nextcloudReady) {
                                     val client = NextcloudClient(preferences.nextcloudAccount(), context.resources)
                                     (NextcloudSync.sync(client, library.library) as? AbsResult.Failure)
                                         ?.let { failed = failed ?: it.message }
@@ -1423,6 +1457,8 @@ private fun Mimidoku(
                 }
 
                 Screen.Nextcloud -> {
+                    // Whether Home has an account for this app is asked again each time the screen opens.
+                    LaunchedEffect(Unit) { askHome() }
                     // One job at a time on the network, shared with the Audiobookshelf screen.
                     val readFolder: suspend (NextcloudClient) -> Unit = { client ->
                         serverStatus = context.getString(R.string.nextcloud_reading)
@@ -1433,6 +1469,18 @@ private fun Mimidoku(
                             is AbsResult.Success -> context.resources.getQuantityString(
                                 R.plurals.nextcloud_books_in_folder, synced.value.read, synced.value.read,
                             )
+                        }
+                    }
+                    // Home's account, taken or asked for again: the folder is checked, then read.
+                    val connectHome: suspend () -> Unit = {
+                        serverStatus = context.getString(R.string.nextcloud_reading)
+                        val client = NextcloudClient(preferences.nextcloudAccount(), context.resources)
+                        when (val found = client.check()) {
+                            is AbsResult.Failure -> serverStatus = found.message
+                            is AbsResult.Success -> {
+                                client.userId?.let { preferences.nextcloudUserId = it }
+                                readFolder(client)
+                            }
                         }
                     }
                     NextcloudScreen(
@@ -1484,7 +1532,10 @@ private fun Mimidoku(
                             serverJob = scope.launch {
                               try {
                                 serverBusy = true
-                                readFolder(NextcloudClient(preferences.nextcloudAccount(), context.resources))
+                                if (preferences.usesHomeAccount) HomeLink.refresh(context)
+                                if (preferences.nextcloudReady) {
+                                    readFolder(NextcloudClient(preferences.nextcloudAccount(), context.resources))
+                                }
                               } catch (e: kotlinx.coroutines.CancellationException) {
                                 serverStatus = context.getString(R.string.server_stopped)
                                 throw e
@@ -1503,14 +1554,63 @@ private fun Mimidoku(
                                 books.filter { it.sourceType == NextcloudSync.SOURCE_NC }
                                     .forEach { AbsDownloader.remove(context, library.library, it.uri) }
                                 library.library.forgetSource(NextcloudSync.SOURCE_NC)
-                                preferences.nextcloudUrl = ""
-                                preferences.nextcloudLogin = ""
-                                preferences.nextcloudPassword = ""
+                                HomeLink.stop(context)
                                 preferences.nextcloudFolder = ""
-                                preferences.nextcloudUserId = ""
                                 serverStatus = context.getString(R.string.server_forgotten)
                                 serverBusy = false
                             }
+                        },
+                        homeAvailable = homeAvailable,
+                        fromHome = if (preferences.usesHomeAccount) {
+                            FromHome(
+                                user = preferences.nextcloudLogin,
+                                server = preferences.nextcloudUrl.substringAfter("://"),
+                                signedOut = !preferences.hasNextcloud,
+                            )
+                        } else {
+                            null
+                        },
+                        onUseHome = { folder ->
+                            serverJob = scope.launch {
+                              try {
+                                serverBusy = true
+                                serverStatus = null
+                                if (HomeLink.use(context) == null) {
+                                    homeAvailable = false
+                                    return@launch
+                                }
+                                preferences.nextcloudFolder = folder
+                                connectHome()
+                              } catch (e: kotlinx.coroutines.CancellationException) {
+                                serverStatus = context.getString(R.string.server_stopped)
+                                throw e
+                              } finally {
+                                serverBusy = false
+                              }
+                            }
+                        },
+                        onConnectHome = { folder ->
+                            serverJob = scope.launch {
+                              try {
+                                serverBusy = true
+                                serverStatus = null
+                                HomeLink.refresh(context)
+                                if (preferences.nextcloudReady) {
+                                    preferences.nextcloudFolder = folder
+                                    connectHome()
+                                }
+                              } catch (e: kotlinx.coroutines.CancellationException) {
+                                serverStatus = context.getString(R.string.server_stopped)
+                                throw e
+                              } finally {
+                                serverBusy = false
+                              }
+                            }
+                        },
+                        onStopHome = {
+                            HomeLink.stop(context)
+                            serverStatus = null
+                            askHome()
                         },
                     )
                 }

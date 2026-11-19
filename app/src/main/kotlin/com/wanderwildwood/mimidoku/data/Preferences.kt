@@ -152,12 +152,28 @@ class Preferences private constructor(context: Context) {
     var nextcloudFolder: String by text("nextcloudFolder", "")
     var nextcloudUserId: String by text("nextcloudUserId", "")
 
-    val hasNextcloud: Boolean get() = nextcloudUrl.isNotBlank() && nextcloudLogin.isNotBlank() && nextcloudPassword.isNotBlank()
+    /**
+     * The Nextcloud account Home holds for the phone, when the reader chose to use it here
+     * ([com.wanderwildwood.mimidoku.server.HomeLink]). Only the choice is kept: who (server and
+     * user, no password) and the stamp last taken from Home, empty while Home is signed out. The
+     * password itself is asked of Home and held in memory only. [nextcloudUrl] and
+     * [nextcloudLogin] then say Home's server and user, and [nextcloudPassword] stays empty.
+     */
+    var nextcloudHomeWho: String by text("nextcloudHomeWho", "")
+    var nextcloudHomeStamp: String by text("nextcloudHomeStamp", "")
+
+    val usesHomeAccount: Boolean get() = nextcloudHomeWho.isNotEmpty()
+
+    val hasNextcloud: Boolean get() = nextcloudUrl.isNotBlank() && nextcloudLogin.isNotBlank() &&
+        if (usesHomeAccount) nextcloudHomeStamp.isNotEmpty() else nextcloudPassword.isNotBlank()
+
+    /** Signed in and holding a password just now: Home's may not have been asked for yet. */
+    val nextcloudReady: Boolean get() = hasNextcloud && nextcloudAccount().password.isNotEmpty()
 
     fun nextcloudAccount() = com.wanderwildwood.mimidoku.server.NextcloudAccount(
         server = nextcloudUrl,
         login = nextcloudLogin,
-        password = nextcloudPassword,
+        password = if (usesHomeAccount) com.wanderwildwood.mimidoku.server.HomeLink.password else nextcloudPassword,
         folder = nextcloudFolder,
         userId = nextcloudUserId,
     )
