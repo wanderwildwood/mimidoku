@@ -202,7 +202,8 @@ class LockScreenControls : AccessibilityService(), LifecycleOwner, ViewModelStor
         val keyguard = getSystemService(KeyguardManager::class.java)
         val power = getSystemService(PowerManager::class.java)
         val held = SystemClock.uptimeMillis() < heldUntil
-        val show = keyguard.isKeyguardLocked &&
+        val show = !SystemLockPlayer.present() &&
+            keyguard.isKeyguardLocked &&
             power.isInteractive &&
             now.value != null &&
             !putAway &&

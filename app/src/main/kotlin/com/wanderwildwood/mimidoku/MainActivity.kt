@@ -7,6 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.wanderwildwood.mimidoku.lockscreen.LockScreenControls
+import com.wanderwildwood.mimidoku.lockscreen.SystemLockPlayer
 import android.content.ComponentName
 import android.content.res.Resources
 import android.content.Intent
@@ -1732,14 +1733,19 @@ private fun Mimidoku(
                                 ),
                             )
                             // Off until turned on in Android's own settings, the only place it can be;
-                            // the row says which it is and goes there.
-                            add(
+                            // the row says which it is and goes there. Where the phone's lock screen
+                            // has its own player for every app the strip never shows, so the row is
+                            // left out, unless the service is still on and can be turned off there.
+                            if (!SystemLockPlayer.present() || lockScreenControlsOn) add(
                                 SettingRow(
                                     key = "lockscreen",
                                     title = stringResource(R.string.settings_lockscreen_controls),
                                     value = stringResource(
-                                        if (lockScreenControlsOn) R.string.settings_lockscreen_controls_on
-                                        else R.string.settings_lockscreen_controls_off,
+                                        when {
+                                            SystemLockPlayer.present() -> R.string.settings_lockscreen_controls_system
+                                            lockScreenControlsOn -> R.string.settings_lockscreen_controls_on
+                                            else -> R.string.settings_lockscreen_controls_off
+                                        },
                                     ),
                                     restricted = lockScreenAsked && !lockScreenControlsOn && restricted,
                                 ),

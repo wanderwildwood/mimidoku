@@ -401,6 +401,7 @@
     <string name="settings_lockscreen_controls">Lock-screen controls</string>
     <string name="settings_lockscreen_controls_on">On</string>
     <string name="settings_lockscreen_controls_off">Off — turn on in Accessibility</string>
+    <string name="settings_lockscreen_controls_system">Not needed: the phone shows its own player. Turn off in Accessibility</string>
     <!-- Settings switch: the book being read is handed to the Glance app for its lock-screen panel -->
     <string name="settings_reading_on_lock_screen">Show the book being read in Glance</string>
     <!-- The controls drawn on the lock screen -->
