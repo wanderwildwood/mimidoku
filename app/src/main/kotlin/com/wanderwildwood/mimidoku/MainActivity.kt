@@ -2137,8 +2137,11 @@ private fun BookEntity.folderKey(): String = Sameness.key(name)
  *
  * Where there is no folder to go by -- audio loose in the chosen directory -- the tag is all
  * there is, and it is used.
+ *
+ * With neither, the book's own name may give one: "Ada Whitlock - Loose Named" ([Sameness.nameAuthor]).
  */
-private fun BookEntity.shownAuthor(): String? = author ?: tagAuthor?.takeUnless { Sameness.isPlaceholder(it) }
+private fun BookEntity.shownAuthor(): String? =
+    author ?: tagAuthor?.takeUnless { Sameness.isPlaceholder(it) } ?: Sameness.nameAuthor(name)
 
 /**
  * The books with each author's folder named once, the way [Sameness.folderHeading] chooses: the

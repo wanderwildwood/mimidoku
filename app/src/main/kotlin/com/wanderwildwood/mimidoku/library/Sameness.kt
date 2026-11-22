@@ -15,6 +15,35 @@ import kotlin.math.abs
  */
 object Sameness {
 
+    /**
+     * The author a book's own name gives, where nothing else does: "Ada Whitlock - Loose Named"
+     * (a file, or a folder of parts). Only a front part that reads as a person's name counts, at
+     * most four words of letters with no digit and not opening on "The", "A" or "An", and only
+     * when the back is not just a part number ("Part 2", "Disc 1", "03"), so a book title or a
+     * track number is never taken for an author. Asked after the folder and the tags.
+     * (22 Nov 2026: such books were shelved under "No author". The tag reader on the phone gives
+     * no AUTHOR or WRITER key at all, and its COMPOSER is so often the narrator that it is not used.)
+     */
+    fun nameAuthor(bookName: String): String? {
+        val cut = NAME_DASH.find(bookName) ?: return null
+        val front = tidy(bookName.substring(0, cut.range.first))
+        val back = bookName.substring(cut.range.last + 1).trim()
+        if (front.isEmpty() || back.isEmpty() || PART_ONLY.matches(back)) return null
+        val words = front.split(' ')
+        if (words.size > 4 || words.first().lowercase(Locale.ROOT) in ARTICLES) return null
+        if (!words.all { NAME_WORD.matches(it) } || isPlaceholder(front)) return null
+        return front
+    }
+
+    /** A hyphen or dash with a space either side, the way a name is set off from a title. */
+    private val NAME_DASH = Regex("\\s[-–—]\\s")
+
+    private val NAME_WORD = Regex("[\\p{L}][\\p{L}.'-]*")
+
+    private val ARTICLES = setOf("the", "a", "an")
+
+    private val PART_ONLY = Regex("(?i)((part|book|disc|disk|cd|vol|volume|chapter|ch)\\.?\\s*)?\\d+")
+
     /** Every mark that is used as an apostrophe in a name. */
     private val APOSTROPHES = Regex("[’‘ʼ`´′]")
 

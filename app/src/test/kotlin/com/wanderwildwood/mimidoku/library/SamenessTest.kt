@@ -214,4 +214,27 @@ class SamenessTest {
         assertEquals("elodie", Sameness.fold("Élodie"))
         assertEquals(Sameness.fold("Jose Saramago"), Sameness.fold("José SARAMAGO"))
     }
+
+    @Test
+    fun aNameSetOffByADashGivesTheAuthor() {
+        assertEquals("Ada Whitlock", Sameness.nameAuthor("Ada Whitlock - Loose Named"))
+        assertEquals("Tomas Reyes", Sameness.nameAuthor("Tomas  Reyes – The Long Road"))
+        assertEquals("Ursula K. Le Guin", Sameness.nameAuthor("Ursula K. Le Guin - A Book"))
+        assertEquals("Molly O'Day", Sameness.nameAuthor("Molly O’Day — Stories"))
+    }
+
+    @Test
+    fun titlesNumbersAndPartsAreNotAuthors() {
+        assertEquals(null, Sameness.nameAuthor("Plain Loose"))
+        assertEquals(null, Sameness.nameAuthor("01 - Chapter One"))
+        assertEquals(null, Sameness.nameAuthor("The Long Road - Part 2"))
+        assertEquals(null, Sameness.nameAuthor("Basil Moor - Disc 1"))
+        assertEquals(null, Sameness.nameAuthor("Basil Moor - 03"))
+        assertEquals(null, Sameness.nameAuthor("A Tale - Told Twice"))
+        assertEquals(null, Sameness.nameAuthor("One Two Three Four Five - Title"))
+        assertEquals(null, Sameness.nameAuthor("Twenty-Twenty-One-Ten-Ten2 - Title"))
+        assertEquals(null, Sameness.nameAuthor("Unknown - Title"))
+        assertEquals(null, Sameness.nameAuthor("Ada-Whitlock-No-Spaces"))
+        assertEquals(null, Sameness.nameAuthor(" - Title"))
+    }
 }
