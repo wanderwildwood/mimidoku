@@ -1633,6 +1633,8 @@ private fun Mimidoku(
                     // Read again whenever the app comes back, which is how the reader returns from
                     // turning the service on in Android's settings.
                     var lockScreenControlsOn by remember { mutableStateOf(LockScreenControls.isEnabled(context)) }
+                    // Glance's row is for a reader who has Glance, or whose switch is still on.
+                    var glanceHere by remember { mutableStateOf(context.packageManager.getLaunchIntentForPackage(GlanceProvider.READER) != null) }
                     // Asked for and still off on the way back: on Android 13+ that is restricted settings.
                     var lockScreenAsked by rememberSaveable { mutableStateOf(false) }
                     var restricted by remember { mutableStateOf(false) }
@@ -1641,6 +1643,7 @@ private fun Mimidoku(
                         val observer = LifecycleEventObserver { _, event ->
                             if (event == Lifecycle.Event.ON_RESUME) {
                                 lockScreenControlsOn = LockScreenControls.isEnabled(context)
+                                glanceHere = context.packageManager.getLaunchIntentForPackage(GlanceProvider.READER) != null
                                 restricted = RestrictedSettings.blocked(context)
                             }
                         }
@@ -1752,7 +1755,7 @@ private fun Mimidoku(
                             )
                             // Beside the controls, because it is the other thing this app puts on
                             // the lock screen - and unlike them it is this app's to switch.
-                            add(
+                            if (glanceHere || preferences.readingOnLockScreen) add(
                                 SettingRow(
                                     key = "glance",
                                     title = stringResource(R.string.settings_reading_on_lock_screen),
