@@ -53,16 +53,6 @@ account**, so the address and an app password need not be typed again. The passw
 Home; when Home signs out, this app is signed out too, and **Stop using it** goes back to its own
 sign-in.
 
-Each book (and each author's shelf) has a plain "Remove" at the end of its row. It asks, and the
-two answers are different things. "Remove from the shelf" takes the book off the list and leaves
-every audio file where it is; the book stays off the list until you bring it back with Settings →
-Show removed books again. "Delete the audio files from this phone" erases the files from the folder
-you granted, and the folder it leaves empty: the button changes to "tap again" and stays that way until
-you tap elsewhere, go back or leave the screen, and the question says how many files and how much room they take. Nothing outside a granted
-folder is ever touched, and never a server's copy -- a book fetched from a server only offers to
-remove its download, and goes back to being one to fetch. A folder granted before this could be done
-was granted for reading only, and has to be chosen again under Settings → Audiobook folders → Add.
-
 Sleep timer -- by hand, or on its own between two hours you set -- playback speed, chapter
 list, bookmarks, and a shake to keep the timer going.
 
