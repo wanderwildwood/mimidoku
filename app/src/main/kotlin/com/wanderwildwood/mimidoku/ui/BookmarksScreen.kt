@@ -79,7 +79,8 @@ fun BookmarksScreen(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp)
+                // 19 dp up: the height of Messaging's pencil, which rests on a 3 dp rule.
+                .padding(end = 16.dp, bottom = 19.dp)
                 .size(56.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.Black)
