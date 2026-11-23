@@ -166,6 +166,13 @@ class BookScanner(private val resolver: ContentResolver) {
         val found = foldersHere.map { folder ->
             async {
                 val inside = children(treeUri, folder.documentId)
+                // A folder named "Ada Whitlock - Folder Book" is a book and says by whom (23 Nov 2026:
+                // it was shelved as an author called "Ada Whitlock - Folder Book", its chapters as
+                // books of their own). Where the reader said this folder holds authors, only when
+                // its audio sits right in it: one holding only folders is still read as an author's.
+                val byName = Sameness.nameAuthor(folder.name)
+                    ?.takeIf { reading != Reading.Authors || inside.any { it.isAudio } }
+                if (byName != null) return@async Read(author = false, books = readBooks(treeUri, listOf(folder), byName))
                 val shelved = readBooks(treeUri, inside.filter { it.isDirectory }, author = folder.name)
                 // A file sitting loose under an author is a whole recording of its own, not a
                 // chapter of its neighbours: nothing groups it with them except the folder, and
