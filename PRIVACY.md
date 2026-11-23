@@ -126,7 +126,7 @@ could. A memory card can always be taken out and read in a computer.
 | Where | What |
 |---|---|
 | App database | Your books, chapters, bookmarks, and your place in each. App-private. |
-| Shared preferences | Your settings, the folder you granted, and your server's address and key. App-private. |
+| Shared preferences | Your settings, the folder you granted, your server's address and key, and for Nextcloud its address, your login name and the app password (sealed, as the key is), or, with "Use the phone's Nextcloud account", only which account and server you chose: the password then stays with Home. App-private. |
 | App files folder | Books you downloaded from your server, on the phone or the memory card. Goes away when the app does. |
 
 App-private means other apps cannot read it and it goes away when you uninstall.
