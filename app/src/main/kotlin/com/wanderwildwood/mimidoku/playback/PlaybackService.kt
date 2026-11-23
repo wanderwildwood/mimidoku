@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -109,7 +110,7 @@ class PlaybackService : MediaSessionService() {
             .build()
 
         player = exoPlayer
-        session = MediaSession.Builder(this, exoPlayer).setCallback(Commands()).build()
+        session = MediaSession.Builder(this, BackInsteadOfPrevious(exoPlayer)).setCallback(Commands()).build()
         _activeSession.value = session
 
         val library = LibraryRepository(this)
@@ -203,6 +204,22 @@ class PlaybackService : MediaSessionService() {
      * session, neither of which exists on the far side of the binder, so they are asked for by
      * name instead.
      */
+    /**
+     * "Previous" from outside the app - the lock screen's own player (MuditaOS 2.0), the 1.x
+     * strip, a headset or car - goes back by the skip amount instead of to the chapter before
+     * (23 Nov 2026, asked on the forum: a chapter is changed with the phone in hand, while
+     * going back a little, when the mind wandered, is what the lock screen is reached for).
+     * The app's own screen turns chapters without it. "Next" still goes to the next chapter.
+     */
+    private inner class BackInsteadOfPrevious(player: Player) : ForwardingPlayer(player) {
+        private fun back() {
+            val skip = Preferences.of(this@PlaybackService).skipSeconds * 1_000L
+            seekTo((currentPosition - skip).coerceAtLeast(0))
+        }
+        override fun seekToPrevious() = back()
+        override fun seekToPreviousMediaItem() = back()
+    }
+
     private inner class Commands : MediaSession.Callback {
 
         override fun onConnect(
