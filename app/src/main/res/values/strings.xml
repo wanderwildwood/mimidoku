@@ -25,31 +25,10 @@
     <!-- One line above the shelves after a swipe down on the library's first page, with a server -->
     <string name="library_pull_checking">Checking the server…</string>
     <string name="library_pull_done">Up to date</string>
-    <string name="remove_button">Remove</string>
-    <!-- Heading of the question when a book (or an author\'s books) is taken off the phone. %1$s is its name -->
-    <string name="remove_title">Remove \"%1$s\"?</string>
-    <!-- Under the heading: how many audio files, and how much room they take. %2$s is a size such as 120 MB -->
-    <plurals name="remove_summary">
-        <item quantity="one">%1$d audio file, %2$s</item>
-        <item quantity="other">%1$d audio files, %2$s</item>
-    </plurals>
-    <string name="remove_shelf_action">Remove from the shelf</string>
-    <string name="remove_shelf_note">The audio files stay where they are on this phone.</string>
-    <string name="remove_delete_action">Delete the audio files from this phone</string>
-    <string name="remove_delete_armed">Delete the audio files — tap again</string>
-    <string name="remove_delete_note">The files are erased from the phone. This cannot be undone.</string>
-    <string name="remove_download_action">Remove the download from this phone</string>
-    <string name="remove_download_armed">Remove the download — tap again</string>
-    <string name="remove_download_note">The server\'s copy stays, and you can download it again.</string>
     <string name="settings_unhide">Show removed books again</string>
     <plurals name="settings_unhide_count">
         <item quantity="one">%d book is off the shelf</item>
         <item quantity="other">%d books are off the shelf</item>
-    </plurals>
-    <string name="remove_read_only">This folder was allowed for reading only. Choose it again under Settings, Audiobook folders, Add, and books in it can be removed.</string>
-    <plurals name="remove_partly">
-        <item quantity="one">%d file would not go, and is still on the phone.</item>
-        <item quantity="other">%d files would not go, and are still on the phone.</item>
     </plurals>
     <string name="library_recent">Recent</string>
     <string name="library_no_books">No books yet</string>

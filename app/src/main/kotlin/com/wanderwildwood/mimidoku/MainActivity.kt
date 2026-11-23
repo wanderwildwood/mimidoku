@@ -63,9 +63,7 @@ import com.wanderwildwood.mimidoku.data.SOURCE_OPENED
 import com.wanderwildwood.mimidoku.glance.GlanceProvider
 import com.wanderwildwood.mimidoku.library.OpenedBook
 import com.wanderwildwood.mimidoku.library.Progress
-import com.wanderwildwood.mimidoku.library.Removal
 import com.wanderwildwood.mimidoku.ui.DarkMode
-import com.wanderwildwood.mimidoku.ui.RemoveDialog
 import com.wanderwildwood.mimidoku.library.Sameness
 import com.wanderwildwood.mimidoku.data.Preferences
 import com.wanderwildwood.mimidoku.data.Shake
@@ -375,10 +373,7 @@ private fun Mimidoku(
     var keptSizes by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     // A book the reader has asked to give back, waiting on the question being answered.
     var givingBack by remember { mutableStateOf<KeptBook?>(null) }
-    // A removal waiting on the reader's answer: which books, and what they take up.
-    var removeAsk by remember { mutableStateOf<RemoveAsk?>(null) }
-    // Something a removal has to say: that the folder was granted for reading only, or that some
-    // files would not go.
+    // Something the app has to say: a file that cannot be opened, places saved or not.
     var notice by remember { mutableStateOf<String?>(null) }
     // The folder whose reading is being asked about: set when one is granted, and again whenever
     // a row is pressed to correct it.
@@ -965,48 +960,6 @@ private fun Mimidoku(
             Screen.Server -> Screen.Settings
             Screen.Nextcloud -> Screen.Settings
             else -> Screen.Library
-        }
-    }
-
-    // Books off the phone. No row calls this now: the Remove word beside the items was taken away
-    // (decided 31 Oct), and the question, the dialog and the deleting below wait for a place of their
-    // own. The player lets go of a book being taken away, as it does when one is given back.
-    val removeFromPhone: (String, List<BookEntity>) -> Unit = { name, targets ->
-        // Asked first, in words: taking a book off the shelf and deleting the reader's files are
-        // different answers, and which one is wanted is not for the app to guess.
-        val asked = targets.distinctBy { it.uri }
-        scope.launch {
-            val (cardFiles, cardBytes) = Removal.weigh(context, library.library, asked)
-            val fetched = asked.filter { isServerSource(it.sourceType) && (it.kept || it.uri in withAudio) }
-            removeAsk = RemoveAsk(
-                title = name,
-                books = asked,
-                files = cardFiles + fetched.sumOf { it.chapterCount },
-                bytes = cardBytes + fetched.sumOf { keptSizes[it.uri] ?: 0L },
-            )
-        }
-    }
-
-    val deleteFromPhone: (List<BookEntity>) -> Unit = { gone ->
-        scope.launch {
-            if (Removal.readOnly(context, library.library, gone)) {
-                notice = context.getString(R.string.remove_read_only)
-                return@launch
-            }
-            if (gone.any { it.uri == playing?.uri }) {
-                controller?.stop()
-                controller?.clearMediaItems()
-                playing = null
-                chapters = emptyList()
-                marks = emptyList()
-            }
-            when (val outcome = Removal.remove(context, library.library, gone)) {
-                Removal.Outcome.Done -> Unit
-                Removal.Outcome.ReadOnly -> notice = context.getString(R.string.remove_read_only)
-                is Removal.Outcome.Partly ->
-                    notice = context.resources.getQuantityString(R.plurals.remove_partly, outcome.left, outcome.left)
-            }
-            keptSizes = keptSizes - gone.map { it.uri }.toSet()
         }
     }
 
@@ -1914,30 +1867,6 @@ private fun Mimidoku(
     // is here or not, which is worth saying on the dialog rather than leaving them to wonder.
     notice?.let { NoticeDialog(text = it, onDismiss = { notice = null }) }
 
-    removeAsk?.let { ask ->
-        RemoveDialog(
-            title = stringResource(R.string.remove_title, ask.title),
-            files = ask.files,
-            bytes = ask.bytes,
-            onCard = ask.books.any { it.sourceType == SOURCE_LOCAL },
-            downloaded = ask.books.any { isServerSource(it.sourceType) && it.kept },
-            onShelf = {
-                scope.launch {
-                    if (ask.books.any { it.uri == playing?.uri && !isServerSource(it.sourceType) }) {
-                        controller?.stop()
-                        controller?.clearMediaItems()
-                        playing = null
-                        chapters = emptyList()
-                        marks = emptyList()
-                    }
-                    preferences.hiddenBooks = Removal.shelve(library.library, ask.books, preferences.hiddenBooks)
-                }
-            },
-            onDelete = { deleteFromPhone(ask.books) },
-            onDismiss = { removeAsk = null },
-        )
-    }
-
     givingBack?.let { book ->
         ConfirmDialog(
             title = stringResource(R.string.server_give_back_title, book.title),
@@ -2318,9 +2247,6 @@ private fun Shelving.shown(key: String, resources: Resources): String = when {
 }
 
 /** One part of a book: a file of its own, or a marked place inside a longer one. */
-/** A removal waiting on the reader's answer. */
-private data class RemoveAsk(val title: String, val books: List<BookEntity>, val files: Int, val bytes: Long)
-
 private data class Part(val title: String, val chapterUri: String, val startMs: Long)
 
 /**

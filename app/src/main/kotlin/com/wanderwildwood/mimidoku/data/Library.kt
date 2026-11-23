@@ -248,18 +248,6 @@ interface LibraryDao {
     @Query("DELETE FROM books WHERE sourceType = :sourceType")
     suspend fun deleteBooksOfSource(sourceType: String)
 
-    @Query("DELETE FROM books WHERE uri = :uri")
-    suspend fun deleteBook(uri: String)
-
-    /** One book and everything hung on it: chapters, marks, bookmarks. */
-    @Transaction
-    suspend fun forgetBook(uri: String) {
-        deleteBook(uri)
-        deleteOrphanedChapters()
-        deleteOrphanedBookmarks()
-        deleteOrphanedMarks()
-    }
-
     @Transaction
     suspend fun forgetSource(sourceType: String) {
         deleteBooksOfSource(sourceType)
@@ -350,14 +338,10 @@ interface LibraryDao {
     suspend fun unkeepPartlyDownloaded(sourceType: String)
 
     /**
-     * Every server book with audio of its own on the phone, whether or not it is all there: one
-     * waiting to fetch a file the server gained still holds the files it had, and those must stay
-     * listed and removable rather than be left behind where nothing can reach them.
+     * Every server book with audio of its own on the phone, whether or not it is all there, as it
+     * changes: one waiting to fetch a file the server gained still holds the files it had, and
+     * those must stay listed and removable rather than be left behind where nothing can reach them.
      */
-    @Query(BOOKS_WITH_AUDIO)
-    suspend fun serverBooksWithAudio(): List<String>
-
-    /** The same as [serverBooksWithAudio], as it changes. */
     @Query(BOOKS_WITH_AUDIO)
     fun serverBooksWithAudioNow(): Flow<List<String>>
 
