@@ -574,16 +574,9 @@ private fun Mimidoku(
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         // Without taking the permission, the grant dies with this activity.
-        // Writing too, so a book can be taken off the phone from here. A provider that will not
-        // grant it still gives reading, and the app reads.
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-            )
-        }.onFailure {
-            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
+        // Reading only: the app plays what is in the folder and never writes to it. (A folder
+        // granted before 23 November may hold writing too; it is left as it is, and unused.)
+        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         grants = context.contentResolver.persistedUriPermissions.map { it.uri }
         // Asked once the folder has been read, not before: what is in it decides which answer the
         // question opens on, and the app cannot suggest one without looking.
@@ -625,6 +618,7 @@ private fun Mimidoku(
             val replaced = withContext(Dispatchers.IO) { library.carryOver(picked, gone) }
             if (replaced.isNotEmpty()) {
                 replaced.forEach { old ->
+                    // Writing too: a folder granted before 23 November may hold it.
                     runCatching {
                         context.contentResolver.releasePersistableUriPermission(
                             old.toUri(),
@@ -1322,6 +1316,7 @@ private fun Mimidoku(
                         onRemove = { row ->
                             // Giving the grant back is the removal: there is nowhere else the folder is
                             // written down, so it cannot come back out of step with what is permitted.
+                            // Writing is given back too, for a folder granted before 23 November.
                             runCatching {
                                 context.contentResolver.releasePersistableUriPermission(
                                     row.id.toUri(),

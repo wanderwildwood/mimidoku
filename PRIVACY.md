@@ -19,10 +19,9 @@ What it keeps from that folder is a list: book names, author names, chapter name
 sizes, durations, and where you are in each one. That list lives in a database that is
 app-private, which means other apps cannot read it and uninstalling takes it away.
 
-Nothing is copied. The audio stays where you put it. The app deletes your audio files only when
-you ask it to, by name: **Remove** on a book (or an author) offers "Remove from the shelf", which
-leaves every file alone, and "Delete the audio files from this phone", which erases them from the
-folder you granted and asks twice. It never deletes anything outside a folder you granted.
+Nothing is copied. The audio stays where you put it. The app asks to read the folder, not to
+write to it, and it never changes, moves or deletes anything in it. The one file it ever writes is
+a copy of your places and bookmarks, where you choose to save it.
 
 A book opened from another app ("Open with" in a file manager) comes with that app's permission
 to read that one file. Only a file handed over by its path rather than shared needs more: then
@@ -183,7 +182,7 @@ If you are in the EU, the EEA or the UK, the GDPR gives you the right to:
 
 Similar laws elsewhere, such as the CCPA in California, give you the right to know, delete and correct, and to opt out of the sale or sharing of your data. Nothing from Audio Reader is sold or shared.
 
-Since Audio Reader keeps what it stores only on your phone, you can exercise most of these rights yourself: remove a book from the shelf or delete its downloaded files, save your places and bookmarks to a file with Save places and bookmarks, forget a server in Settings, clear the app's data in Android's settings, or uninstall the app, which deletes all of it. For anything you cannot do yourself, write to the address above.
+Since Audio Reader keeps what it stores only on your phone, you can exercise most of these rights yourself: remove a downloaded book from the phone, save your places and bookmarks to a file with Save places and bookmarks, forget a server in Settings, clear the app's data in Android's settings, or uninstall the app, which deletes all of it. For anything you cannot do yourself, write to the address above.
 
 If you point Audio Reader at a server of your own, what that server keeps is yours to manage.
 <!-- /shared-about privacy section -->
