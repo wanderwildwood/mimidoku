@@ -12,8 +12,8 @@ nobody should write twice.
 
 | | |
 |---|---|
-| ![The library, which is just the folders on the card](screenshots/1-library.png) | ![The chapter list](screenshots/2-chapters.png) |
-| ![Playing, with the controls a thumb can find](screenshots/3-player.png) | ![Preferences](screenshots/4-preferences.png) |
+| ![The library, which is just the folders on the card](screenshots/1-library.png) | ![Playing, with the controls a thumb can find](screenshots/2-player.png) |
+| ![The chapter list](screenshots/3-chapters.png) | ![Settings](screenshots/4-settings.png) |
 
 ## State
 
