@@ -237,4 +237,15 @@ class SamenessTest {
         assertEquals(null, Sameness.nameAuthor("Ada-Whitlock-No-Spaces"))
         assertEquals(null, Sameness.nameAuthor(" - Title"))
     }
+
+    @Test
+    fun theAuthorSplitOffLeavesTheTitle() {
+        assertEquals("The Long Road", Sameness.titleAfterAuthor("Tomas Reyes - The Long Road", "Tomas Reyes"))
+        assertEquals("Stories", Sameness.titleAfterAuthor("Molly O’Day — Stories", "molly o'day"))
+        // Someone else's name in front, no author at all, or no name to split: kept whole.
+        assertEquals("Tomas Reyes - The Long Road", Sameness.titleAfterAuthor("Tomas Reyes - The Long Road", "Ada Whitlock"))
+        assertEquals("Tomas Reyes - The Long Road", Sameness.titleAfterAuthor("Tomas Reyes - The Long Road", null))
+        assertEquals("The Long Road - Part 2", Sameness.titleAfterAuthor("The Long Road - Part 2", "The Long Road"))
+        assertEquals("Plain Loose", Sameness.titleAfterAuthor("Plain Loose", "Ada Whitlock"))
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import com.wanderwildwood.mimidoku.R
 import com.wanderwildwood.mimidoku.data.LibraryDatabase
 import com.wanderwildwood.mimidoku.data.Preferences
+import com.wanderwildwood.mimidoku.library.shownTitle
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -30,7 +31,7 @@ class ReadingOnLockScreen : GlanceProvider() {
                 chapters.map { it.uri to 0L }
             }
             val position = now.positionAt(NowReading.elapsed())
-            val title = book.tagTitle ?: book.name
+            val title = book.shownTitle()
             val text = if (parts.size > 1) {
                 NowReading.partNumber(parts, now.chapterUri, position)
                     ?.let { context.getString(R.string.glance_chapter, title, it) }

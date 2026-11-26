@@ -35,6 +35,19 @@ object Sameness {
         return front
     }
 
+    /**
+     * The title left once the author is split off an "Author - Title" name: "Kenneth Grahame -
+     * The Wind in the Willows" by Kenneth Grahame is "The Wind in the Willows". Only when the
+     * front is the [author] shown, so a name whose front is someone else, or no name at all, is
+     * kept whole. (26 Nov 2026: the author was split off in 1.3.73 and the title still carried it.)
+     */
+    fun titleAfterAuthor(bookName: String, author: String?): String {
+        val front = nameAuthor(bookName) ?: return bookName
+        if (author == null || key(author) != key(front)) return bookName
+        val cut = NAME_DASH.find(bookName) ?: return bookName
+        return bookName.substring(cut.range.last + 1).trim().ifEmpty { bookName }
+    }
+
     /** A hyphen or dash with a space either side, the way a name is set off from a title. */
     private val NAME_DASH = Regex("\\s[-–—]\\s")
 
